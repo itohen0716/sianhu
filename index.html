@@ -14,11 +14,12 @@
     .meta{min-width:800px;display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;font:15px serif}.meta span:last-child{text-align:right}
     .meta input{border:0;border-bottom:1px dashed #aaa;background:none;text-align:center;font:28px serif;min-width:0}
     .score-wrap{min-width:800px;display:grid;grid-template-columns:55px 1fr;margin-top:28px}.labels{display:grid;grid-template-rows:repeat(3,46px);font:12px/46px serif;text-align:right;padding-right:7px}
-    .score{display:grid;grid-template-columns:repeat(4,1fr);border-block:2px solid var(--ink)}
-    .measure{display:grid;grid-template-rows:repeat(3,46px);border-left:1.5px solid var(--ink);position:relative}.measure:last-child{border-right:2px solid var(--ink)}.measure.on{background:#fff9dd}
-    .string{display:grid;grid-template-columns:repeat(16,1fr);border-bottom:1px solid var(--ink);position:relative}.string:last-child{border-bottom:0}
+    .score{display:flex;min-width:745px;border-block:2px solid var(--ink)}
+    .measure{display:grid;grid-template-rows:repeat(3,46px);flex:1 0 var(--measure-width,180px);border-left:1.5px solid var(--ink);position:relative}.measure:last-child{border-right:2px solid var(--ink)}.measure.on{background:#fff9dd}
+    .string{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));position:relative}
+    .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:var(--yellow);box-shadow:inset 0 0 0 2px #c9a927}
-    .note{z-index:2;align-self:center;height:40px;border:0;background:none;padding:0;cursor:pointer}.note b{display:inline-block;background:#fffef9;padding:0 2px 2px;font:600 25px/30px Arial}
+    .note{z-index:2;align-self:center;height:40px;border:0;background:none;padding:0;cursor:pointer}.note b{display:inline-block;background:#fffef9;padding:0 3px 2px;font:600 25px/30px Arial}
     .measure.on .note b{background:#fff9dd}.d2 b{border-bottom:2px solid}.d1 b{border-bottom:5px double}
     .panel{margin-top:14px;padding:16px;background:#fffcf7;border:1px solid #c9bcad;border-radius:15px}.status{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--pale);padding:10px;border-radius:10px}.status strong{display:block;color:#285366}
     .move{display:flex;gap:5px}.move .del{color:#9d4036}.controls{display:grid;grid-template-columns:1fr 1.3fr;gap:14px;margin-top:14px}fieldset{border:0;padding:0;margin:0}legend{font-size:13px;font-weight:bold;color:#74695e;margin-bottom:7px}
@@ -52,12 +53,18 @@ let state={notes:[],title:"曲名入力",m:0,s:1,p:0,d:4},past=[],future=[];
 try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.notes)){state.notes=x.notes;state.title=x.title||state.title}}catch(e){}
 const q=x=>document.querySelector(x),save=()=>localStorage.setItem(KEY,JSON.stringify({notes:state.notes,title:state.title}));
 function snap(){past.push(JSON.stringify({notes:state.notes,title:state.title}));if(past.length>40)past.shift();future=[]}
+function measureWidth(m){
+ const notes=state.notes.filter(n=>n.m===m);
+ const denseUnits=notes.reduce((sum,n)=>sum+(n.d===1 ? 1 : n.d===2 ? .55 : .3),0);
+ const widest=notes.reduce((max,n)=>Math.max(max,String(n.v).length),1);
+ return Math.max(180,Math.ceil(denseUnits*30+widest*8));
+}
 function render(){
  q("#title").value=state.title;q("#status").textContent=`${state.m+1}小節・${["","一","二","三"][state.s]}の糸・${Math.floor(state.p/4)+1}拍目`;
  q("#strings").innerHTML=[3,2,1].map(s=>`<button class="${s===state.s?"on":""}" data-s="${s}">${["","一","二","三"][s]}の糸</button>`).join("");
  q("#durations").innerHTML=[[4,"4分","下線なし"],[2,"8分","下線1本"],[1,"16分","下線2本"]].map(x=>`<button class="${x[0]===state.d?"on":""}" data-d="${x[0]}"><b>${x[1]}</b><small>${x[2]}</small></button>`).join("");
  q("#numbers").innerHTML=vals.map(v=>`<button data-v="${v}">${v}</button>`).join("");
- q("#score").innerHTML=[0,1,2,3].map(m=>`<div class="measure ${m===state.m?"on":""}">${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>`<button class="note d${n.d}" style="grid-column:${n.p+1}/span ${n.d}" data-pos="${m},${s},${n.p}"><b>${n.v}</b></button>`).join("")}</div>`).join("")}</div>`).join("");
+ q("#score").innerHTML=[0,1,2,3].map(m=>`<div class="measure ${m===state.m?"on":""}" style="--measure-width:${measureWidth(m)}px">${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>`<button class="note d${n.d}" style="grid-column:${n.p+1}/span ${n.d}" data-pos="${m},${s},${n.p}"><b>${n.v}</b></button>`).join("")}</div>`).join("")}</div>`).join("");
  q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;save();
 }
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
