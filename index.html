@@ -11,7 +11,9 @@
     .head{display:flex;justify-content:space-between;align-items:end;gap:10px}h1{margin:0;font:600 27px serif}
     .brand{margin:0;color:var(--blue);font:13px serif;letter-spacing:.12em}.actions{display:flex;flex-wrap:wrap;gap:6px}
     .actions button,.move button,.layout-controls button{min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:8px 12px}
-    .paper{margin-top:12px;padding:24px 22px 34px;background:var(--paper);border:1px solid #cabfaf;box-shadow:0 8px 25px #46331d1c;overflow:hidden}
+    .paper{position:relative;margin-top:12px;padding:24px 22px 34px;background:var(--paper);border:1px solid #cabfaf;box-shadow:0 8px 25px #46331d1c;overflow:hidden}
+    .paper.annotating{touch-action:none}.annotation-svg{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none}.paper.annotating .annotation-svg{pointer-events:auto}
+    .annotation-svg text{font:600 18px "Yu Gothic",sans-serif;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}.annotation-svg text.annotation-text{stroke-width:5px}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;font:15px serif}.meta span:last-child{text-align:right}
     .meta input{border:0;border-bottom:1px dashed #aaa;background:none;text-align:center;font:28px serif;min-width:0}
     .staff{margin-top:28px}.staff-head{display:flex;justify-content:space-between;align-items:center;margin:0 0 5px 55px;font:12px serif;color:#75695d}
@@ -31,11 +33,14 @@
     .nums{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}.nums button,.rests button{min-height:48px;background:white;border:1px solid #cbbfb2;border-radius:9px;font-size:18px;font-weight:bold}.nums button:active,.rests button:active{background:#fff2ac}
     .rests{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.rests button{font-size:15px}.rests .mark{display:block;font:24px/1.1 Arial,sans-serif}.rests button[data-rest="4"] .mark{font-size:31px}.rests button[data-rest="2"] .mark,.rests button[data-rest="1"] .mark{font-size:23px}
     .bottom{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:#766b60}.clear{border:1px solid #d1aaa1;border-radius:9px;background:#fff;color:#9d4036;padding:9px}
+    .layer-panel{margin-top:12px;padding:14px;background:#f8f3eb;border:1px solid #c9bcad;border-radius:15px}.layer-top,.layer-switches,.draw-tools,.colors{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.layer-top{justify-content:space-between}
+    .layer-switches{margin-top:10px}.layer-chip,.draw-tools button,.layer-top button{min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:7px 11px}.layer-chip.on,.draw-tools button.on{background:#477d91;color:#fff;border-color:#477d91}.layer-chip.hidden{text-decoration:line-through;opacity:.58}.layer-chip small{display:block;font-size:10px}
+    .draw-tools{margin-top:12px;padding-top:12px;border-top:1px solid #ddd2c5}.colors{margin-left:auto}.color{width:38px;height:38px!important;min-height:38px!important;border-radius:50%!important;padding:0!important;background:var(--c)!important}.color.on{outline:3px solid #fff;box-shadow:0 0 0 3px #477d91}.layer-help{margin:8px 0 0;font-size:12px;color:#75695d}
     dialog{width:min(92vw,480px);border:1px solid #bbaea0;border-radius:16px;padding:0;box-shadow:0 18px 50px #0005}dialog::backdrop{background:#332c2588}
     .dialog-body{padding:22px}.dialog-body h2{margin:0 0 8px;font:600 24px serif}.dialog-body p{margin:0 0 18px;color:#6d6257}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .form-grid label{font-size:13px;font-weight:bold}.form-grid input{width:100%;margin-top:6px;padding:11px;border:1px solid #bcae9e;border-radius:9px;font-size:18px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
     .dialog-actions button{min-height:44px;padding:9px 18px;border:1px solid #bcae9e;border-radius:9px;background:#fff}.dialog-actions .primary{background:var(--blue);color:#fff;border-color:var(--blue)}
-    @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.nums{grid-template-columns:repeat(5,1fr)}.nums button{min-height:54px}.rests{grid-template-columns:repeat(2,1fr)}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}}
+    @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.nums{grid-template-columns:repeat(5,1fr)}.nums button{min-height:54px}.rests{grid-template-columns:repeat(2,1fr)}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}.colors{margin-left:0}.draw-tools button{flex:1 0 28%}}
     @media print{body{background:#fff}.app{max-width:none;padding:0}.head,.panel{display:none}.paper{border:0;box-shadow:none;margin:0;padding:8mm}.score-scroll{overflow:visible}.score{width:100%}.measure{min-width:0!important;flex:1 1 auto}.staff{break-inside:avoid}.meta{grid-template-columns:1fr 2fr 1fr}}
   </style>
 </head>
@@ -45,6 +50,16 @@
   <section class="paper">
     <div class="meta"><span>〈二上り〉 四分ノ二拍子</span><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
     <div id="scoreArea"></div>
+    <svg id="annotations" class="annotation-svg" aria-label="書き込みレイヤー"></svg>
+  </section>
+  <section class="layer-panel">
+    <div class="layer-top"><strong>個人書き込みレイヤー</strong><div><button id="toggleDrawing">✎ 描画を開始</button><button id="addLayer">＋ レイヤー</button><button id="deleteLayer">削除</button></div></div>
+    <div id="layerSwitches" class="layer-switches"></div>
+    <div id="drawTools" class="draw-tools">
+      <button data-tool="pen">自由線</button><button data-tool="arrow">矢印</button><button data-tool="rect">枠</button><button data-tool="text">コメント</button><button data-tool="eraser">消しゴム</button>
+      <div id="colors" class="colors"></div>
+    </div>
+    <p id="layerHelp" class="layer-help">「描画を開始」を押すと、選択中の個人レイヤーへ書き込めます。</p>
   </section>
   <section class="panel">
     <div class="layout-bar">
@@ -75,8 +90,10 @@
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1));
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
-const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,m:0,s:1,p:0,d:4};
+const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
+const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"pen",drawColor:colors[0]};
 let state={...defaults},past=[],future=[],hasSaved=false;
+let drawing=false,draft=null;
 const q=x=>document.querySelector(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 function load(){
   try{
@@ -86,7 +103,7 @@ function load(){
     if(old&&Array.isArray(old.notes)){state={...defaults,notes:old.notes.map(n=>n.v==="0"?{...n,v:"○"}:n),title:old.title||defaults.title};hasSaved=true}
   }catch(error){console.warn("保存データを読み込めませんでした。",error)}
 }
-function serializable(){return{notes:state.notes,title:state.title,rows:state.rows,measuresPerRow:state.measuresPerRow,m:state.m,s:state.s,p:state.p,d:state.d}}
+function serializable(){return{notes:state.notes,title:state.title,rows:state.rows,measuresPerRow:state.measuresPerRow,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,drawColor:state.drawColor}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(serializable()));hasSaved=true}catch(error){console.warn("自動保存できませんでした。",error)}}
 function snap(){past.push(JSON.stringify(serializable()));if(past.length>50)past.shift();future=[]}
 function totalMeasures(){return state.rows*state.measuresPerRow}
@@ -116,6 +133,57 @@ function render(){
   q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff"><div class="staff-head"><span>${r+1}段目</span><span>${state.measuresPerRow}小節</span></div><div class="score-wrap"><div class="labels"><span>三の糸</span><span>二の糸</span><span>一の糸</span></div><div class="score-scroll"><div class="score">${Array.from({length:state.measuresPerRow},(_,i)=>measureHtml(r*state.measuresPerRow+i)).join("")}</div></div></div></section>`).join("");
   q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;
   q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=state.measuresPerRow<=1;save();
+  renderLayers();
+}
+function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
+function uid(){return globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function"?globalThis.crypto.randomUUID():`item-${Date.now()}-${Math.random().toString(36).slice(2)}`}
+function esc(value){return String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]))}
+function pointsAttr(points){return points.map(point=>`${point.x},${point.y}`).join(" ")}
+function itemHtml(item){
+  const common=`data-item="${item.id}" stroke="${item.color}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
+  if(item.type==="pen")return `<polyline ${common} points="${pointsAttr(item.points)}"/>`;
+  if(item.type==="rect")return `<rect ${common} x="${Math.min(item.x1,item.x2)}" y="${Math.min(item.y1,item.y2)}" width="${Math.abs(item.x2-item.x1)}" height="${Math.abs(item.y2-item.y1)}" rx="5"/>`;
+  if(item.type==="arrow"){
+    const dx=item.x2-item.x1,dy=item.y2-item.y1,a=Math.atan2(dy,dx),size=16;
+    const p1={x:item.x2-size*Math.cos(a-.55),y:item.y2-size*Math.sin(a-.55)},p2={x:item.x2-size*Math.cos(a+.55),y:item.y2-size*Math.sin(a+.55)};
+    return `<g data-item="${item.id}"><line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/><polyline ${common} points="${p1.x},${p1.y} ${item.x2},${item.y2} ${p2.x},${p2.y}"/></g>`;
+  }
+  return `<text data-item="${item.id}" class="annotation-text" x="${item.x}" y="${item.y}" fill="${item.color}">${esc(item.text)}</text>`;
+}
+function renderLayers(){
+  if(!Array.isArray(state.layers))state.layers=[];
+  const svg=q("#annotations"),paper=q(".paper");
+  svg.setAttribute("viewBox","0 0 1000 1000");svg.setAttribute("preserveAspectRatio","none");
+  svg.innerHTML=state.layers.filter(layer=>layer.visible!==false).map(layer=>`<g data-layer="${layer.id}">${layer.items.map(itemHtml).join("")}</g>`).join("");
+  q("#layerSwitches").innerHTML=state.layers.length?state.layers.map(layer=>`<button class="layer-chip ${layer.id===state.activeLayerId?"on":""} ${layer.visible===false?"hidden":""}" data-layer="${layer.id}">${esc(layer.name)}<small>${layer.visible===false?"非表示":"表示中"}・${layer.items.length}件</small></button>`).join(""):"<span>レイヤーはまだありません</span>";
+  q("#drawTools").querySelectorAll("[data-tool]").forEach(button=>button.classList.toggle("on",button.dataset.tool===state.drawTool));
+  q("#colors").innerHTML=colors.map(color=>`<button class="color ${color===state.drawColor?"on":""}" style="--c:${color}" data-color="${color}" aria-label="${color}"></button>`).join("");
+  paper.classList.toggle("annotating",drawing);
+  q("#toggleDrawing").textContent=drawing?"✓ 描画を終了":"✎ 描画を開始";
+  const layer=activeLayer();q("#layerHelp").textContent=drawing?(layer?`「${layer.name}」へ書き込み中。譜面上を操作してください。`:"先に個人レイヤーを作成してください。"):"レイヤーボタンを短く押すと切替、同じボタンを長押しすると表示・非表示を切り替えます。";
+  save();
+}
+function pointFromEvent(event){const rect=q("#annotations").getBoundingClientRect();return{x:(event.clientX-rect.left)*q("#annotations").viewBox.baseVal.width/rect.width,y:(event.clientY-rect.top)*q("#annotations").viewBox.baseVal.height/rect.height}}
+function addLayer(){
+  const name=prompt("この書き込みレイヤーを使う人の名前を入力してください。","");
+  if(!name||!name.trim())return;
+  snap();const id=`layer-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;state.layers.push({id,name:name.trim(),visible:true,items:[]});state.activeLayerId=id;render();
+}
+function startDraw(event){
+  if(!drawing)return;const layer=activeLayer();if(!layer){addLayer();return}
+  const p=pointFromEvent(event);
+  if(state.drawTool==="text"){const text=prompt("譜面に入れるコメントを入力してください。","");if(text&&text.trim()){snap();layer.items.push({id:uid(),type:"text",x:p.x,y:p.y,text:text.trim(),color:state.drawColor});render()}return}
+  if(state.drawTool==="eraser"){const target=event.target.closest("[data-item]");if(target){snap();layer.items=layer.items.filter(item=>item.id!==target.dataset.item);render()}return}
+  event.preventDefault();q("#annotations").setPointerCapture(event.pointerId);draft={type:state.drawTool,start:p,points:[p]};
+}
+function moveDraw(event){if(!draft)return;event.preventDefault();const p=pointFromEvent(event);if(draft.type==="pen")draft.points.push(p);else draft.end=p}
+function endDraw(event){
+  if(!draft)return;const layer=activeLayer(),end=draft.end||pointFromEvent(event);snap();
+  if(draft.type==="pen"&&draft.points.length>1)layer.items.push({id:uid(),type:"pen",points:draft.points,color:state.drawColor});
+  else if(draft.type==="rect"&&Math.hypot(end.x-draft.start.x,end.y-draft.start.y)>5)layer.items.push({id:uid(),type:"rect",x1:draft.start.x,y1:draft.start.y,x2:end.x,y2:end.y,color:state.drawColor});
+  else if(draft.type==="arrow"&&Math.hypot(end.x-draft.start.x,end.y-draft.start.y)>5)layer.items.push({id:uid(),type:"arrow",x1:draft.start.x,y1:draft.start.y,x2:end.x,y2:end.y,color:state.drawColor});
+  else past.pop();
+  draft=null;render();
 }
 function changeLayout(rows,measures){
   rows=clamp(Number(rows)||1,1,20);measures=clamp(Number(measures)||1,1,12);
@@ -151,9 +219,23 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="addMeasure"){changeLayout(state.rows,state.measuresPerRow+1);return}
   else if(b.id==="removeMeasure"){changeLayout(state.rows,state.measuresPerRow-1);return}
   else if(b.id==="newScore"){openNew();return}
+  else if(b.id==="addLayer"){addLayer();return}
+  else if(b.id==="deleteLayer"){const layer=activeLayer();if(layer&&confirm(`「${layer.name}」レイヤーと書き込みを削除しますか？`)){snap();state.layers=state.layers.filter(x=>x.id!==layer.id);state.activeLayerId=state.layers[0]?.id||null;drawing=false;render()}return}
+  else if(b.id==="toggleDrawing"){if(!state.layers.length){addLayer();if(!state.layers.length)return}drawing=!drawing;renderLayers();return}
+  else if(b.dataset.layer){state.activeLayerId=b.dataset.layer;renderLayers();return}
+  else if(b.dataset.tool){state.drawTool=b.dataset.tool;renderLayers();return}
+  else if(b.dataset.color){state.drawColor=b.dataset.color;renderLayers();return}
   else if(b.id==="cancelNew"){q("#newDialog").close();return}
   render();
 });
+let layerPressTimer=null,longPressed=false;
+q("#layerSwitches").addEventListener("pointerdown",event=>{const button=event.target.closest("[data-layer]");if(!button)return;longPressed=false;layerPressTimer=setTimeout(()=>{longPressed=true;const layer=state.layers.find(x=>x.id===button.dataset.layer);if(layer){snap();layer.visible=layer.visible===false;render()}},600)});
+q("#layerSwitches").addEventListener("pointerup",()=>clearTimeout(layerPressTimer));
+q("#layerSwitches").addEventListener("pointerleave",()=>clearTimeout(layerPressTimer));
+q("#annotations").addEventListener("pointerdown",startDraw);
+q("#annotations").addEventListener("pointermove",moveDraw);
+q("#annotations").addEventListener("pointerup",endDraw);
+q("#annotations").addEventListener("pointercancel",()=>{draft=null});
 q("#title").addEventListener("change",e=>{snap();state.title=e.target.value;render()});
 q("#newForm").addEventListener("submit",e=>{e.preventDefault();
   if((state.notes.length||state.title!=="曲名入力")&&!confirm("現在の譜面を消して、新規作成しますか？"))return;
