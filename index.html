@@ -12,8 +12,13 @@
     .brand{margin:0;color:var(--blue);font:13px serif;letter-spacing:.12em}.actions{display:flex;flex-wrap:wrap;gap:6px}
     .actions button,.move button,.layout-controls button{min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:8px 12px}
     .paper{position:relative;margin-top:12px;padding:24px 22px 34px;background:var(--paper);border:1px solid #cabfaf;box-shadow:0 8px 25px #46331d1c;overflow:hidden}
+    .paper.preview-mode .score-scroll{overflow:hidden}
+    .paper.preview-mode .score{transform-origin:left top}
+    .paper.preview-mode .cell,.paper.preview-mode .note{pointer-events:none}
+    .paper.preview-mode .cell.cursor{background:transparent;box-shadow:none}
+    .paper.preview-mode .annotation-svg{pointer-events:none}
     .paper.annotating{touch-action:none}.annotation-svg{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none}.paper.annotating .annotation-svg{pointer-events:auto}
-    .annotation-svg text{font-family:"Yu Gothic",sans-serif}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected{filter:drop-shadow(0 0 4px #f2c500)}
+    .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected{filter:drop-shadow(0 0 4px #f2c500)}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;font:15px serif}.meta span:last-child{text-align:right}
     .meta input{border:0;border-bottom:1px dashed #aaa;background:none;text-align:center;font:28px serif;min-width:0}
     .staff{margin-top:28px}.staff-head{display:flex;justify-content:space-between;align-items:center;margin:0 0 5px 55px;font:12px serif;color:#75695d}
@@ -47,7 +52,7 @@
 </head>
 <body>
 <main class="app">
-  <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>文化譜入力</h1></div><div class="actions"><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
+  <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>文化譜入力</h1></div><div class="actions"><button id="previewScore">▣ 枠内プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
   <section class="paper">
     <div class="meta"><span>〈二上り〉 四分ノ二拍子</span><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
     <div id="scoreArea"></div>
@@ -108,19 +113,19 @@
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1));
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
-const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",drawColor:colors[0],numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white"};
+const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",drawColor:colors[0],numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:false,annotationCoordVersion:2};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,dragging=null;
 const q=x=>document.querySelector(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 function load(){
   try{
     const current=JSON.parse(localStorage.getItem(KEY));
-    if(current&&Array.isArray(current.notes)){state={...defaults,...current};hasSaved=true;return}
+    if(current&&Array.isArray(current.notes)){state={...defaults,...current,annotationCoordVersion:current.annotationCoordVersion||1};hasSaved=true;return}
     const old=JSON.parse(localStorage.getItem(OLD_KEY));
     if(old&&Array.isArray(old.notes)){state={...defaults,notes:old.notes.map(n=>n.v==="0"?{...n,v:"○"}:n),title:old.title||defaults.title};hasSaved=true}
   }catch(error){console.warn("保存データを読み込めませんでした。",error)}
 }
-function serializable(){return{notes:state.notes,title:state.title,rows:state.rows,measuresPerRow:state.measuresPerRow,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground}}
+function serializable(){return{notes:state.notes,title:state.title,rows:state.rows,measuresPerRow:state.measuresPerRow,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(serializable()));hasSaved=true}catch(error){console.warn("自動保存できませんでした。",error)}}
 function snap(){past.push(JSON.stringify(serializable()));if(past.length>50)past.shift();future=[]}
 function totalMeasures(){return state.rows*state.measuresPerRow}
@@ -149,12 +154,14 @@ function render(){
   q("#numbers").innerHTML=vals.map(v=>`<button data-v="${v}">${v}</button>`).join("");
   q("#rests").innerHTML=`<button data-v="○"><span class="mark">○</span>開放弦</button>`+rests.map(r=>`<button data-rest="${r.d}"><span class="mark">${r.mark}</span>${r.label}</button>`).join("");
   q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff"><div class="staff-head"><span>${r+1}段目</span><span>${state.measuresPerRow}小節</span></div><div class="score-wrap"><div class="labels"><span>三の糸</span><span>二の糸</span><span>一の糸</span></div><div class="score-scroll"><div class="score">${Array.from({length:state.measuresPerRow},(_,i)=>measureHtml(r*state.measuresPerRow+i)).join("")}</div></div></div></section>`).join("");
+  q(".paper").classList.toggle("preview-mode",state.preview);
+  q("#previewScore").textContent=state.preview?"✎ 編集表示へ戻る":"▣ 枠内プレビュー";
   q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;
   q("#numberColor").value=state.numberColor;q("#openColor").value=state.openColor;
   const currentNote=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);
   q("#selectedNoteColor").value=currentNote&&!currentNote.rest?(currentNote.color||(currentNote.v==="○"?state.openColor:state.numberColor)):"#222222";
   q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=state.measuresPerRow<=1;save();
-  renderLayers();
+  renderLayers();requestAnimationFrame(applyPreview);
 }
 function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
 function selectedItem(){return activeLayer()?.items.find(item=>item.id===selectedItemId)||null}
@@ -178,7 +185,17 @@ function itemHtml(item){
 function renderLayers(){
   if(!Array.isArray(state.layers))state.layers=[];
   const svg=q("#annotations"),paper=q(".paper");
-  svg.setAttribute("viewBox","0 0 1000 1000");svg.setAttribute("preserveAspectRatio","none");
+  const rect=svg.getBoundingClientRect(),logicalWidth=1000,logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
+  if(state.annotationCoordVersion!==2){
+    state.layers.forEach(layer=>layer.items.forEach(item=>{
+      const scalePoint=point=>{point.y=point.y*logicalHeight/1000};
+      if(item.type==="pen")item.points.forEach(scalePoint);
+      else if(item.type==="text")item.y=item.y*logicalHeight/1000;
+      else{item.y1=item.y1*logicalHeight/1000;item.y2=item.y2*logicalHeight/1000}
+    }));
+    state.annotationCoordVersion=2;
+  }
+  svg.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);svg.setAttribute("preserveAspectRatio","xMinYMin meet");
   svg.innerHTML=state.layers.filter(layer=>layer.visible!==false).map(layer=>`<g data-layer="${layer.id}">${layer.items.map(itemHtml).join("")}</g>`).join("");
   q("#layerSwitches").innerHTML=state.layers.length?state.layers.map(layer=>`<button class="layer-chip ${layer.id===state.activeLayerId?"on":""} ${layer.visible===false?"hidden":""}" data-layer="${layer.id}">${esc(layer.name)}<small>${layer.visible===false?"非表示":"表示中"}・${layer.items.length}件</small></button>`).join(""):"<span>レイヤーはまだありません</span>";
   q("#drawTools").querySelectorAll("[data-tool]").forEach(button=>button.classList.toggle("on",button.dataset.tool===state.drawTool));
@@ -190,6 +207,18 @@ function renderLayers(){
   q("#toggleDrawing").textContent=drawing?"✓ 描画を終了":"✎ 描画を開始";
   const layer=activeLayer();q("#layerHelp").textContent=drawing?(layer?(state.drawTool==="select"?"動かしたい線・矢印・枠・コメントをタップし、そのまま指またはペンで移動します。":`「${layer.name}」へ書き込み中。譜面上を操作してください。`):"先に個人レイヤーを作成してください。"):"レイヤーボタンを短く押すと切替、同じボタンを長押しすると表示・非表示を切り替えます。";
   save();
+}
+function applyPreview(){
+  document.querySelectorAll(".score-scroll").forEach(scroll=>{
+    const score=scroll.querySelector(".score");
+    score.style.transform="";scroll.style.height="";
+    if(!state.preview)return;
+    const naturalWidth=score.scrollWidth,scale=Math.min(1,scroll.clientWidth/Math.max(1,naturalWidth));
+    score.style.transform=`scale(${scale})`;
+    scroll.style.height=`${Math.ceil(score.offsetHeight*scale)+4}px`;
+    scroll.scrollLeft=0;
+  });
+  renderLayers();
 }
 function pointFromEvent(event){const rect=q("#annotations").getBoundingClientRect();return{x:(event.clientX-rect.left)*q("#annotations").viewBox.baseVal.width/rect.width,y:(event.clientY-rect.top)*q("#annotations").viewBox.baseVal.height/rect.height}}
 function addLayer(){
@@ -258,6 +287,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="addMeasure"){changeLayout(state.rows,state.measuresPerRow+1);return}
   else if(b.id==="removeMeasure"){changeLayout(state.rows,state.measuresPerRow-1);return}
   else if(b.id==="newScore"){openNew();return}
+  else if(b.id==="previewScore"){state.preview=!state.preview;if(state.preview)drawing=false;render();return}
   else if(b.id==="addLayer"){addLayer();return}
   else if(b.id==="deleteLayer"){const layer=activeLayer();if(layer&&confirm(`「${layer.name}」レイヤーと書き込みを削除しますか？`)){snap();state.layers=state.layers.filter(x=>x.id!==layer.id);state.activeLayerId=state.layers[0]?.id||null;drawing=false;render()}return}
   else if(b.id==="toggleDrawing"){if(!state.layers.length){addLayer();if(!state.layers.length)return}drawing=!drawing;renderLayers();return}
@@ -291,6 +321,7 @@ q("#newForm").addEventListener("submit",e=>{e.preventDefault();
   const rows=clamp(+q("#initialRows").value,1,20),measures=clamp(+q("#initialMeasures").value,1,12);
   snap();state={...defaults,notes:[],layers:[],rows,measuresPerRow:measures};selectedItemId=null;q("#newDialog").close();render();
 });
+window.addEventListener("resize",()=>{applyPreview()},{passive:true});
 render();if(!hasSaved)openNew();
 })();
 </script>
