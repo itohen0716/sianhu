@@ -55,7 +55,7 @@
     .base-layer-note{margin:8px 0 0;color:#75695d;font-size:12px}
     @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.nums{grid-template-columns:repeat(5,1fr)}.nums button{min-height:54px}.rests{grid-template-columns:repeat(2,1fr)}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}.colors{margin-left:0}.draw-tools button{flex:1 0 28%}}
     @page{size:A4 portrait;margin:7mm}
-    @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{min-width:0!important;flex:1 1 auto;grid-template-rows:repeat(3,var(--print-row-height,46px))}.labels{grid-template-rows:repeat(3,var(--print-row-height,46px));line-height:var(--print-row-height,46px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;margin-top:0;padding-top:10mm}.note{height:calc(var(--print-row-height,46px) * .86)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell.cursor{background:none!important;box-shadow:none!important}.meta{grid-template-columns:1fr 2fr 1fr}}
+    @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{min-width:0!important;flex:1 1 auto;grid-template-rows:repeat(3,var(--print-row-height,46px))}.labels{grid-template-rows:repeat(3,var(--print-row-height,46px));line-height:var(--print-row-height,46px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;padding-top:0}.note{height:calc(var(--print-row-height,46px) * .86)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell.cursor{background:none!important;box-shadow:none!important}.meta{grid-template-columns:1fr 2fr 1fr}}
   </style>
 </head>
 <body class="annotation-page">
@@ -474,21 +474,31 @@ q("#printForm").addEventListener("submit",event=>{
   save();q("#printDialog").close();render();requestAnimationFrame(()=>window.print());
 });
 function applyPrintLayout(){
-  const pageRows=currentPageRows(),rowCount=Math.max(...pageRows,1),availableHeight=940,headerHeight=64;
-  const staffGap=rowCount<=5?20:clamp(Math.floor((availableHeight-headerHeight)/(rowCount*7)),6,20);
-  const rowHeight=rowCount<=5?46:clamp(Math.floor((availableHeight-headerHeight-rowCount*staffGap)/(rowCount*3)),10,46);
-  const noteSize=clamp(Math.floor(rowHeight*.54),8,25),paper=q(".paper");
-  paper.style.setProperty("--print-staff-gap",`${staffGap}px`);
-  paper.style.setProperty("--print-row-height",`${rowHeight}px`);
-  paper.style.setProperty("--print-note-size",`${noteSize}px`);
   render();
+  const pageRows=currentPageRows(),staffs=qAll(".staff"),printableHeight=1050,firstPageHeader=60;
+  let staffIndex=0;
+  pageRows.forEach((count,pageIndex)=>{
+    const usableHeight=printableHeight-(pageIndex===0?firstPageHeader:0);
+    const distribute=count>=6;
+    const rowHeight=distribute?clamp(Math.floor((usableHeight-(count+1)*10)/(count*3)),18,46):46;
+    const staffGap=distribute?clamp(Math.floor((usableHeight-count*rowHeight*3)/(count+1)),8,40):20;
+    const noteSize=clamp(Math.floor(rowHeight*.54),10,25);
+    for(let row=0;row<count;row+=1){
+      const staff=staffs[staffIndex++];
+      if(!staff)break;
+      staff.style.setProperty("--print-staff-gap",`${staffGap}px`);
+      staff.style.setProperty("--print-row-height",`${rowHeight}px`);
+      staff.style.setProperty("--print-note-size",`${noteSize}px`);
+    }
+  });
 }
 window.addEventListener("beforeprint",applyPrintLayout);
 window.addEventListener("afterprint",()=>{
-  const paper=q(".paper");
-  paper.style.removeProperty("--print-staff-gap");
-  paper.style.removeProperty("--print-row-height");
-  paper.style.removeProperty("--print-note-size");
+  qAll(".staff").forEach(staff=>{
+    staff.style.removeProperty("--print-staff-gap");
+    staff.style.removeProperty("--print-row-height");
+    staff.style.removeProperty("--print-note-size");
+  });
   render();
 });
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
