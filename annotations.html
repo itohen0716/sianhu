@@ -71,11 +71,6 @@
     <div id="drawTools" class="draw-tools">
       <button data-tool="select">選択・移動</button><button data-tool="pen">自由線</button><button data-tool="arrow">矢印</button><button data-tool="rect">枠</button><button data-tool="text">コメント</button><button data-tool="eraser">消しゴム</button>
       <div id="colors" class="colors"></div>
-      <div id="symbolTools" class="symbol-tools">
-        <strong>奏法・指番号（「奏法」レイヤー専用）</strong>
-        <button data-symbol="ス" title="スクイ">スクイ<br>ス</button><button data-symbol="ハ" title="ハジキ">ハジキ<br>ハ</button><button data-symbol="スリ" title="スリ">スリ<br>スリ</button><button data-symbol="ウ" title="ウチ">ウチ<br>ウ</button><button data-symbol="「" title="押し撥">押し撥<br>「</button><button data-symbol="ケ" title="消し">消し<br>ケ</button>
-        <button class="roman" data-symbol="Ⅰ" title="指番号Ⅰ">Ⅰ</button><button class="roman" data-symbol="Ⅱ" title="指番号Ⅱ">Ⅱ</button><button class="roman" data-symbol="Ⅲ" title="指番号Ⅲ">Ⅲ</button>
-      </div>
     </div>
     <div class="edit-tools"><button id="editComment">コメント再編集</button><button id="deleteItem">選択項目を削除</button><button id="bringFront">最前面へ</button></div>
     <div class="color-settings">
@@ -127,7 +122,7 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,drawTool:"select",selectedSymbol:null,drawColor:colors[0],numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:false,annotationCoordVersion:2};
+const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:false,annotationCoordVersion:2};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,dragging=null;
 const q=x=>document.querySelector(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
@@ -144,15 +139,15 @@ function ensureTechniqueLayer(){
   let layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
   if(!layer){layer={id:TECHNIQUE_LAYER_ID,name:"奏法",visible:true,fixed:true,items:[]};state.layers.unshift(layer)}
   layer.name="奏法";layer.fixed=true;
-  if(!state.layers.some(item=>item.id===state.activeLayerId))state.activeLayerId=TECHNIQUE_LAYER_ID;
+  if(!state.layers.some(item=>item.id===state.activeLayerId&&item.id!==TECHNIQUE_LAYER_ID))state.activeLayerId=state.layers.find(item=>item.id!==TECHNIQUE_LAYER_ID)?.id||null;
 }
-function serializable(){return{notes:state.notes,title:state.title,rows:state.rows,measuresPerRow:state.measuresPerRow,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion}}
+function serializable(){return{notes:state.notes,title:state.title,rows:state.rows,measuresPerRow:state.measuresPerRow,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion}}
 function save(){
   try{
     const latest=JSON.parse(localStorage.getItem(KEY)||"null")||{};
     const current=serializable();
     const merged=IS_ANNOTATION_PAGE
-      ?{...latest,...current,notes:latest.notes||current.notes,title:latest.title||current.title,rows:latest.rows||current.rows,measuresPerRow:latest.measuresPerRow||current.measuresPerRow,numberColor:latest.numberColor||current.numberColor,openColor:latest.openColor||current.openColor}
+      ?{...latest,...current,notes:latest.notes||current.notes,title:latest.title||current.title,rows:latest.rows||current.rows,measuresPerRow:latest.measuresPerRow||current.measuresPerRow,measureOffsets:latest.measureOffsets||current.measureOffsets,numberColor:latest.numberColor||current.numberColor,openColor:latest.openColor||current.openColor,layers:[(latest.layers||[]).find(layer=>layer.id===TECHNIQUE_LAYER_ID),...current.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID)].filter(Boolean)}
       :{...current,layers:latest.layers||current.layers,activeLayerId:latest.activeLayerId||current.activeLayerId};
     localStorage.setItem(KEY,JSON.stringify(merged));Object.assign(state,merged);hasSaved=true;
   }catch(error){console.warn("自動保存できませんでした。",error)}
@@ -163,12 +158,12 @@ function measureWidth(m){
   const notes=state.notes.filter(n=>n.m===m);
   const widest=notes.reduce((max,n)=>Math.max(max,String(n.v||"").length),1);
   const perString=Math.max(0,...[1,2,3].map(s=>notes.filter(n=>n.s===s).reduce((sum,n)=>sum+(n.d===1?1:n.d===2?.55:.3),0)));
-  return Math.max(180,Math.ceil(perString*31+widest*8));
+  return Math.max(120,Math.max(180,Math.ceil(perString*31+widest*8))+(state.measureOffsets?.[m]||0));
 }
 function noteHtml(n,m,s){
   const value=n.rest?(rests.find(r=>r.d===n.d)||rests[0]).mark:n.v;
   const color=n.rest?"#222222":(n.color||(n.v==="○"?state.openColor:state.numberColor));
-  return `<button class="note d${n.d}${n.rest?" rest":""}" style="grid-column:${n.p+1}/span ${n.d};--note-color:${color}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b></button>`;
+  return `<button class="note d${n.d}${n.rest?" rest":""}" style="grid-column:${n.p+1}/span ${n.d};--note-color:${color};transform:translateX(${n.x||0}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b></button>`;
 }
 function measureHtml(m){
   return `<div class="measure ${m===state.m?"on":""}" style="--measure-width:${measureWidth(m)}px">${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
@@ -196,6 +191,26 @@ function render(){
 function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
 function selectedItem(){return activeLayer()?.items.find(item=>item.id===selectedItemId)||null}
 function uid(){return globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function"?globalThis.crypto.randomUUID():`item-${Date.now()}-${Math.random().toString(36).slice(2)}`}
+function anchorKey(m,s,p){return`${m},${s},${p}`}
+function noteAnchorPoint(anchor,side="above"){
+  const svg=q("#annotations"),note=q(`[data-note="${anchorKey(anchor.m,anchor.s,anchor.p)}"]`);
+  if(!svg||!note)return null;
+  const svgRect=svg.getBoundingClientRect(),noteRect=note.getBoundingClientRect(),view=svg.viewBox.baseVal;
+  if(!svgRect.width||!svgRect.height)return null;
+  return{
+    x:(noteRect.left+noteRect.width/2-svgRect.left)*view.width/svgRect.width,
+    y:((side==="below"?noteRect.bottom+20:noteRect.top-8)-svgRect.top)*view.height/svgRect.height
+  };
+}
+function syncLinkedSymbols(){
+  const layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
+  if(!layer)return;
+  layer.items.forEach(item=>{
+    if(item.type!=="symbol"||!item.anchor)return;
+    const point=noteAnchorPoint(item.anchor,item.side||"above");
+    if(point){item.x=point.x+(item.offsetX||0);item.y=point.y+(item.offsetY||0)}
+  });
+}
 function esc(value){return String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]))}
 function pointsAttr(points){return points.map(point=>`${point.x},${point.y}`).join(" ")}
 function itemHtml(item){
@@ -230,18 +245,19 @@ function renderLayers(){
     state.annotationCoordVersion=2;
   }
   svg.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);svg.setAttribute("preserveAspectRatio","xMinYMin meet");
+  syncLinkedSymbols();
   svg.innerHTML=state.layers.filter(layer=>layer.visible!==false).map(layer=>`<g data-layer="${layer.id}">${layer.items.map(itemHtml).join("")}</g>`).join("");
-  q("#layerSwitches").innerHTML=state.layers.map(layer=>`<button class="layer-chip ${layer.fixed?"fixed":""} ${layer.id===state.activeLayerId?"on":""} ${layer.visible===false?"hidden":""}" data-layer="${layer.id}">${esc(layer.name)}<small>${layer.visible===false?"非表示":"表示中"}・${layer.items.length}件${layer.fixed?"・削除不可":""}</small></button>`).join("");
+  const personalLayers=state.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID);
+  q("#layerSwitches").innerHTML=personalLayers.length?personalLayers.map(layer=>`<button class="layer-chip ${layer.id===state.activeLayerId?"on":""} ${layer.visible===false?"hidden":""}" data-layer="${layer.id}">${esc(layer.name)}<small>${layer.visible===false?"非表示":"表示中"}・${layer.items.length}件</small></button>`).join(""):"<span>個人レイヤーはまだありません</span>";
   q("#drawTools").querySelectorAll("[data-tool]").forEach(button=>button.classList.toggle("on",button.dataset.tool===state.drawTool));
   q("#colors").innerHTML=colors.map(color=>`<button class="color ${color===state.drawColor?"on":""}" style="--c:${color}" data-color="${color}" aria-label="${color}"></button>`).join("");
-  q("#symbolTools").querySelectorAll("[data-symbol]").forEach(button=>button.classList.toggle("on",button.dataset.symbol===state.selectedSymbol&&state.drawTool==="symbol"));
   const item=selectedItem();
   q("#itemColor").value=item?.color||state.drawColor;q("#textSize").value=String(item?.size||state.textSize);q("#textBackground").value=item?.background||state.textBackground;
   q("#editComment").disabled=item?.type!=="text";q("#deleteItem").disabled=!item;q("#bringFront").disabled=!item;
-  q("#deleteLayer").disabled=Boolean(activeLayer()?.fixed);
+  q("#deleteLayer").disabled=!activeLayer();
   paper.classList.toggle("annotating",drawing);
   q("#toggleDrawing").textContent=drawing?"✓ 描画を終了":"✎ 描画を開始";
-  const layer=activeLayer();q("#layerHelp").textContent=drawing?(layer?(state.drawTool==="select"?"動かしたい記号・線・矢印・枠・コメントをタップし、そのまま指またはペンで移動します。":state.drawTool==="symbol"?`「${state.selectedSymbol}」を置く位置をタップしてください。`:`「${layer.name}」へ書き込み中。譜面上を操作してください。`):"先にレイヤーを選択してください。"):"「奏法」は標準装備の削除できないレイヤーです。レイヤーボタンの長押しで表示・非表示を切り替えられます。";
+  const layer=activeLayer();q("#layerHelp").textContent=drawing?(layer?(state.drawTool==="select"?"動かしたい線・矢印・枠・コメントをタップし、そのまま指またはペンで移動します。":`「${layer.name}」へ書き込み中。譜面上を操作してください。`):"先に個人レイヤーを作成してください。"):"奏法を含む写譜は最下層に固定され、このページでは変更できません。";
   save();
 }
 function applyPreview(){
@@ -263,18 +279,13 @@ function addLayer(){
   snap();const id=`layer-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;state.layers.push({id,name:name.trim(),visible:true,items:[]});state.activeLayerId=id;render();
 }
 function startDraw(event){
-  if(!drawing)return;const layer=activeLayer();if(!layer){addLayer();return}
+  if(!drawing)return;const layer=activeLayer();if(!layer||layer.id===TECHNIQUE_LAYER_ID){addLayer();return}
   const p=pointFromEvent(event);
   if(state.drawTool==="select"){
     const target=event.target.closest("[data-item]"),id=target?.dataset.item;
     if(!id){selectedItemId=null;renderLayers();return}
     selectedItemId=id;const item=selectedItem();if(!item)return;
     event.preventDefault();snap();dragging={item,last:p};q("#annotations").setPointerCapture(event.pointerId);renderLayers();return;
-  }
-  if(state.drawTool==="symbol"){
-    if(layer.id!==TECHNIQUE_LAYER_ID){alert("奏法・指番号は「奏法」レイヤーを選んで配置してください。");return}
-    if(!state.selectedSymbol)return;
-    snap();const item={id:uid(),type:"symbol",x:p.x,y:p.y,text:state.selectedSymbol,color:state.drawColor,size:24};layer.items.push(item);selectedItemId=item.id;render();return;
   }
   if(state.drawTool==="text"){const text=prompt("譜面に入れるコメントを入力してください。","");if(text&&text.trim()){snap();const item={id:uid(),type:"text",x:p.x,y:p.y,text:text.trim(),color:state.drawColor,size:state.textSize,background:state.textBackground};layer.items.push(item);selectedItemId=item.id;render()}return}
   if(state.drawTool==="eraser"){const target=event.target.closest("[data-item]");if(target){snap();layer.items=layer.items.filter(item=>item.id!==target.dataset.item);render()}return}
@@ -330,11 +341,10 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="newScore"){openNew();return}
   else if(b.id==="previewScore"){state.preview=!state.preview;if(state.preview)drawing=false;render();return}
   else if(b.id==="addLayer"){addLayer();return}
-  else if(b.id==="deleteLayer"){const layer=activeLayer();if(layer?.fixed){alert("「奏法」レイヤーは標準レイヤーのため削除できません。");return}if(layer&&confirm(`「${layer.name}」レイヤーと書き込みを削除しますか？`)){snap();state.layers=state.layers.filter(x=>x.id!==layer.id);state.activeLayerId=TECHNIQUE_LAYER_ID;drawing=false;render()}return}
+  else if(b.id==="deleteLayer"){const layer=activeLayer();if(layer&&confirm(`「${layer.name}」レイヤーと書き込みを削除しますか？`)){snap();state.layers=state.layers.filter(x=>x.id!==layer.id);state.activeLayerId=state.layers.find(x=>x.id!==TECHNIQUE_LAYER_ID)?.id||null;drawing=false;render()}return}
   else if(b.id==="toggleDrawing"){if(!state.layers.length){addLayer();if(!state.layers.length)return}drawing=!drawing;renderLayers();return}
   else if(b.dataset.layer){state.activeLayerId=b.dataset.layer;selectedItemId=null;renderLayers();return}
   else if(b.dataset.tool){state.drawTool=b.dataset.tool;renderLayers();return}
-  else if(b.dataset.symbol){state.activeLayerId=TECHNIQUE_LAYER_ID;state.drawTool="symbol";state.selectedSymbol=b.dataset.symbol;selectedItemId=null;renderLayers();return}
   else if(b.dataset.color){state.drawColor=b.dataset.color;renderLayers();return}
   else if(b.id==="deleteItem"){const layer=activeLayer(),item=selectedItem();if(layer&&item){snap();layer.items=layer.items.filter(x=>x.id!==item.id);selectedItemId=null;render()}return}
   else if(b.id==="editComment"){const item=selectedItem();if(item?.type==="text"){const text=prompt("コメントを編集してください。",item.text);if(text!==null&&text.trim()){snap();item.text=text.trim();render()}}return}
