@@ -573,20 +573,27 @@ q("#printForm").addEventListener("submit",event=>{
 function applyPrintLayout(){
   cursorVisible=false;
   render();
-  const pageRows=currentPageRows(),staffs=qAll(".staff"),printableHeight=1050,firstPageHeader=60;
+  const pageRows=currentPageRows(),staffs=qAll(".staff");
+  const printableHeight=283*96/25.4;
+  const titleGapExtra=10;
+  const metaHeight=q(".meta")?.getBoundingClientRect().height||34;
   let staffIndex=0;
   pageRows.forEach((count,pageIndex)=>{
-    const usableHeight=printableHeight-(pageIndex===0?firstPageHeader:0);
+    const usableHeight=printableHeight-(pageIndex===0?metaHeight:0);
     const distribute=count>=6;
-    const rowHeight=distribute?clamp(Math.floor((usableHeight-(count+1)*10)/(count*3)),18,46):46;
-    const staffGap=distribute?clamp(Math.floor((usableHeight-count*rowHeight*3)/(count+1)),8,40):20;
-    const noteSize=clamp(Math.floor(rowHeight*.54),10,25);
+    const rowHeight=distribute?clamp(70-count*4.2,28,42):46;
+    const extraFirstGap=distribute&&pageIndex===0?titleGapExtra:0;
+    const staffGap=distribute
+      ?Math.max(8,(usableHeight-count*rowHeight*3-extraFirstGap)/(count+1))
+      :20;
+    const noteSize=clamp(rowHeight*.54,10,25);
     for(let row=0;row<count;row+=1){
       const staff=staffs[staffIndex++];
       if(!staff)break;
-      staff.style.setProperty("--print-staff-gap",`${staffGap}px`);
+      const gap=staffGap+(row===0?extraFirstGap:0);
+      staff.style.setProperty("--print-staff-gap",`${gap.toFixed(2)}px`);
       staff.style.setProperty("--print-row-height",`${rowHeight}px`);
-      staff.style.setProperty("--print-note-size",`${noteSize}px`);
+      staff.style.setProperty("--print-note-size",`${noteSize.toFixed(2)}px`);
     }
   });
 }
