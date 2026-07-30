@@ -7,21 +7,20 @@
   <style>
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
     *{box-sizing:border-box}body{margin:0;background:#e5ded3;color:var(--ink);font-family:"Yu Gothic",sans-serif}
-    button,input{font:inherit}button{cursor:pointer}.app{max-width:1100px;margin:auto;padding:14px}
+    button,input{font:inherit}button{cursor:pointer}.app{max-width:1100px;margin:auto;padding:14px}main.app{display:flex;flex-direction:column}
     .head{display:flex;justify-content:space-between;align-items:end;gap:10px}h1{margin:0;font:600 27px serif}
     .brand{margin:0;color:var(--blue);font:13px serif;letter-spacing:.12em}.actions{display:flex;flex-wrap:wrap;gap:6px}
     .actions button,.move button,.layout-controls button{min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:8px 12px}
     .paper{position:relative;margin-top:12px;padding:24px 22px 34px;background:var(--paper);border:1px solid #cabfaf;box-shadow:0 8px 25px #46331d1c;overflow:hidden}
     .paper.preview-mode .score-scroll{overflow:hidden}
-    .paper.preview-mode .score{transform-origin:left center}
-    .paper.preview-mode .cell,.paper.preview-mode .note{pointer-events:none}
-    .paper.preview-mode .cell.cursor{background:transparent;box-shadow:none}
-    .paper.preview-mode .annotation-svg{pointer-events:none}
+    .paper.preview-mode .score{width:100%;min-width:0}
+    .paper.preview-mode .measure{min-width:0;flex:1 1 0}
+    .paper.preview-mode .string{grid-template-columns:repeat(16,minmax(0,1fr))}
     .paper.annotating{touch-action:none}.annotation-svg{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none}.paper.annotating .annotation-svg{pointer-events:auto}
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected{filter:drop-shadow(0 0 4px #f2c500)}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;font:15px serif}.meta span:last-child{text-align:right}
     .meta input{border:0;border-bottom:1px dashed #aaa;background:none;text-align:center;font:28px serif;min-width:0}
-    .staff{margin-top:28px}.staff-head{display:flex;justify-content:space-between;align-items:center;margin:0 0 5px 55px;font:12px serif;color:#75695d}
+    .staff{margin-top:28px}
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,46px);font:12px/46px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
     .score{display:flex;width:max-content;min-width:100%}.measure{display:grid;grid-template-rows:repeat(3,46px);flex:1 0 var(--measure-width,180px);border-left:1.5px solid var(--ink);position:relative}
@@ -48,17 +47,18 @@
     .form-grid label{font-size:13px;font-weight:bold}.form-grid input{width:100%;margin-top:6px;padding:11px;border:1px solid #bcae9e;border-radius:9px;font-size:18px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
     .dialog-actions button{min-height:44px;padding:9px 18px;border:1px solid #bcae9e;border-radius:9px;background:#fff}.dialog-actions .primary{background:var(--blue);color:#fff;border-color:var(--blue)}
     .page-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #477d91;border-radius:9px;background:#477d91;color:#fff;padding:8px 12px;text-decoration:none}
-    .symbol-tools{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.symbol-tools button{min-width:54px;min-height:48px;border:1px solid #bcae9e;border-radius:9px;background:#fff}.symbol-tools button.on{background:#477d91;color:#fff}.symbol-tools .roman{font-family:"Yu Mincho","Times New Roman",serif;font-size:21px}.layer-chip.fixed::before{content:"🔒 ";font-size:12px}.annotation-item.symbol-item text{font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}
+    .symbol-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.symbol-tools button{min-width:48px;min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:4px 7px;font-size:13px;line-height:1.2}.symbol-tools button.on{background:#477d91;color:#fff}.symbol-tools .roman{font-family:"Yu Mincho","Times New Roman",serif;font-size:18px}.layer-chip.fixed::before{content:"🔒 ";font-size:12px}.annotation-item.symbol-item text{font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}
     body.annotation-page .panel,body.annotation-page .note-color-panel,body.annotation-page #newScore,body.annotation-page #undo,body.annotation-page #redo{display:none}
     body.annotation-page #scoreArea{pointer-events:none}
+    body.score-page .head{order:0}body.score-page .paper{order:1}body.score-page .panel{order:2}body.score-page .layer-panel{order:3}body.score-page .note-color-panel{order:4}
     .base-layer-note{margin:8px 0 0;color:#75695d;font-size:12px}
     @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.nums{grid-template-columns:repeat(5,1fr)}.nums button{min-height:54px}.rests{grid-template-columns:repeat(2,1fr)}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}.colors{margin-left:0}.draw-tools button{flex:1 0 28%}}
-    @media print{body{background:#fff}.app{max-width:none;padding:0}.head,.panel{display:none}.paper{border:0;box-shadow:none;margin:0;padding:8mm}.score-scroll{overflow:visible}.score{width:100%}.measure{min-width:0!important;flex:1 1 auto}.staff{break-inside:avoid}.meta{grid-template-columns:1fr 2fr 1fr}}
+    @media print{body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.note-color-panel{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:8mm}.score-scroll{overflow:visible}.score{width:100%}.measure{min-width:0!important;flex:1 1 auto}.staff{break-inside:avoid}.meta{grid-template-columns:1fr 2fr 1fr}}
   </style>
 </head>
 <body class="score-page">
 <main class="app">
-  <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>写譜</h1></div><div class="actions"><a class="page-link" href="./annotations.html">✎ 書き込みページ</a><button id="previewScore">▣ 枠内プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
+  <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>写譜</h1></div><div class="actions"><a class="page-link" href="./annotations.html">✎ 書き込みページ</a><button id="printPreview">印刷プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
   <section class="paper">
     <div class="meta"><span>〈二上り〉 四分ノ二拍子</span><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
     <div id="scoreArea"></div>
@@ -126,7 +126,7 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:24,textBackground:"none",preview:false,annotationCoordVersion:2};
+const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null;
 const q=x=>document.querySelector(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
@@ -173,7 +173,8 @@ function measureHtml(m){
 }
 function render(){
   const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,15);
-  q("#title").value=state.title;q("#title").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent=`${state.rows}段・1段${state.measuresPerRow}小節`;
+  state.preview=true;
+  q("#title").value=state.title;q("#title").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
   q("#rowCount").textContent=`${state.rows}段`;q("#measureCount").textContent=`${state.measuresPerRow}小節`;
   const row=Math.floor(state.m/state.measuresPerRow);
   q("#status").textContent=`${row+1}段・${state.m%state.measuresPerRow+1}小節・${["","一","二","三"][state.s]}の糸・${Math.floor(state.p/4)+1}拍目`;
@@ -181,9 +182,8 @@ function render(){
   q("#durations").innerHTML=[[4,"4分","下線なし"],[2,"8分","下線1本"],[1,"16分","下線2本"]].map(x=>`<button class="${x[0]===state.d?"on":""}" data-d="${x[0]}"><b>${x[1]}</b><small>${x[2]}</small></button>`).join("");
   q("#numbers").innerHTML=vals.map(v=>`<button data-v="${v}">${v}</button>`).join("");
   q("#rests").innerHTML=`<button data-v="○"><span class="mark">○</span>開放弦</button>`+rests.map(r=>`<button data-rest="${r.d}"><span class="mark">${r.mark}</span>${r.label}</button>`).join("");
-  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff"><div class="staff-head"><span>${r+1}段目</span><span>${state.measuresPerRow}小節</span></div><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:state.measuresPerRow},(_,i)=>measureHtml(r*state.measuresPerRow+i)).join("")}</div></div></div></section>`).join("");
+  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:state.measuresPerRow},(_,i)=>measureHtml(r*state.measuresPerRow+i)).join("")}</div></div></div></section>`).join("");
   q(".paper").classList.toggle("preview-mode",state.preview);
-  q("#previewScore").textContent=state.preview?"✎ 編集表示へ戻る":"▣ 枠内プレビュー";
   q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;
   q("#numberColor").value=state.numberColor;q("#openColor").value=state.openColor;
   const currentNote=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);
@@ -244,8 +244,8 @@ function itemHtml(item){
     return `<g class="annotation-item${selected}" data-item="${item.id}"><line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/><polyline ${common} points="${p1.x},${p1.y} ${item.x2},${item.y2} ${p2.x},${p2.y}"/></g>`;
   }
   if(item.type==="symbol"){
-    const size=item.size||24;
-    return `<g class="annotation-item symbol-item text-item${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}">${esc(item.text)}</text></g>`;
+    const size=Math.min(item.size||20,20);
+    return `<g class="annotation-item symbol-item text-item${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text></g>`;
   }
   const background=item.background||"white",bg=background==="none"?"none":background==="translucent"?"rgba(255,255,255,.72)":"#fff";
   const size=item.size||20,width=Math.max(55,item.text.length*size*.95),height=size*1.55;
@@ -285,10 +285,6 @@ function applyPreview(){
   document.querySelectorAll(".score-scroll").forEach(scroll=>{
     const score=scroll.querySelector(".score");
     score.style.transform="";scroll.style.height="";
-    if(!state.preview)return;
-    const naturalWidth=score.scrollWidth,scale=Math.min(1,scroll.clientWidth/Math.max(1,naturalWidth));
-    score.style.transform=`scaleX(${scale})`;
-    scroll.style.height="";
     scroll.scrollLeft=0;
   });
   renderLayers();
@@ -313,7 +309,7 @@ function startDraw(event){
     const note=nearestPlayableNote(p);
     if(!note){alert("関連付ける数字または開放弦の近くをタップしてください。");return}
     snap();const side=state.symbolSide||"above",anchor={m:note.m,s:note.s,p:note.p};
-    const item={id:uid(),type:"symbol",x:p.x,y:p.y,text:state.selectedSymbol,color:state.drawColor,size:24,anchor,side,offsetX:0,offsetY:0};
+    const item={id:uid(),type:"symbol",x:p.x,y:p.y,text:state.selectedSymbol,color:state.drawColor,size:20,anchor,side,offsetX:0,offsetY:0};
     layer.items.push(item);selectedItemId=item.id;render();return;
   }
   if(state.drawTool==="text"){const text=prompt("譜面に入れるコメントを入力してください。","");if(text&&text.trim()){snap();const item={id:uid(),type:"text",x:p.x,y:p.y,text:text.trim(),color:state.drawColor,size:state.textSize,background:state.textBackground};layer.items.push(item);selectedItemId=item.id;render()}return}
@@ -375,7 +371,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="addMeasure"){changeLayout(state.rows,state.measuresPerRow+1);return}
   else if(b.id==="removeMeasure"){changeLayout(state.rows,state.measuresPerRow-1);return}
   else if(b.id==="newScore"){openNew();return}
-  else if(b.id==="previewScore"){state.preview=!state.preview;if(state.preview)drawing=false;render();return}
+  else if(b.id==="printPreview"){window.print();return}
   else if(b.id==="deleteLayer"){alert("「奏法」レイヤーは標準レイヤーのため削除できません。");return}
   else if(b.id==="toggleDrawing"){drawing=!drawing;renderLayers();return}
   else if(b.dataset.layer){state.activeLayerId=b.dataset.layer;selectedItemId=null;renderLayers();return}
@@ -414,7 +410,7 @@ q("#annotations").addEventListener("pointerup",endDraw);
 q("#annotations").addEventListener("pointercancel",()=>{draft=null;dragging=null});
 let scoreDrag=null;
 q("#scoreArea").addEventListener("pointerdown",event=>{
-  if(drawing||state.preview)return;
+  if(drawing)return;
   const noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline]");
   if(noteButton){
     const [m,s,p]=noteButton.dataset.note.split(",").map(Number),note=state.notes.find(n=>n.m===m&&n.s===s&&n.p===p);
