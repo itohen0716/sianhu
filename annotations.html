@@ -14,28 +14,28 @@
     .paper{position:relative;margin-top:12px;padding:24px 22px 34px;background:var(--paper);border:1px solid #cabfaf;box-shadow:0 8px 25px #46331d1c;overflow:hidden}
     .paper.preview-mode .score-scroll{overflow:hidden}
     .paper.preview-mode .score{width:100%;min-width:0}
-    .paper.preview-mode .measure{min-width:0;flex:1 1 0}
+    .paper.preview-mode .measure{min-width:0;width:auto;flex:var(--measure-grow,384) 1 0}
     .paper.preview-mode .string{grid-template-columns:repeat(16,minmax(0,1fr))}
     .paper.annotating{touch-action:none}.annotation-svg{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none}.paper.annotating .annotation-svg{pointer-events:auto}
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected{filter:drop-shadow(0 0 4px #f2c500)}
-    .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;font:15px serif}.meta span:last-child{text-align:right}
+    .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;font:15px serif}.score-meta{display:flex;align-items:center;gap:6px}.score-meta select,.score-meta input{border:0;border-bottom:1px dashed #aaa;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
     .meta input{border:0;border-bottom:1px dashed #aaa;background:none;text-align:center;font:28px serif;min-width:0}
     .staff{margin-top:28px}
-    .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,38px);font:12px/38px serif;text-align:right;padding-right:7px}
+    .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,34px);font:12px/34px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
-    .score{display:flex;width:max-content;min-width:100%}.measure{display:grid;grid-template-rows:repeat(3,38px);flex:1 0 var(--measure-width,180px);border-left:1.5px solid var(--ink);position:relative}
-    .measure:last-child{border-right:2px solid var(--ink)}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(16,minmax(32px,1fr));position:relative}
+    .score{display:flex;width:max-content;min-width:100%}.measure{--row-height:34px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}
+    .measure::before,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure::before{left:0}.measure:last-child::after{right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));position:relative}
     .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:var(--yellow);box-shadow:inset 0 0 0 2px #c9a927}
-    .note{z-index:2;align-self:center;justify-self:center;width:max-content;height:36px;border:0;background:none;padding:0;cursor:pointer;overflow:visible}.note b{display:inline-block;min-width:20px;background:var(--paper);padding:0 2px 2px;font:600 25px/30px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}
-    .measure.on .note b{background:#fff9dd}.note.d2::after,.note.d1::after{content:"";position:absolute;left:50%;width:18px;transform:translateX(-50%);border-top:2px solid currentColor;bottom:0}.note.d1::after{height:5px;border-bottom:2px solid currentColor}.note{position:relative}.note.rest b{font-family:Arial,sans-serif}.note.rest.d4 b{font-size:31px}.note.rest.d2 b,.note.rest.d1 b{font-size:23px}
+    .note{z-index:2;align-self:center;justify-self:center;width:max-content;height:32px;border:0;background:none;padding:0;cursor:pointer;overflow:visible}.note b{display:inline-block;min-width:20px;background:var(--paper);padding:0 2px 2px;font:600 25px/29px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}
+    .measure.on .note b{background:#fff9dd}.note.d2::after,.note.d1::after{content:"";position:absolute;left:50%;width:18px;transform:translateX(-50%);border-top:2px solid currentColor;bottom:0}.note.d1::after{height:5px;border-bottom:2px solid currentColor}.note{position:relative}.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-family:Arial,sans-serif;font-size:20px;line-height:25px}
     .panel{margin-top:14px;padding:16px;background:#fffcf7;border:1px solid #c9bcad;border-radius:15px}.layout-bar{display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd2c5}
     .layout-controls{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.layout-controls strong{min-width:82px;text-align:center}.layout-controls button[aria-label]{width:42px;padding:6px;font-size:20px}
     .status{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--pale);padding:10px;border-radius:10px}.status strong{display:block;color:#285366}
     .move{display:flex;gap:5px}.move .del{color:#9d4036}.controls{display:grid;grid-template-columns:1fr 1.3fr;gap:14px;margin-top:14px}fieldset{border:0;padding:0;margin:0}legend{font-size:13px;font-weight:bold;color:#74695e;margin-bottom:7px}
     .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.seg button{min-height:54px;border:1px solid #c7b9aa;border-radius:9px;background:white}.seg button.on{background:var(--blue);color:white;border-color:var(--blue)}.seg small{display:block;font-size:10px}
     .nums{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}.nums button,.rests button{min-height:48px;background:white;border:1px solid #cbbfb2;border-radius:9px;font-size:18px;font-weight:bold}.nums button:active,.rests button:active{background:#fff2ac}
-    .rests{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.rests button{font-size:15px}.rests .mark{display:block;font:24px/1.1 Arial,sans-serif}.rests button[data-rest="4"] .mark{font-size:31px}.rests button[data-rest="2"] .mark,.rests button[data-rest="1"] .mark{font-size:23px}
+    .rests{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.rests button{font-size:15px}.rests .mark,.rests button[data-rest="4"] .mark,.rests button[data-rest="2"] .mark,.rests button[data-rest="1"] .mark{display:block;font:20px/1.1 Arial,sans-serif}
     .bottom{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:#766b60}.clear{border:1px solid #d1aaa1;border-radius:9px;background:#fff;color:#9d4036;padding:9px}
     .layer-panel,.note-color-panel{margin-top:12px;padding:14px;background:#f8f3eb;border:1px solid #c9bcad;border-radius:15px}.layer-top,.layer-switches,.draw-tools,.colors,.edit-tools,.color-settings{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.layer-top{justify-content:space-between}
     .layer-switches{margin-top:10px}.layer-chip,.draw-tools button,.layer-top button{min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:7px 11px}.layer-chip.on,.draw-tools button.on{background:#477d91;color:#fff;border-color:#477d91}.layer-chip.hidden{text-decoration:line-through;opacity:.58}.layer-chip small{display:block;font-size:10px}
@@ -55,7 +55,7 @@
     .base-layer-note{margin:8px 0 0;color:#75695d;font-size:12px}
     @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.nums{grid-template-columns:repeat(5,1fr)}.nums button{min-height:54px}.rests{grid-template-columns:repeat(2,1fr)}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}.colors{margin-left:0}.draw-tools button{flex:1 0 28%}}
     @page{size:A4 portrait;margin:7mm}
-    @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{min-width:0!important;flex:1 1 auto;grid-template-rows:repeat(3,var(--print-row-height,38px))}.labels{grid-template-rows:repeat(3,var(--print-row-height,38px));line-height:var(--print-row-height,38px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;padding-top:0}.note{height:calc(var(--print-row-height,38px) * .94)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell.cursor{background:none!important;box-shadow:none!important}.meta{grid-template-columns:1fr 2fr 1fr}}
+    @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{--row-height:var(--print-row-height,34px);min-width:0!important;width:auto;flex:var(--print-measure-grow,1) 1 0}.labels{grid-template-rows:repeat(3,var(--print-row-height,34px));line-height:var(--print-row-height,34px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;padding-top:0}.note{height:calc(var(--print-row-height,34px) * .94)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell.cursor{background:none!important;box-shadow:none!important}.meta{grid-template-columns:1fr 2fr 1fr}}
   </style>
 </head>
 <body class="annotation-page">
@@ -63,7 +63,7 @@
   <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>書き込み</h1><p class="base-layer-note">写譜は最下層の表示専用レイヤーです。</p></div><div class="actions"><a class="page-link" href="./index.html">♪ 写譜ページ</a><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
   <input id="scoreFileInput" type="file" accept=".shian-score.json,.json,application/json" hidden>
   <section class="paper">
-    <div class="meta"><span>〈二上り〉 四分ノ二拍子</span><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
+    <div class="meta"><div class="score-meta"><span>〈</span><select id="tuning" aria-label="調弦"><option>本調子</option><option selected>二上り</option><option>三下り</option></select><span>〉</span><input id="meter" value="四分ノ二拍子" aria-label="拍子"></div><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
     <div id="scoreArea"></div>
     <svg id="annotations" class="annotation-svg" aria-label="書き込みレイヤー"></svg>
   </section>
@@ -141,7 +141,7 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],title:"曲名入力",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],title:"曲名入力",tuning:"二上り",meter:"四分ノ二拍子",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,dragging=null;
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
@@ -185,7 +185,7 @@ function pageStartRows(pageRows=currentPageRows()){
   return starts;
 }
 function printPlanText(pageRows=currentPageRows()){return`${pageRows.length}ページ：${pageRows.map(count=>`${count}段`).join(" ＋ ")}`}
-function serializable(){return{notes:state.notes,title:state.title,rows:state.rows,measuresPerRow:state.measuresPerRow,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function serializable(){return{notes:state.notes,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function safeFileName(value){const name=String(value||"文化譜").trim().replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ");return(name&&name!=="曲名入力"?name:"文化譜").slice(0,80)}
 function exportScoreFile(){
   save();
@@ -233,7 +233,9 @@ function measureWidth(m){
   const notes=state.notes.filter(n=>n.m===m);
   const widest=notes.reduce((max,n)=>Math.max(max,String(n.v||"").length),1);
   const perString=Math.max(0,...[1,2,3].map(s=>notes.filter(n=>n.s===s).reduce((sum,n)=>sum+(n.d===1?1:n.d===2?.55:.3),0)));
-  return Math.max(120,Math.max(180,Math.ceil(perString*31+widest*8))+(state.measureOffsets?.[m]||0));
+  const occupied=new Set(notes.map(note=>note.p)).size;
+  const contentWidth=Math.max(384,occupied*34+widest*10+48);
+  return Math.max(240,contentWidth+(state.measureOffsets?.[m]||0));
 }
 function noteRhythmClass(n,m){
   if(n.rest)return`d${n.d}`;
@@ -255,12 +257,12 @@ function noteHtml(n,m,s){
   return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}" style="grid-column:${n.p+1};--note-color:${color};transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b></button>`;
 }
 function measureHtml(m){
-  return `<div class="measure ${m===state.m?"on":""}" style="--measure-width:${measureWidth(m)}px">${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
+  const width=measureWidth(m);return `<div class="measure ${m===state.m?"on":""}" style="--measure-width:${width}px;--measure-grow:${width}">${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
 }
 function render(){
   const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,15);
   state.preview=true;
-  q("#title").value=state.title;q("#title").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
+  q("#title").value=state.title;q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=true;q("#meter").value=state.meter;q("#meter").readOnly=true;q("#summary").textContent="";
   q("#rowCount").textContent=`${state.rows}段`;q("#measureCount").textContent=`${state.measuresPerRow}小節`;
   const row=Math.floor(state.m/state.measuresPerRow);
   q("#status").textContent=`${row+1}段・${state.m%state.measuresPerRow+1}小節・${["","一","二","三"][state.s]}の糸・${Math.floor(state.p/4)+1}拍目`;
@@ -497,7 +499,7 @@ function applyPrintLayout(){
   pageRows.forEach((count,pageIndex)=>{
     const usableHeight=printableHeight-(pageIndex===0?metaHeight:0);
     const distribute=count>=6;
-    const rowHeight=distribute?clamp(64-count*3.6,28,38):38;
+    const rowHeight=distribute?clamp(60-count*3.2,28,34):34;
     const extraFirstGap=distribute&&pageIndex===0?titleGapExtra:0;
     const staffGap=distribute
       ?Math.max(8,(usableHeight-count*rowHeight*3-extraFirstGap)/(count+1))
@@ -510,6 +512,7 @@ function applyPrintLayout(){
       staff.style.setProperty("--print-staff-gap",`${gap.toFixed(2)}px`);
       staff.style.setProperty("--print-row-height",`${rowHeight}px`);
       staff.style.setProperty("--print-note-size",`${noteSize.toFixed(2)}px`);
+      staff.querySelectorAll(".measure").forEach((measure,index)=>measure.style.setProperty("--print-measure-grow",String(measureWidth((staffIndex-1)*state.measuresPerRow+index))));
     }
   });
 }
@@ -519,6 +522,7 @@ window.addEventListener("afterprint",()=>{
     staff.style.removeProperty("--print-staff-gap");
     staff.style.removeProperty("--print-row-height");
     staff.style.removeProperty("--print-note-size");
+    staff.querySelectorAll(".measure").forEach(measure=>measure.style.removeProperty("--print-measure-grow"));
   });
   render();
 });
