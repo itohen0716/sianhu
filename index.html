@@ -452,7 +452,7 @@ function applyPreview(){
 }
 function pointFromEvent(event){const rect=q("#annotations").getBoundingClientRect();return{x:(event.clientX-rect.left)*q("#annotations").viewBox.baseVal.width/rect.width,y:(event.clientY-rect.top)*q("#annotations").viewBox.baseVal.height/rect.height}}
 function addLayer(){
-  const name=prompt("この書き込みレイヤーを使う人の名前を入力してください。","");
+  const name=prompt("レイヤーの名前を入力してください","");
   if(!name||!name.trim())return;
   snap();const id=`layer-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;state.layers.push({id,name:name.trim(),visible:true,items:[]});state.activeLayerId=id;render();
 }
