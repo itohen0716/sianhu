@@ -38,11 +38,14 @@
     .nums{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}.nums button,.rests button{min-height:48px;background:white;border:1px solid #cbbfb2;border-radius:9px;font-size:18px;font-weight:bold}.nums button:active,.rests button:active{background:#fff2ac}
     .rests{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.rests button{font-size:15px}.rests .mark,.rests button[data-rest="4"] .mark,.rests button[data-rest="2"] .mark,.rests button[data-rest="1"] .mark{display:block;font:20px/1.1 Arial,sans-serif}
     .bottom{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:#766b60}.clear{border:1px solid #d1aaa1;border-radius:9px;background:#fff;color:#9d4036;padding:9px}
-    .layer-panel,.note-color-panel{margin-top:12px;padding:14px;background:#f8f3eb;border:1px solid #c9bcad;border-radius:15px}.layer-top,.layer-switches,.draw-tools,.colors,.edit-tools,.color-settings{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.layer-top{justify-content:space-between}
-    .layer-switches{margin-top:10px}.layer-chip,.draw-tools button,.layer-top button{min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:7px 11px}.layer-chip.on,.draw-tools button.on{background:#477d91;color:#fff;border-color:#477d91}.layer-chip.hidden{text-decoration:line-through;opacity:.58}.layer-chip small{display:block;font-size:10px}
+    .editor-switcher,.layer-panel,.note-color-panel{margin-top:12px;padding:14px;background:#f8f3eb;border:1px solid #c9bcad;border-radius:15px}.editor-switcher h2,.editor-panel-title{margin:0;font:600 18px serif}.layer-top,.layer-switches,.draw-tools,.colors,.edit-tools,.color-settings{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.layer-top{justify-content:space-between}
+    .layer-switches{margin-top:10px}.layer-chip,.draw-tools button,.layer-top button{min-height:46px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:7px 13px}.layer-chip{flex:1 1 190px}.layer-chip.on,.draw-tools button.on{background:#477d91;color:#fff;border-color:#477d91}.layer-chip.hidden{text-decoration:line-through;opacity:.58}.layer-chip small{display:block;font-size:10px}
     body.score-page[data-score-layer="notes"] .barline-handle{pointer-events:none}
     body.score-page[data-score-layer="staff"] .note,body.score-page[data-score-layer="staff"] .cell{pointer-events:none}
     body.score-page[data-score-layer="technique"] #scoreArea{pointer-events:none}
+    body.score-page .editor-panel{display:none}
+    body.score-page[data-score-layer="technique"] .editor-panel[data-editor-panel~="technique"],body.score-page[data-score-layer="notes"] .editor-panel[data-editor-panel~="notes"],body.score-page[data-score-layer="staff"] .editor-panel[data-editor-panel~="staff"]{display:block}
+    body.score-page[data-score-layer="notes"] .staff-only,body.score-page[data-score-layer="staff"] .notes-only{display:none!important}
     .draw-tools{margin-top:12px;padding-top:12px;border-top:1px solid #ddd2c5}.colors{margin-left:auto}.color{width:38px;height:38px!important;min-height:38px!important;border-radius:50%!important;padding:0!important;background:var(--c)!important}.color.on{outline:3px solid #fff;box-shadow:0 0 0 3px #477d91}.layer-help{margin:8px 0 0;font-size:12px;color:#75695d}
     .edit-tools,.color-settings,.symbol-position,.slur-width-controls{margin-top:9px}.edit-tools button,.color-settings button,.color-settings select,.color-settings input,.symbol-position button,.slur-width-controls button{min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:7px 11px}.edit-tools button:disabled,.slur-width-controls button:disabled{opacity:.45}.color-settings label{display:flex;align-items:center;gap:6px;font-size:13px}.color-settings input[type=color]{width:48px;padding:3px}.note-color-panel h2{margin:0 0 8px;font:600 18px serif}.note-color-panel p{margin:7px 0 0;font-size:12px;color:#75695d}.symbol-position,.slur-width-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.symbol-position button.on{background:#795548;color:#fff;border-color:#795548}.slur-width-controls[hidden]{display:none}
     dialog{width:min(92vw,480px);border:1px solid #bbaea0;border-radius:16px;padding:0;box-shadow:0 18px 50px #0005}dialog::backdrop{background:#332c2588}
@@ -54,11 +57,11 @@
     .symbol-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.symbol-tools button{min-width:48px;min-height:42px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:4px 7px;font-size:13px;line-height:1.2}.symbol-tools button.on{background:#477d91;color:#fff}.symbol-tools .roman{font-family:"Yu Mincho","Times New Roman",serif;font-size:18px}.layer-chip.fixed::before{content:"🔒 ";font-size:12px}.annotation-item.symbol-item text{font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}
     body.annotation-page .panel,body.annotation-page .note-color-panel,body.annotation-page #newScore,body.annotation-page #undo,body.annotation-page #redo{display:none}
     body.annotation-page #scoreArea{pointer-events:none}
-    body.score-page .head{order:0}body.score-page .paper{order:1}body.score-page .panel{order:2}body.score-page .layer-panel{order:3}body.score-page .note-color-panel{order:4}
+    body.score-page .head{order:0}body.score-page .paper{order:1}body.score-page .editor-switcher{order:2}body.score-page .editor-panel{order:3}body.score-page .note-color-panel{order:4}
     .base-layer-note{margin:8px 0 0;color:#75695d;font-size:12px}
     @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.nums{grid-template-columns:repeat(5,1fr)}.nums button{min-height:54px}.rests{grid-template-columns:repeat(2,1fr)}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}.colors{margin-left:0}.draw-tools button{flex:1 0 28%}}
     @page{size:A4 portrait;margin:7mm}
-    @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{--row-height:var(--print-row-height,34px);min-width:0!important;width:auto;flex:var(--print-measure-grow,1) 1 0}.labels{grid-template-rows:repeat(3,var(--print-row-height,34px));line-height:var(--print-row-height,34px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;padding-top:0}.note{height:calc(var(--print-row-height,34px) * .94)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell.cursor{background:none!important;box-shadow:none!important}.meta{grid-template-columns:1fr 2fr 1fr}#tuning{-webkit-appearance:none;appearance:none;background-image:none;padding-right:4px}}
+    @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.editor-switcher,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{--row-height:var(--print-row-height,34px);min-width:0!important;width:auto;flex:var(--print-measure-grow,1) 1 0}.labels{grid-template-rows:repeat(3,var(--print-row-height,34px));line-height:var(--print-row-height,34px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;padding-top:0}.note{height:calc(var(--print-row-height,34px) * .94)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell.cursor{background:none!important;box-shadow:none!important}.meta{grid-template-columns:1fr 2fr 1fr}#tuning{-webkit-appearance:none;appearance:none;background-image:none;padding-right:4px}}
   </style>
 </head>
 <body class="score-page">
@@ -70,9 +73,12 @@
     <div id="scoreArea"></div>
     <svg id="annotations" class="annotation-svg" aria-label="書き込みレイヤー"></svg>
   </section>
-  <section class="layer-panel">
-    <div class="layer-top"><strong>写譜ページの3レイヤー</strong><div><button id="toggleDrawing">奏法の配置・移動を開始</button><button id="deleteLayer" disabled>奏法レイヤー削除不可</button></div></div>
+  <section class="editor-switcher" aria-label="写譜レイヤー切り替え">
+    <h2>編集するレイヤー</h2>
     <div id="layerSwitches" class="layer-switches"></div>
+  </section>
+  <section class="layer-panel editor-panel" data-editor-panel="technique">
+    <div class="layer-top"><strong class="editor-panel-title">奏法レイヤー</strong><div><button id="toggleDrawing">奏法の配置・移動を開始</button><button id="deleteLayer" disabled>奏法レイヤー削除不可</button></div></div>
     <div id="drawTools" class="draw-tools">
       <button data-tool="select">選択・移動</button>
       <div id="colors" class="colors"></div>
@@ -91,7 +97,7 @@
     </div>
     <p id="layerHelp" class="layer-help">奏法・指番号を選び、関連付ける数字または開放弦をタップします。音の移動・削除にも追従します。</p>
   </section>
-  <section class="note-color-panel">
+  <section class="note-color-panel editor-panel" data-editor-panel="notes">
     <h2>数字・開放弦の色</h2>
     <div class="color-settings">
       <label>数字の標準色 <input id="numberColor" type="color" value="#222222"></label>
@@ -101,18 +107,20 @@
     </div>
     <p>休符は黒のままです。譜面上の数字・開放弦を選ぶと、その音だけ別色にできます。</p>
   </section>
-  <section class="panel">
-    <div class="layout-bar">
+  <section class="panel editor-panel" data-editor-panel="notes staff">
+    <h2 class="editor-panel-title notes-only">数字・開放弦レイヤー</h2>
+    <h2 class="editor-panel-title staff-only">譜線・小節線レイヤー</h2>
+    <div class="layout-bar staff-only">
       <div class="layout-controls"><span>段数</span><button id="removeRow" aria-label="段を減らす">−</button><strong id="rowCount"></strong><button id="addRow" aria-label="段を増やす">＋</button></div>
       <div class="layout-controls"><span>1段の小節数</span><button id="removeMeasure" aria-label="小節を減らす">−</button><strong id="measureCount"></strong><button id="addMeasure" aria-label="小節を増やす">＋</button></div>
     </div>
-    <div class="status"><div><small>現在の入力位置</small><strong id="status"></strong><small>上のレイヤーを選び、数字・開放弦または小節線を編集します。選択して直接ドラッグもできます。</small></div><div class="move"><button id="prev" aria-label="前の入力位置">←</button><button id="next" aria-label="次の入力位置">→</button><button id="moveSelectedLeft">選択を左へ</button><button id="moveSelectedRight">選択を右へ</button><button id="resetPositions">位置を標準に戻す</button><button id="delete" class="del">選択した音を削除</button></div></div>
-    <div class="controls">
+    <div class="status"><div class="notes-only"><small>現在の入力位置</small><strong id="status"></strong><small>数字・開放弦だけを選択・移動できます。</small></div><div class="staff-only"><small>小節線の編集</small><strong>動かす小節線を選択してください</strong><small>数字には反応しません。</small></div><div class="move"><button id="prev" class="notes-only" aria-label="前の入力位置">←</button><button id="next" class="notes-only" aria-label="次の入力位置">→</button><button id="moveSelectedLeft">選択を左へ</button><button id="moveSelectedRight">選択を右へ</button><button id="resetPositions">位置を標準に戻す</button><button id="delete" class="del notes-only">選択した音を削除</button></div></div>
+    <div class="controls notes-only">
       <fieldset><legend>1. 糸を選ぶ</legend><div id="strings" class="seg"></div></fieldset>
       <fieldset><legend>2. 音の長さ</legend><div id="durations" class="seg"></div></fieldset>
     </div>
-    <fieldset style="margin-top:14px"><legend>3. 数字・開放弦・休符を入れる</legend><div id="numbers" class="nums"></div><div id="rests" class="rests"></div></fieldset>
-    <div class="bottom"><span>入力内容はこの端末に自動保存されます。</span><button id="clear" class="clear">譜面を空にする</button></div>
+    <fieldset class="notes-only" style="margin-top:14px"><legend>3. 数字・開放弦・休符を入れる</legend><div id="numbers" class="nums"></div><div id="rests" class="rests"></div></fieldset>
+    <div class="bottom notes-only"><span>入力内容はこの端末に自動保存されます。</span><button id="clear" class="clear">譜面を空にする</button></div>
   </section>
 </main>
 <dialog id="newDialog">
@@ -161,6 +169,7 @@ function load(){
     const old=JSON.parse(localStorage.getItem(OLD_KEY));
     if(old&&Array.isArray(old.notes)){state={...defaults,notes:old.notes.map(n=>n.v==="0"?{...n,v:"○"}:n),title:old.title||defaults.title};ensureTechniqueLayer();hasSaved=true}
   }catch(error){console.warn("保存データを読み込めませんでした。",error)}
+  state.scoreEditLayer="notes";drawing=false;
 }
 function ensureTechniqueLayer(){
   if(!Array.isArray(state.layers))state.layers=[];
@@ -504,7 +513,7 @@ function openPrintSettings(){
   updatePrintDialog();
   if(typeof q("#printDialog").showModal==="function")q("#printDialog").showModal();else q("#printDialog").setAttribute("open","");
 }
-load();
+load();state.scoreEditLayer="notes";drawing=false;
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.s){
     const nextString=+b.dataset.s;
@@ -680,7 +689,7 @@ window.addEventListener("afterprint",()=>{
 });
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
-window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
+window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};drawing=false;render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
