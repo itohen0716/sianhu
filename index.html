@@ -18,14 +18,16 @@
     .paper.preview-mode .string{grid-template-columns:repeat(16,minmax(0,1fr))}
     .paper.annotating{touch-action:none}.annotation-svg{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none}.paper.annotating .annotation-svg{pointer-events:auto}
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected{filter:drop-shadow(0 0 4px #f2c500)}
-    .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;font:15px serif}.score-meta{display:flex;align-items:center;gap:6px}.score-meta select,.score-meta input{border:0;border-bottom:1px dashed #aaa;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
-    .meta input{border:0;border-bottom:1px dashed #aaa;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}
+    .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;font:15px serif}.score-meta{display:flex;align-items:flex-end;gap:6px}.score-meta select,.score-meta input{border:0;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
+    .meta input{border:0;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}.meta #title{justify-self:center;width:8em;max-width:100%;box-sizing:border-box;border-bottom:1px solid #333;padding:4px 1em}
     .staff{margin-top:28px}
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,34px);font:12px/34px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
     .score{display:flex;width:max-content;min-width:100%}.measure{--row-height:34px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}
     .measure:last-child{border-right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));position:relative}
     .barline-handle{position:absolute;z-index:7;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);left:-18px;width:36px;border:0;background:transparent;touch-action:none;cursor:ew-resize}.barline-handle::after{content:"";position:absolute;left:17px;top:0;bottom:0;border-left:1.5px solid var(--ink)}.barline-handle:hover::after,.barline-handle:focus-visible::after,.barline-handle.selected::after{border-left:4px solid #c9a927}.measure:first-child>.barline-handle,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure:first-child>.barline-handle{pointer-events:none}.measure:last-child::after{right:0}
+    .barline-handle.endline-handle{left:auto;right:-18px;cursor:pointer}
+    .measure.custom-end::after{display:none}
     .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}
     .note{z-index:2;align-self:center;justify-self:center;width:max-content;height:32px;border:0;background:none;padding:0;cursor:ew-resize;overflow:visible;touch-action:none}.note.moving b{outline:2px solid #c9a927;border-radius:4px}.note b{display:inline-block;min-width:20px;background:var(--paper);padding:0 2px 2px;font:600 25px/29px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}
@@ -37,6 +39,7 @@
     .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.seg button{min-height:54px;border:1px solid #c7b9aa;border-radius:9px;background:white}.seg button.on{background:var(--blue);color:white;border-color:var(--blue)}.seg small{display:block;font-size:10px}
     .nums{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}.nums button,.rests button{min-height:48px;background:white;border:1px solid #cbbfb2;border-radius:9px;font-size:18px;font-weight:bold}.nums button:active,.rests button:active{background:#fff2ac}
     .rests{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.rests button{font-size:15px}.rests .mark,.rests button[data-rest="4"] .mark,.rests button[data-rest="2"] .mark,.rests button[data-rest="1"] .mark{display:block;font:20px/1.1 Arial,sans-serif}
+    .part-tools{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid #ddd2c5}.part-tools button{min-height:48px;min-width:92px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:6px 10px}.part-tools button.on{background:var(--blue);color:#fff;border-color:var(--blue)}.part-preview{display:block;height:25px;margin:auto}.score-part{position:absolute;z-index:5;top:calc(var(--row-height)/2);height:calc(var(--row-height)*2);width:34px;padding:0;border:0;background:transparent;transform:translateX(-50%);touch-action:none;cursor:ew-resize}.score-part.selected{filter:drop-shadow(0 0 3px #c9a927)}.score-part svg{display:block;width:100%;height:100%;overflow:visible}.barline-handle .bar-symbol{position:absolute;left:9px;top:0;width:18px;height:100%;pointer-events:none;overflow:visible}.barline-handle[data-kind]:not([data-kind="single"])::after{display:none}.barline-handle.selected .bar-symbol{filter:drop-shadow(0 0 3px #c9a927)}
     .bottom{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:#766b60}.clear{border:1px solid #d1aaa1;border-radius:9px;background:#fff;color:#9d4036;padding:9px}
     .editor-switcher,.layer-panel,.note-color-panel{margin-top:12px;padding:14px;background:#f8f3eb;border:1px solid #c9bcad;border-radius:15px}.editor-switcher h2,.editor-panel-title{margin:0;font:600 18px serif}.layer-top,.layer-switches,.draw-tools,.colors,.edit-tools,.color-settings{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.layer-top{justify-content:space-between}
     .layer-switches{margin-top:10px}.layer-chip,.draw-tools button,.layer-top button{min-height:46px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:7px 13px}.layer-chip{flex:1 1 190px}.layer-chip.on,.draw-tools button.on{background:#477d91;color:#fff;border-color:#477d91}.layer-chip.hidden{text-decoration:line-through;opacity:.58}.layer-chip small{display:block;font-size:10px}
@@ -119,7 +122,8 @@
       <fieldset><legend>1. 糸を選ぶ</legend><div id="strings" class="seg"></div></fieldset>
       <fieldset><legend>2. 音の長さ</legend><div id="durations" class="seg"></div></fieldset>
     </div>
-    <fieldset class="notes-only" style="margin-top:14px"><legend>3. 数字・開放弦・休符を入れる</legend><div id="numbers" class="nums"></div><div id="rests" class="rests"></div></fieldset>
+    <fieldset class="notes-only" style="margin-top:14px"><legend>3. 数字・開放弦・休符を入れる</legend><div id="numbers" class="nums"></div><div id="rests" class="rests"></div><div id="sameParts" class="part-tools" aria-label="同じ記号"><button data-score-part="same1"><svg class="part-preview" viewBox="0 0 28 28"><circle cx="5" cy="8" r="2" fill="currentColor"/><circle cx="23" cy="20" r="2" fill="currentColor"/><line x1="8" y1="24" x2="20" y2="4" stroke="currentColor" stroke-width="2"/></svg>同じ1</button><button data-score-part="same2"><svg class="part-preview" viewBox="0 0 28 28"><circle cx="4" cy="8" r="2" fill="currentColor"/><circle cx="24" cy="20" r="2" fill="currentColor"/><line x1="7" y1="24" x2="18" y2="4" stroke="currentColor" stroke-width="2"/><line x1="12" y1="24" x2="23" y2="4" stroke="currentColor" stroke-width="2"/></svg>同じ2</button></div></fieldset>
+    <div class="staff-only part-tools" id="barlineParts"><button data-bar-kind="single">通常線</button><button data-bar-kind="double">2本線</button><button data-bar-kind="repeat-start">くり返しA</button><button data-bar-kind="repeat-end">くり返しB</button><button data-bar-kind="final">終止符</button></div>
     <div class="bottom notes-only"><span>入力内容はこの端末に自動保存されます。</span><button id="clear" class="clear">譜面を空にする</button></div>
   </section>
 </main>
@@ -158,7 +162,7 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],title:"曲名入力",tuning:"二上り",meter:"四分ノ二拍子",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"四分ノ二拍子",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null;
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
@@ -205,8 +209,9 @@ function pageStartRows(pageRows=currentPageRows()){
   return starts;
 }
 function printPlanText(pageRows=currentPageRows()){return`${pageRows.length}ページ：${pageRows.map(count=>`${count}段`).join(" ＋ ")}`}
-function serializable(){return{notes:state.notes,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function safeFileName(value){const name=String(value||"文化譜").trim().replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ");return(name&&name!=="曲名入力"?name:"文化譜").slice(0,80)}
+function updateTitleWidth(){const el=q("#title");if(!el)return;const length=Math.max(1,Array.from(el.value||"").length);el.style.width=`min(100%, ${length+2}em)`}
 function exportScoreFile(){
   save();
   const defaultName=safeFileName(state.title);
@@ -225,7 +230,7 @@ function validatedImportedScore(value){
   const rows=Number(score.rows),measures=Number(score.measuresPerRow);
   if(!Number.isInteger(rows)||rows<1||rows>20||!Number.isInteger(measures)||measures<1||measures>12)throw new Error("段数または小節数が対応範囲外です。");
   if(score.notes.some(note=>!note||!Number.isInteger(note.m)||!Number.isInteger(note.s)||!Number.isInteger(note.p)||note.m<0||note.m>=rows*measures||note.s<1||note.s>3||note.p<0||note.p>15))throw new Error("音符データに不正な位置があります。");
-  return{...defaults,...score,rows,measuresPerRow:measures,notes:score.notes,layers:score.layers};
+  return{...defaults,...score,rows,measuresPerRow:measures,notes:score.notes,scoreParts:Array.isArray(score.scoreParts)?score.scoreParts:[],barlineKinds:score.barlineKinds&&typeof score.barlineKinds==="object"?score.barlineKinds:{},layers:score.layers};
 }
 async function importScoreFile(file){
   if(!file)return;
@@ -300,14 +305,24 @@ function noteHtml(n,m,s){
   const x=n.rest?(n.x||0):columnX(m,n.p);
   return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}" style="grid-column:${n.p+1};--note-color:${color};transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b></button>`;
 }
+function samePartSvg(kind){const second=kind==="same2"?'<line x1="13" y1="62" x2="27" y2="6" stroke="currentColor" stroke-width="2"/>':"";return `<svg viewBox="0 0 34 68" aria-hidden="true"><circle cx="5" cy="18" r="2.5" fill="currentColor"/><circle cx="29" cy="50" r="2.5" fill="currentColor"/><line x1="7" y1="62" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>${second}</svg>`}
+function barlineSvg(kind){
+  if(kind==="single")return"";
+  const line=(x,width=1.5)=>`<line x1="${x}" y1="0" x2="${x}" y2="68" stroke="currentColor" stroke-width="${width}"/>`,dots=x=>`<circle cx="${x}" cy="23" r="2.2" fill="currentColor"/><circle cx="${x}" cy="45" r="2.2" fill="currentColor"/>`;
+  if(kind==="double")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(7)}${line(11)}</svg>`;
+  if(kind==="repeat-start")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(5)}${line(9)}${dots(15)}</svg>`;
+  if(kind==="repeat-end")return `<svg class="bar-symbol" viewBox="0 0 18 68">${dots(3)}${line(9)}${line(13)}</svg>`;
+  return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(6)}${line(12,4)}</svg>`;
+}
+function scorePartsHtml(m){return(state.scoreParts||[]).filter(part=>part.m===m).map(part=>`<button class="score-part${selectedScoreTarget?.type==="scorePart"&&selectedScoreTarget.id===part.id?" selected":""}" style="left:calc(${(part.p+.5)*100/16}% + ${part.x||0}px)" data-score-part-id="${part.id}" aria-label="${part.kind==="same2"?"同じ2":"同じ1"}">${samePartSvg(part.kind)}</button>`).join("")}
 function measureHtml(m){
   const selected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.m===m?" selected":"";
-  const width=measureWidth(m);return `<div class="measure ${m===state.m?"on":""}" style="--measure-width:${width}px;--measure-grow:${width}"><button class="barline-handle${selected}" data-barline="${m}" aria-label="${m+1}小節の開始線を横移動"></button>${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${cursorVisible&&m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
+  const width=measureWidth(m),kind=state.barlineKinds?.[m]||"single",atRowEnd=(m+1)%state.measuresPerRow===0,endKind=state.barlineKinds?.[m+1]||"single",endSelected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.m===m+1?" selected":"",endLine=atRowEnd?`<button class="barline-handle endline-handle${endSelected}" data-barline="${m+1}" data-end="true" data-kind="${endKind}" aria-label="段末の小節線を選択">${barlineSvg(endKind)}</button>`:"";return `<div class="measure ${m===state.m?"on":""}${atRowEnd&&endKind!=="single"?" custom-end":""}" style="--measure-width:${width}px;--measure-grow:${width}"><button class="barline-handle${selected}" data-barline="${m}" data-kind="${kind}" aria-label="${m+1}小節の開始線を横移動">${barlineSvg(kind)}</button>${endLine}${scorePartsHtml(m)}${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${cursorVisible&&m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
 }
 function render(){
   const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,15);
   state.preview=true;
-  q("#title").value=state.title;q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=IS_ANNOTATION_PAGE;q("#meter").value=state.meter;q("#meter").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
+  q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=IS_ANNOTATION_PAGE;q("#meter").value=state.meter;q("#meter").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
   q("#rowCount").textContent=`${state.rows}段`;q("#measureCount").textContent=`${state.measuresPerRow}小節`;
   const row=Math.floor(state.m/state.measuresPerRow);
   q("#status").textContent=`${row+1}段・${state.m%state.measuresPerRow+1}小節・${["","一","二","三"][state.s]}の糸・${Math.floor(state.p/4)+1}拍目`;
@@ -486,7 +501,7 @@ function changeLayout(rows,measures){
   rows=clamp(Number(rows)||1,1,20);measures=clamp(Number(measures)||1,1,12);
   const newTotal=rows*measures,discard=state.notes.some(n=>n.m>=newTotal);
   if(discard&&!confirm("減らした範囲に入力済みの音があります。その音を削除して変更しますか？"))return false;
-  snap();const removed=state.notes.filter(n=>n.m>=newTotal).map(n=>anchorKey(n.m,n.s,n.p));removeLinkedSymbols(removed);state.rows=rows;state.measuresPerRow=measures;state.notes=state.notes.filter(n=>n.m<newTotal);state.m=clamp(state.m,0,newTotal-1);render();return true;
+  snap();const removed=state.notes.filter(n=>n.m>=newTotal).map(n=>anchorKey(n.m,n.s,n.p));removeLinkedSymbols(removed);state.rows=rows;state.measuresPerRow=measures;state.notes=state.notes.filter(n=>n.m<newTotal);state.scoreParts=(state.scoreParts||[]).filter(part=>part.m<newTotal);state.barlineKinds=Object.fromEntries(Object.entries(state.barlineKinds||{}).filter(([m])=>+m<newTotal));state.m=clamp(state.m,0,newTotal-1);render();return true;
 }
 function insert(value,isRest=false,duration=state.d){
   snap();const d=Math.min(duration,16-state.p);
@@ -526,16 +541,21 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.pos){[state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);cursorVisible=true;lastInserted=null}
   else if(b.dataset.v){insert(b.dataset.v)}
   else if(b.dataset.rest){insert("",true,+b.dataset.rest)}
+  else if(b.dataset.scorePart){snap();state.scoreParts=Array.isArray(state.scoreParts)?state.scoreParts:[];const part={id:uid(),kind:b.dataset.scorePart,m:state.m,p:state.p,x:0};state.scoreParts.push(part);selectedScoreTarget={type:"scorePart",id:part.id};cursorVisible=false}
+  else if(b.dataset.barKind){if(selectedScoreTarget?.type!=="barline"){alert("先に変更する小節線を譜面上で選択してください。");return}snap();state.barlineKinds={...(state.barlineKinds||{}),[selectedScoreTarget.m]:b.dataset.barKind}}
   else if(b.id==="prev"){if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=15}}
   else if(b.id==="next"){if(state.p<15)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
-  else if(b.id==="resetPositions"&&confirm("数字と小節線の横位置を標準に戻しますか？")){snap();state.notes.forEach(note=>note.x=0);state.measureOffsets=[]}
+  else if(b.id==="resetPositions"&&confirm("数字・同じ記号・小節線の横位置を標準に戻しますか？")){snap();state.notes.forEach(note=>note.x=0);(state.scoreParts||[]).forEach(part=>part.x=0);state.measureOffsets=[]}
   else if(b.id==="delete"){
+    if(selectedScoreTarget?.type==="scorePart"){
+      const before=(state.scoreParts||[]).length;snap();state.scoreParts=(state.scoreParts||[]).filter(part=>part.id!==selectedScoreTarget.id);if(state.scoreParts.length===before)past.pop();selectedScoreTarget=null;render();return;
+    }
     const key=selectedScoreTarget?.type==="note"?selectedScoreTarget.key:anchorKey(state.m,state.s,state.p),len=state.notes.length;
     snap();state.notes=state.notes.filter(n=>anchorKey(n.m,n.s,n.p)!==key);
     if(len===state.notes.length)past.pop();else removeLinkedSymbols([key]);
     selectedScoreTarget=null;lastInserted=null;
   }
-  else if(b.id==="clear"&&state.notes.length&&confirm("譜面の入力内容をすべて削除しますか？")){snap();removeLinkedSymbols(state.notes.map(n=>anchorKey(n.m,n.s,n.p)));state.notes=[];state.m=0;state.s=1;state.p=0}
+  else if(b.id==="clear"&&(state.notes.length||state.scoreParts?.length||Object.keys(state.barlineKinds||{}).length)&&confirm("譜面の入力内容をすべて削除しますか？")){snap();removeLinkedSymbols(state.notes.map(n=>anchorKey(n.m,n.s,n.p)));state.notes=[];state.scoreParts=[];state.barlineKinds={};state.m=0;state.s=1;state.p=0}
   else if(b.id==="undo"&&past.length){future.unshift(JSON.stringify(serializable()));Object.assign(state,JSON.parse(past.pop()));selectedItemId=null}
   else if(b.id==="redo"&&future.length){past.push(JSON.stringify(serializable()));Object.assign(state,JSON.parse(future.shift()));selectedItemId=null}
   else if(b.id==="addRow"){changeLayout(state.rows+1,state.measuresPerRow);return}
@@ -568,6 +588,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
       if(notes.length){const origin=columnX(m,p),bounds=noteMoveBounds(m,p,origin),x=clamp(origin+amount,bounds.min,bounds.max);notes.forEach(note=>note.x=x)}else past.pop();
     }
     else if(selectedScoreTarget?.type==="barline"){if(!moveSelectedBarline(amount))past.pop()}
+    else if(selectedScoreTarget?.type==="scorePart"){const part=(state.scoreParts||[]).find(entry=>entry.id===selectedScoreTarget.id);if(part)part.x=clamp((part.x||0)+amount,-measureWidth(part.m)/2,measureWidth(part.m)/2);else past.pop()}
     else{past.pop();alert("先に数字・開放弦・小節線・奏法記号を選択してください。")}
     render();return;
   }
@@ -599,12 +620,14 @@ q("#annotations").addEventListener("pointercancel",()=>{draft=null;dragging=null
 let scoreDrag=null;
 q("#scoreArea").addEventListener("pointerdown",event=>{
   if(drawing)return;
-  const noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline]");
-  if(noteButton&&state.scoreEditLayer==="notes"){
+  const partButton=event.target.closest("[data-score-part-id]"),noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline]");
+  if(partButton&&state.scoreEditLayer==="notes"){
+    const part=(state.scoreParts||[]).find(entry=>entry.id===partButton.dataset.scorePartId);if(!part)return;selectedScoreTarget={type:"scorePart",id:part.id};selectedItemId=null;event.preventDefault();snap();const measure=partButton.closest(".measure"),rect=measure.getBoundingClientRect(),base=(part.p+.5)*rect.width/16;scoreDrag={type:"scorePart",part,startX:event.clientX,originX:part.x||0,min:-base+17,max:rect.width-base-17};partButton.classList.add("selected");partButton.setPointerCapture(event.pointerId);
+  }else if(noteButton&&state.scoreEditLayer==="notes"){
     const [m,s,p]=noteButton.dataset.note.split(",").map(Number),note=state.notes.find(n=>n.m===m&&n.s===s&&n.p===p);
     if(!note)return;state.m=m;state.s=s;state.p=p;cursorVisible=true;lastInserted=null;selectedScoreTarget={type:"note",key:anchorKey(m,s,p)};selectedItemId=null;event.preventDefault();snap();const originX=note.rest?(note.x||0):columnX(m,p);scoreDrag={type:"note",notes:note.rest?[note]:columnNotes(m,p),m,p,startX:event.clientX,originX,bounds:noteMoveBounds(m,p,originX)};noteButton.classList.add("moving");noteButton.setPointerCapture(event.pointerId);
   }else if(barline&&state.scoreEditLayer==="staff"){
-    const m=+barline.dataset.barline;if(m%state.measuresPerRow===0)return;selectedScoreTarget={type:"barline",m};selectedItemId=null;event.preventDefault();snap();scoreDrag={type:"barline",m,startX:event.clientX,left:m-1,right:m,leftOffset:state.measureOffsets?.[m-1]||0,rightOffset:state.measureOffsets?.[m]||0,leftWidth:measureWidth(m-1),rightWidth:measureWidth(m)};barline.classList.add("selected");barline.setPointerCapture(event.pointerId);
+    const m=+barline.dataset.barline;if(m%state.measuresPerRow===0&&!barline.dataset.end)return;selectedScoreTarget={type:"barline",m};selectedItemId=null;event.preventDefault();barline.classList.add("selected");if(barline.dataset.end)return;snap();scoreDrag={type:"barline",m,startX:event.clientX,left:m-1,right:m,leftOffset:state.measureOffsets?.[m-1]||0,rightOffset:state.measureOffsets?.[m]||0,leftWidth:measureWidth(m-1),rightWidth:measureWidth(m)};barline.setPointerCapture(event.pointerId);
   }
 });
 q("#scoreArea").addEventListener("pointermove",event=>{
@@ -613,6 +636,8 @@ q("#scoreArea").addEventListener("pointermove",event=>{
     const x=clamp(scoreDrag.originX+dx,scoreDrag.bounds.min,scoreDrag.bounds.max);scoreDrag.notes.forEach(note=>note.x=x);
     qAll(`[data-note^="${scoreDrag.m},"][data-note$=",${scoreDrag.p}"]`).forEach(element=>element.style.setProperty("transform",`translateX(${x}px)`));
     renderLayers(true);
+  }else if(scoreDrag.type==="scorePart"){
+    const x=clamp(scoreDrag.originX+dx,scoreDrag.min,scoreDrag.max);scoreDrag.part.x=x;const button=q(`[data-score-part-id="${scoreDrag.part.id}"]`);if(button)button.style.left=`calc(${(scoreDrag.part.p+.5)*100/16}% + ${x}px)`;
   }else{
     state.measureOffsets=Array.isArray(state.measureOffsets)?state.measureOffsets:[];
     const bounded=clamp(dx,240-scoreDrag.leftWidth,scoreDrag.rightWidth-240);
@@ -630,6 +655,7 @@ q("#textSize").addEventListener("change",event=>{const item=selectedItem(),value
 q("#textBackground").addEventListener("change",event=>{const item=selectedItem();state.textBackground=event.target.value;if(item?.type==="text"){snap();item.background=event.target.value}render()});
 q("#numberColor").addEventListener("change",event=>{snap();state.numberColor=event.target.value;state.notes.filter(n=>!n.rest&&n.v!=="○"&&!n.individualColor).forEach(n=>n.color=state.numberColor);render()});
 q("#openColor").addEventListener("change",event=>{snap();state.openColor=event.target.value;state.notes.filter(n=>!n.rest&&n.v==="○"&&!n.individualColor).forEach(n=>n.color=state.openColor);render()});
+q("#title").addEventListener("input",updateTitleWidth);
 q("#title").addEventListener("change",e=>{snap();state.title=e.target.value;render()});
 q("#tuning").addEventListener("change",e=>{snap();state.tuning=e.target.value;render()});
 q("#meter").addEventListener("change",e=>{snap();state.meter=e.target.value.trim()||defaults.meter;render()});
