@@ -69,7 +69,7 @@
     <svg id="annotations" class="annotation-svg" aria-label="書き込みレイヤー"></svg>
   </section>
   <section class="layer-panel">
-    <div class="layer-top"><strong>書き込みレイヤー</strong><div><button id="toggleDrawing">✎ 描画を開始</button><button id="addLayer">＋ 個人レイヤー</button><button id="deleteLayer">削除</button></div></div>
+    <div class="layer-top"><strong>書き込みレイヤー</strong><div><button id="toggleDrawing">✎ 描画を開始</button><button id="addLayer">＋ 個人レイヤー</button><button id="renameLayer">名前変更</button><button id="deleteLayer">削除</button></div></div>
     <div id="layerSwitches" class="layer-switches"></div>
     <div id="drawTools" class="draw-tools">
       <button data-tool="select">選択・移動</button><button data-tool="pen">自由線</button><button data-tool="arrow">矢印</button><button data-tool="rect">枠</button><button data-tool="text">コメント</button><button data-tool="eraser">消しゴム</button>
@@ -365,6 +365,7 @@ function renderLayers(){
   q("#rectWidth").value=rectItem?String(Math.round(Math.abs(item.x2-item.x1))):"100";q("#rectHeight").value=rectItem?String(Math.round(Math.abs(item.y2-item.y1))):"100";
   q("#editComment").disabled=item?.type!=="text";q("#deleteItem").disabled=!item;q("#bringFront").disabled=!item;
   q("#deleteLayer").disabled=!activeLayer();
+  q("#renameLayer").disabled=!activeLayer();
   paper.classList.toggle("annotating",drawing);
   q("#toggleDrawing").textContent=drawing?"✓ 描画を終了":"✎ 描画を開始";
   const layer=activeLayer();q("#layerHelp").textContent=drawing?(layer?(state.drawTool==="select"?"動かしたい線・矢印・枠・コメントをタップし、そのまま指またはペンで移動します。":`「${layer.name}」へ書き込み中。譜面上を操作してください。`):"先に個人レイヤーを作成してください。"):"奏法を含む写譜は最下層に固定され、このページでは変更できません。";
@@ -380,9 +381,16 @@ function applyPreview(){
 }
 function pointFromEvent(event){const rect=q("#annotations").getBoundingClientRect();return{x:(event.clientX-rect.left)*q("#annotations").viewBox.baseVal.width/rect.width,y:(event.clientY-rect.top)*q("#annotations").viewBox.baseVal.height/rect.height}}
 function addLayer(){
-  const name=prompt("この書き込みレイヤーを使う人の名前を入力してください。","");
+  const name=prompt("レイヤーの名前を入力してください","");
   if(!name||!name.trim())return;
   snap();const id=`layer-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;state.layers.push({id,name:name.trim(),visible:true,printEnabled:true,items:[]});state.activeLayerId=id;render();
+}
+function renameLayer(){
+  const layer=activeLayer();
+  if(!layer)return;
+  const name=prompt("レイヤーの名前を入力してください",layer.name);
+  if(name===null||!name.trim()||name.trim()===layer.name)return;
+  snap();layer.name=name.trim();render();
 }
 function startDraw(event){
   if(!drawing)return;const layer=activeLayer();if(!layer||layer.id===TECHNIQUE_LAYER_ID){addLayer();return}
@@ -461,6 +469,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="loadScoreFile"){q("#scoreFileInput").click();return}
   else if(b.id==="printPreview"){openPrintSettings();return}
   else if(b.id==="addLayer"){addLayer();return}
+  else if(b.id==="renameLayer"){renameLayer();return}
   else if(b.id==="deleteLayer"){const layer=activeLayer();if(layer&&confirm(`「${layer.name}」レイヤーと書き込みを削除しますか？`)){snap();state.layers=state.layers.filter(x=>x.id!==layer.id);state.activeLayerId=state.layers.find(x=>x.id!==TECHNIQUE_LAYER_ID)?.id||null;drawing=false;render()}return}
   else if(b.id==="toggleDrawing"){if(!state.layers.length){addLayer();if(!state.layers.length)return}drawing=!drawing;renderLayers();return}
   else if(b.dataset.layer){state.activeLayerId=b.dataset.layer;selectedItemId=null;renderLayers();return}
