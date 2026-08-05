@@ -15,7 +15,7 @@
     .paper.preview-mode .score-scroll{overflow:hidden}
     .paper.preview-mode .score{width:100%;min-width:0}
     .paper.preview-mode .measure{min-width:0;width:auto;flex:var(--measure-grow,384) 1 0}
-    .paper.preview-mode .string{grid-template-columns:repeat(16,minmax(0,1fr))}
+    .paper.preview-mode .string{grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr))}
     .paper.annotating{touch-action:none}.annotation-svg{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none}.paper.annotating .annotation-svg{pointer-events:auto}
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected{filter:drop-shadow(0 0 4px #f2c500)}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;font:15px serif}.score-meta{display:flex;align-items:flex-end;gap:6px}.score-meta select,.score-meta input{border:0;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
@@ -24,7 +24,7 @@
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,34px);font:12px/34px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
     .score{display:flex;width:max-content;min-width:100%}.measure{--row-height:34px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}
-    .measure::before,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure::before{left:0}.measure:last-child::after{right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));position:relative}
+    .measure::before,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure::before{left:0}.measure:last-child::after{right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));position:relative}
     .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:var(--yellow);box-shadow:inset 0 0 0 2px #c9a927}
     .note{z-index:2;align-self:center;justify-self:center;width:max-content;height:32px;border:0;background:none;padding:0;cursor:pointer;overflow:visible}.note b{display:inline-block;min-width:20px;background:var(--paper);padding:0 2px 2px;font:600 25px/29px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}
@@ -145,14 +145,21 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"四分ノ二拍子",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],lineStyle:"solid",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],lineStyle:"solid",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,dragging=null,printing=false;
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").trim()}
+function parseMeter(value){const raw=toAscii(value).replace(/\s+/g,"");let match=raw.match(/^(\d{1,2})\/(\d{1,2})$/);if(!match){const nums=raw.match(/(三十二|十六|十二|十一|十|一|二|三|四|五|六|七|八|九|\d+)/g);if(nums?.length>=2){const map={一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12,十六:16,三十二:32};match=[raw,String(map[nums[1]]||nums[1]),String(map[nums[0]]||nums[0])]}}if(!match)return null;const numerator=Number(match[1]),denominator=Number(match[2]);if(!Number.isInteger(numerator)||numerator<1||numerator>99||![1,2,4,8,16].includes(denominator))return null;const capacity=16*numerator/denominator;if(!Number.isInteger(capacity)||capacity<1||capacity>64)return null;return{numerator,denominator,capacity,signature:`${numerator}/${denominator}`}}
+function kanjiNumber(value){const digits=["","一","二","三","四","五","六","七","八","九"];if(value<10)return digits[value];if(value===10)return"十";if(value<20)return`十${digits[value-10]}`;const tens=Math.floor(value/10),ones=value%10;return`${digits[tens]}十${digits[ones]}`}
+function meterLabel(value=state.meter){const meter=parseMeter(value)||parseMeter(defaults.meter);return`${kanjiNumber(meter.denominator)}分ノ${kanjiNumber(meter.numerator)}拍子`}
+function measureCapacity(){return(parseMeter(state.meter)||parseMeter(defaults.meter)).capacity}
+function barlineKey(row,boundary){return`${row}:${boundary}`}
+function migrateState(){const rawMeter=state.meter,parsed=parseMeter(rawMeter)||parseMeter(defaults.meter),legacy=String(rawMeter||"").includes("拍子"),oldRows=state.rows;if(legacy&&parsed.capacity<16&&state.notes.some(note=>note.p>=parsed.capacity)){const remap=(m,p)=>{const absolute=m*16+p;return{m:Math.floor(absolute/parsed.capacity),p:absolute%parsed.capacity}};state.notes=state.notes.map(note=>({...note,...remap(note.m,note.p)}));state.scoreParts=(state.scoreParts||[]).map(part=>({...part,...remap(part.m,part.p)}));state.layers=(state.layers||[]).map(layer=>({...layer,items:(layer.items||[]).map(item=>item.anchor?{...item,anchor:{...item.anchor,...remap(item.anchor.m,item.anchor.p)}}:item)}));const needed=Math.max(1,...state.notes.map(note=>note.m+1),...state.scoreParts.map(part=>part.m+1));state.rows=clamp(Math.ceil(needed/state.measuresPerRow),state.rows,20);state.measureOffsets=[];const cursor=remap(state.m,state.p);state.m=cursor.m;state.p=cursor.p}state.meter=parsed.signature;const old=state.barlineKinds&&typeof state.barlineKinds==="object"?state.barlineKinds:{};if(Object.keys(old).some(key=>!key.includes(":"))){const migrated={};for(let row=0;row<oldRows;row++){for(let boundary=0;boundary<=state.measuresPerRow;boundary++){const global=row*state.measuresPerRow+boundary;if(old[global])migrated[barlineKey(row,boundary)]=old[global]}}state.barlineKinds=migrated}}
 function load(){
   try{
     const current=JSON.parse(localStorage.getItem(KEY));
-    if(current&&Array.isArray(current.notes)){state={...defaults,...current,annotationCoordVersion:current.annotationCoordVersion||1};ensureTechniqueLayer();hasSaved=true;return}
+    if(current&&Array.isArray(current.notes)){state={...defaults,...current,annotationCoordVersion:current.annotationCoordVersion||1};migrateState();ensureTechniqueLayer();hasSaved=true;return}
     const old=JSON.parse(localStorage.getItem(OLD_KEY));
     if(old&&Array.isArray(old.notes)){state={...defaults,notes:old.notes.map(n=>n.v==="0"?{...n,v:"○"}:n),title:old.title||defaults.title};ensureTechniqueLayer();hasSaved=true}
   }catch(error){console.warn("保存データを読み込めませんでした。",error)}
@@ -209,7 +216,8 @@ function validatedImportedScore(value){
   if(!score||typeof score!=="object"||!Array.isArray(score.notes)||!Array.isArray(score.layers))throw new Error("文化譜の保存ファイルではありません。");
   const rows=Number(score.rows),measures=Number(score.measuresPerRow);
   if(!Number.isInteger(rows)||rows<1||rows>20||!Number.isInteger(measures)||measures<1||measures>12)throw new Error("段数または小節数が対応範囲外です。");
-  if(score.notes.some(note=>!note||!Number.isInteger(note.m)||!Number.isInteger(note.s)||!Number.isInteger(note.p)||note.m<0||note.m>=rows*measures||note.s<1||note.s>3||note.p<0||note.p>15))throw new Error("音符データに不正な位置があります。");
+  const meter=parseMeter(score.meter||defaults.meter);if(!meter)throw new Error("拍子データを認識できません。");const importedCapacity=String(score.meter||"").includes("拍子")?Math.max(16,meter.capacity):meter.capacity;
+  if(score.notes.some(note=>!note||!Number.isInteger(note.m)||!Number.isInteger(note.s)||!Number.isInteger(note.p)||note.m<0||note.m>=rows*measures||note.s<1||note.s>3||note.p<0||note.p>=importedCapacity))throw new Error("音符データに不正な位置があります。");
   return{...defaults,...score,rows,measuresPerRow:measures,notes:score.notes,scoreParts:Array.isArray(score.scoreParts)?score.scoreParts:[],barlineKinds:score.barlineKinds&&typeof score.barlineKinds==="object"?score.barlineKinds:{},layers:score.layers};
 }
 async function importScoreFile(file){
@@ -218,7 +226,7 @@ async function importScoreFile(file){
     if(file.size>10*1024*1024)throw new Error("保存ファイルが大きすぎます（上限10MB）。");
     const imported=validatedImportedScore(JSON.parse(await file.text()));
     if((state.notes.length||state.layers.some(layer=>layer.items?.length))&&!confirm("現在の文化譜を、読み込んだ内容に置き換えますか？"))return;
-    state=imported;ensureTechniqueLayer();past=[];future=[];selectedItemId=null;drawing=false;save();render();
+    state=imported;migrateState();ensureTechniqueLayer();past=[];future=[];selectedItemId=null;drawing=false;save();render();
     alert(`「${state.title||"文化譜"}」を読み込みました。`);
   }catch(error){console.error(error);alert(`読み込めませんでした。\n${error instanceof Error?error.message:"ファイルを確認してください。"}`)}
 }
@@ -239,7 +247,7 @@ function measureWidth(m){
   const widest=notes.reduce((max,n)=>Math.max(max,String(n.v||"").length),1);
   const perString=Math.max(0,...[1,2,3].map(s=>notes.filter(n=>n.s===s).reduce((sum,n)=>sum+(n.d===1?1:n.d===2?.55:.3),0)));
   const occupied=new Set(notes.map(note=>note.p)).size;
-  const contentWidth=Math.max(384,occupied*34+widest*10+48);
+  const contentWidth=Math.max(384,measureCapacity()*24,occupied*34+widest*10+48);
   return Math.max(240,contentWidth+(state.measureOffsets?.[m]||0));
 }
 function noteRhythmClass(n,m){
@@ -263,14 +271,14 @@ function noteHtml(n,m,s){
 }
 function samePartSvg(kind){const second=kind==="same2"?'<line x1="13" y1="62" x2="27" y2="6" stroke="currentColor" stroke-width="2"/>':"";return `<svg viewBox="0 0 34 68"><circle cx="5" cy="18" r="2.5" fill="currentColor"/><circle cx="29" cy="50" r="2.5" fill="currentColor"/><line x1="7" y1="62" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>${second}</svg>`}
 function barlineSvg(kind){if(kind==="single")return"";const line=(x,width=1.5)=>`<line x1="${x}" y1="0" x2="${x}" y2="68" stroke="currentColor" stroke-width="${width}"/>`,dots=x=>`<circle cx="${x}" cy="23" r="2.2" fill="currentColor"/><circle cx="${x}" cy="45" r="2.2" fill="currentColor"/>`;if(kind==="double")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(7)}${line(11)}</svg>`;if(kind==="repeat-start")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(5)}${line(9)}${dots(15)}</svg>`;if(kind==="repeat-end")return `<svg class="bar-symbol" viewBox="0 0 18 68">${dots(3)}${line(9)}${line(13)}</svg>`;return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(6)}${line(12,4)}</svg>`}
-function scorePartsHtml(m){return(state.scoreParts||[]).filter(part=>part.m===m).map(part=>`<span class="score-part" style="left:calc(${(part.p+.5)*100/16}% + ${part.x||0}px)">${samePartSvg(part.kind)}</span>`).join("")}
+function scorePartsHtml(m){const capacity=measureCapacity();return(state.scoreParts||[]).filter(part=>part.m===m).map(part=>`<span class="score-part" style="left:calc(${(part.p+.5)*100/capacity}% + ${part.x||0}px)">${samePartSvg(part.kind)}</span>`).join("")}
 function measureHtml(m){
-  const width=measureWidth(m),kind=state.barlineKinds?.[m]||"single",atRowEnd=(m+1)%state.measuresPerRow===0,endKind=state.barlineKinds?.[m+1]||"single",endLine=atRowEnd&&endKind!=="single"?barlineSvg(endKind).replace('class="bar-symbol"','class="bar-symbol end-bar"'):"";return `<div class="measure ${m===state.m?"on":""}${kind!=="single"?" custom-bar":""}${endLine?" custom-end":""}" style="--measure-width:${width}px;--measure-grow:${width}">${barlineSvg(kind)}${endLine}${scorePartsHtml(m)}${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
+  const row=Math.floor(m/state.measuresPerRow),boundary=m%state.measuresPerRow,capacity=measureCapacity(),kind=state.barlineKinds?.[barlineKey(row,boundary)]||"single",atRowEnd=boundary===state.measuresPerRow-1,endKind=state.barlineKinds?.[barlineKey(row,state.measuresPerRow)]||"single",width=measureWidth(m),endLine=atRowEnd&&endKind!=="single"?barlineSvg(endKind).replace('class="bar-symbol"','class="bar-symbol end-bar"'):"";return `<div class="measure ${m===state.m?"on":""}${kind!=="single"?" custom-bar":""}${endLine?" custom-end":""}" style="--measure-width:${width}px;--measure-grow:${width};--meter-columns:${capacity}">${barlineSvg(kind)}${endLine}${scorePartsHtml(m)}${[3,2,1].map(s=>`<div class="string">${Array.from({length:capacity},(_,p)=>`<button class="cell ${m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
 }
 function render(){
-  const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,15);
+  const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,measureCapacity()-1);
   state.preview=true;
-  q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=true;q("#meter").value=state.meter;q("#meter").readOnly=true;q("#summary").textContent="";
+  q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=true;q("#meter").value=meterLabel();q("#meter").readOnly=true;q("#summary").textContent="";
   q("#rowCount").textContent=`${state.rows}段`;q("#measureCount").textContent=`${state.measuresPerRow}小節`;
   const row=Math.floor(state.m/state.measuresPerRow);
   q("#status").textContent=`${row+1}段・${state.m%state.measuresPerRow+1}小節・${["","一","二","三"][state.s]}の糸・${Math.floor(state.p/4)+1}拍目`;
@@ -553,8 +561,8 @@ window.addEventListener("afterprint",()=>{
   render();
 });
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
-window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
-window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
+window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
+window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState();render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
