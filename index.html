@@ -15,7 +15,7 @@
     .paper.preview-mode .score-scroll{overflow:hidden}
     .paper.preview-mode .score{width:100%;min-width:0}
     .paper.preview-mode .measure{min-width:0;width:auto;flex:var(--measure-grow,384) 1 0}
-    .paper.preview-mode .string{grid-template-columns:repeat(16,minmax(0,1fr))}
+    .paper.preview-mode .string{grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr))}
     .paper.annotating{touch-action:none}.annotation-svg{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none}.paper.annotating .annotation-svg{pointer-events:auto}
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected{filter:drop-shadow(0 0 4px #f2c500)}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;font:15px serif}.score-meta{display:flex;align-items:flex-end;gap:6px}.score-meta select,.score-meta input{border:0;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
@@ -24,7 +24,7 @@
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,34px);font:12px/34px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
     .score{display:flex;width:max-content;min-width:100%}.measure{--row-height:34px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}
-    .measure:last-child{border-right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));position:relative}
+    .measure:last-child{border-right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));position:relative}
     .barline-handle{position:absolute;z-index:7;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);left:-18px;width:36px;border:0;background:transparent;touch-action:none;cursor:ew-resize}.barline-handle::after{content:"";position:absolute;left:17px;top:0;bottom:0;border-left:1.5px solid var(--ink)}.barline-handle:hover::after,.barline-handle:focus-visible::after,.barline-handle.selected::after{border-left:4px solid #c9a927}.measure:first-child>.barline-handle,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure:first-child>.barline-handle{pointer-events:none}.measure:last-child::after{right:0}
     .barline-handle.endline-handle{left:auto;right:-18px;cursor:pointer}
     .measure.custom-end::after{display:none}
@@ -72,7 +72,7 @@
   <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>写譜</h1></div><div class="actions"><a class="page-link" href="./annotations.html">✎ 書き込みページ</a><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
   <input id="scoreFileInput" type="file" accept=".shian-score.json,.json,application/json" hidden>
   <section class="paper">
-    <div class="meta"><div class="score-meta"><span>〈</span><select id="tuning" aria-label="調弦"><option>本調子</option><option selected>二上り</option><option>三下り</option></select><span>〉</span><input id="meter" value="四分ノ二拍子" aria-label="拍子"></div><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
+    <div class="meta"><div class="score-meta"><span>〈</span><select id="tuning" aria-label="調弦"><option>本調子</option><option selected>二上り</option><option>三下り</option></select><span>〉</span><input id="meter" value="四分ノ二拍子" aria-label="拍子" title="2/4の形式で入力"></div><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
     <div id="scoreArea"></div>
     <svg id="annotations" class="annotation-svg" aria-label="書き込みレイヤー"></svg>
   </section>
@@ -124,7 +124,7 @@
     <fieldset class="notes-only" style="margin-top:14px"><legend>3. 数字・開放弦・休符を入れる</legend><div id="numbers" class="nums"></div><div id="rests" class="rests"></div><div id="sameParts" class="part-tools" aria-label="同じ記号"><button data-score-part="same1"><svg class="part-preview" viewBox="0 0 28 28"><circle cx="5" cy="8" r="2" fill="currentColor"/><circle cx="23" cy="20" r="2" fill="currentColor"/><line x1="8" y1="24" x2="20" y2="4" stroke="currentColor" stroke-width="2"/></svg>同じ1</button><button data-score-part="same2"><svg class="part-preview" viewBox="0 0 28 28"><circle cx="4" cy="8" r="2" fill="currentColor"/><circle cx="24" cy="20" r="2" fill="currentColor"/><line x1="7" y1="24" x2="18" y2="4" stroke="currentColor" stroke-width="2"/><line x1="12" y1="24" x2="23" y2="4" stroke="currentColor" stroke-width="2"/></svg>同じ2</button></div></fieldset>
     <div class="staff-only part-tools" id="barlineParts"><button data-bar-kind="single"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>通常線</button><button data-bar-kind="double"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="11" y1="2" x2="11" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="17" y1="2" x2="17" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>2本線</button><button data-bar-kind="repeat-start"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="13" y1="2" x2="13" y2="26" stroke="currentColor" stroke-width="1.5"/><circle cx="21" cy="10" r="2" fill="currentColor"/><circle cx="21" cy="18" r="2" fill="currentColor"/></svg>くり返しA</button><button data-bar-kind="repeat-end"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><circle cx="7" cy="10" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/><line x1="15" y1="2" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="2" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>くり返しB</button><button data-bar-kind="final"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="10" y1="2" x2="10" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="18" y1="2" x2="18" y2="26" stroke="currentColor" stroke-width="4"/></svg>終止符</button></div>
     <div class="bottom notes-only"><span>入力内容はこの端末に自動保存されます。</span><button id="clear" class="clear">譜面を空にする</button></div>
-    <div class="status status-bottom"><div class="notes-only"><small>現在の入力位置</small><strong id="status"></strong><small>数字・開放弦だけを選択・移動できます。</small></div><div class="staff-only"><small>小節線の編集</small><strong>動かす小節線を選択してください</strong><small>数字には反応しません。</small></div><div class="move"><button id="prev" class="notes-only" aria-label="前の入力位置">←</button><button id="next" class="notes-only" aria-label="次の入力位置">→</button><button id="moveSelectedLeft">選択を左へ</button><button id="moveSelectedRight">選択を右へ</button><button id="resetPositions">位置を標準に戻す</button><button id="delete" class="del notes-only">選択した音を削除</button></div></div>
+    <div class="status status-bottom"><div class="notes-only"><small>現在の入力位置</small><strong id="status"></strong><small id="keyboardStatus">キーボード：糸*音価*数字（例 3*16*19）</small></div><div class="staff-only"><small>小節線の編集</small><strong>動かす小節線を選択してください</strong><small>数字には反応しません。</small></div><div class="move"><button id="prev" class="notes-only" aria-label="前の入力位置">←</button><button id="next" class="notes-only" aria-label="次の入力位置">→</button><button id="moveSelectedLeft">選択を左へ</button><button id="moveSelectedRight">選択を右へ</button><button id="resetPositions">位置を標準に戻す</button><button id="delete" class="del notes-only">選択した音を削除</button></div></div>
   </section>
 </main>
 <dialog id="newDialog">
@@ -162,14 +162,41 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"四分ノ二拍子",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
-let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null;
+let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="";
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").replace(/[＊×]/g,"*").trim()}
+function parseMeter(value){
+  const raw=toAscii(value).replace(/\s+/g,"");let match=raw.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(!match){const nums=raw.match(/(三十二|十六|十二|十一|十|一|二|三|四|五|六|七|八|九|\d+)/g);if(nums?.length>=2){const map={一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12,十六:16,三十二:32};match=[raw,String(map[nums[1]]||nums[1]),String(map[nums[0]]||nums[0])]}}
+  if(!match)return null;const numerator=Number(match[1]),denominator=Number(match[2]);
+  if(!Number.isInteger(numerator)||numerator<1||numerator>99||![1,2,4,8,16].includes(denominator))return null;
+  const capacity=16*numerator/denominator;if(!Number.isInteger(capacity)||capacity<1||capacity>64)return null;
+  return{numerator,denominator,capacity,signature:`${numerator}/${denominator}`};
+}
+function kanjiNumber(value){const digits=["","一","二","三","四","五","六","七","八","九"];if(value<10)return digits[value];if(value===10)return"十";if(value<20)return`十${digits[value-10]}`;const tens=Math.floor(value/10),ones=value%10;return`${digits[tens]}十${digits[ones]}`}
+function meterLabel(value=state.meter){const meter=parseMeter(value)||parseMeter(defaults.meter);return`${kanjiNumber(meter.denominator)}分ノ${kanjiNumber(meter.numerator)}拍子`}
+function measureCapacity(){return(parseMeter(state.meter)||parseMeter(defaults.meter)).capacity}
+function barlineKey(row,boundary){return`${row}:${boundary}`}
+function migrateState(){
+  const rawMeter=state.meter,parsed=parseMeter(rawMeter)||parseMeter(defaults.meter),legacy=String(rawMeter||"").includes("拍子"),oldRows=state.rows;
+  if(legacy&&parsed.capacity<16&&state.notes.some(note=>note.p>=parsed.capacity)){
+    const remap=(m,p)=>{const absolute=m*16+p;return{m:Math.floor(absolute/parsed.capacity),p:absolute%parsed.capacity}};
+    state.notes=state.notes.map(note=>({...note,...remap(note.m,note.p)}));
+    state.scoreParts=(state.scoreParts||[]).map(part=>({...part,...remap(part.m,part.p)}));
+    state.layers=(state.layers||[]).map(layer=>({...layer,items:(layer.items||[]).map(item=>item.anchor?{...item,anchor:{...item.anchor,...remap(item.anchor.m,item.anchor.p)}}:item)}));
+    const needed=Math.max(1,...state.notes.map(note=>note.m+1),...state.scoreParts.map(part=>part.m+1));state.rows=clamp(Math.ceil(needed/state.measuresPerRow),state.rows,20);state.measureOffsets=[];
+    const cursor=remap(state.m,state.p);state.m=cursor.m;state.p=cursor.p;
+  }
+  state.meter=parsed.signature;
+  const old=state.barlineKinds&&typeof state.barlineKinds==="object"?state.barlineKinds:{};
+  if(Object.keys(old).some(key=>!key.includes(":"))){const migrated={};for(let row=0;row<oldRows;row++){for(let boundary=0;boundary<=state.measuresPerRow;boundary++){const global=row*state.measuresPerRow+boundary;if(old[global])migrated[barlineKey(row,boundary)]=old[global]}}state.barlineKinds=migrated}
+}
 function load(){
   try{
     const current=JSON.parse(localStorage.getItem(KEY));
-    if(current&&Array.isArray(current.notes)){state={...defaults,...current,annotationCoordVersion:current.annotationCoordVersion||1};ensureTechniqueLayer();hasSaved=true;return}
+    if(current&&Array.isArray(current.notes)){state={...defaults,...current,annotationCoordVersion:current.annotationCoordVersion||1};migrateState();ensureTechniqueLayer();hasSaved=true;return}
     const old=JSON.parse(localStorage.getItem(OLD_KEY));
     if(old&&Array.isArray(old.notes)){state={...defaults,notes:old.notes.map(n=>n.v==="0"?{...n,v:"○"}:n),title:old.title||defaults.title};ensureTechniqueLayer();hasSaved=true}
   }catch(error){console.warn("保存データを読み込めませんでした。",error)}
@@ -229,7 +256,9 @@ function validatedImportedScore(value){
   if(!score||typeof score!=="object"||!Array.isArray(score.notes)||!Array.isArray(score.layers))throw new Error("文化譜の保存ファイルではありません。");
   const rows=Number(score.rows),measures=Number(score.measuresPerRow);
   if(!Number.isInteger(rows)||rows<1||rows>20||!Number.isInteger(measures)||measures<1||measures>12)throw new Error("段数または小節数が対応範囲外です。");
-  if(score.notes.some(note=>!note||!Number.isInteger(note.m)||!Number.isInteger(note.s)||!Number.isInteger(note.p)||note.m<0||note.m>=rows*measures||note.s<1||note.s>3||note.p<0||note.p>15))throw new Error("音符データに不正な位置があります。");
+  const meter=parseMeter(score.meter||defaults.meter);if(!meter)throw new Error("拍子データを認識できません。");
+  const importedCapacity=String(score.meter||"").includes("拍子")?Math.max(16,meter.capacity):meter.capacity;
+  if(score.notes.some(note=>!note||!Number.isInteger(note.m)||!Number.isInteger(note.s)||!Number.isInteger(note.p)||note.m<0||note.m>=rows*measures||note.s<1||note.s>3||note.p<0||note.p>=importedCapacity))throw new Error("音符データに不正な位置があります。");
   return{...defaults,...score,rows,measuresPerRow:measures,notes:score.notes,scoreParts:Array.isArray(score.scoreParts)?score.scoreParts:[],barlineKinds:score.barlineKinds&&typeof score.barlineKinds==="object"?score.barlineKinds:{},layers:score.layers};
 }
 async function importScoreFile(file){
@@ -238,7 +267,7 @@ async function importScoreFile(file){
     if(file.size>10*1024*1024)throw new Error("保存ファイルが大きすぎます（上限10MB）。");
     const imported=validatedImportedScore(JSON.parse(await file.text()));
     if((state.notes.length||state.layers.some(layer=>layer.items?.length))&&!confirm("現在の文化譜を、読み込んだ内容に置き換えますか？"))return;
-    state=imported;ensureTechniqueLayer();past=[];future=[];selectedItemId=null;selectedScoreTarget=null;drawing=false;cursorVisible=false;save();render();
+    state=imported;migrateState();ensureTechniqueLayer();past=[];future=[];selectedItemId=null;selectedScoreTarget=null;drawing=false;cursorVisible=false;save();render();
     alert(`「${state.title||"文化譜"}」を読み込みました。`);
   }catch(error){console.error(error);alert(`読み込めませんでした。\n${error instanceof Error?error.message:"ファイルを確認してください。"}`)}
 }
@@ -259,7 +288,7 @@ function measureWidth(m){
   const widest=notes.reduce((max,n)=>Math.max(max,String(n.v||"").length),1);
   const perString=Math.max(0,...[1,2,3].map(s=>notes.filter(n=>n.s===s).reduce((sum,n)=>sum+(n.d===1?1:n.d===2?.55:.3),0)));
   const occupied=new Set(notes.map(note=>note.p)).size;
-  const contentWidth=Math.max(384,occupied*34+widest*10+48);
+  const contentWidth=Math.max(384,measureCapacity()*24,occupied*34+widest*10+48);
   return Math.max(240,contentWidth+(state.measureOffsets?.[m]||0));
 }
 function noteRhythmClass(n,m){
@@ -314,18 +343,19 @@ function barlineSvg(kind){
   if(kind==="repeat-end")return `<svg class="bar-symbol" viewBox="0 0 18 68">${dots(3)}${line(9)}${line(13)}</svg>`;
   return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(6)}${line(12,4)}</svg>`;
 }
-function scorePartsHtml(m){return(state.scoreParts||[]).filter(part=>part.m===m).map(part=>`<button class="score-part${selectedScoreTarget?.type==="scorePart"&&selectedScoreTarget.id===part.id?" selected":""}" style="left:calc(${(part.p+.5)*100/16}% + ${part.x||0}px)" data-score-part-id="${part.id}" aria-label="${part.kind==="same2"?"同じ2":"同じ1"}">${samePartSvg(part.kind)}</button>`).join("")}
+function scorePartsHtml(m){const capacity=measureCapacity();return(state.scoreParts||[]).filter(part=>part.m===m).map(part=>`<button class="score-part${selectedScoreTarget?.type==="scorePart"&&selectedScoreTarget.id===part.id?" selected":""}" style="left:calc(${(part.p+.5)*100/capacity}% + ${part.x||0}px)" data-score-part-id="${part.id}" aria-label="${part.kind==="same2"?"同じ2":"同じ1"}">${samePartSvg(part.kind)}</button>`).join("")}
 function measureHtml(m){
-  const selected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.m===m?" selected":"";
-  const width=measureWidth(m),kind=state.barlineKinds?.[m]||"single",atRowEnd=(m+1)%state.measuresPerRow===0,endKind=state.barlineKinds?.[m+1]||"single",endSelected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.m===m+1?" selected":"",endLine=atRowEnd?`<button class="barline-handle endline-handle${endSelected}" data-barline="${m+1}" data-end="true" data-kind="${endKind}" aria-label="段末の小節線を選択">${barlineSvg(endKind)}</button>`:"";return `<div class="measure ${m===state.m?"on":""}${atRowEnd&&endKind!=="single"?" custom-end":""}" style="--measure-width:${width}px;--measure-grow:${width}"><button class="barline-handle${selected}" data-barline="${m}" data-kind="${kind}" aria-label="${m+1}小節の開始線を横移動">${barlineSvg(kind)}</button>${endLine}${scorePartsHtml(m)}${[3,2,1].map(s=>`<div class="string">${Array.from({length:16},(_,p)=>`<button class="cell ${cursorVisible&&m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
+  const row=Math.floor(m/state.measuresPerRow),boundary=m%state.measuresPerRow,startKey=barlineKey(row,boundary),endKey=barlineKey(row,state.measuresPerRow),selected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.key===startKey?" selected":"";
+  const capacity=measureCapacity(),width=measureWidth(m),kind=state.barlineKinds?.[startKey]||"single",atRowEnd=boundary===state.measuresPerRow-1,endKind=state.barlineKinds?.[endKey]||"single",endSelected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.key===endKey?" selected":"",endLine=atRowEnd?`<button class="barline-handle endline-handle${endSelected}" data-barline-key="${endKey}" data-boundary="${m+1}" data-end="true" data-kind="${endKind}" aria-label="${row+1}段末の小節線を選択">${barlineSvg(endKind)}</button>`:"";return `<div class="measure ${m===state.m?"on":""}${atRowEnd&&endKind!=="single"?" custom-end":""}" style="--measure-width:${width}px;--measure-grow:${width};--meter-columns:${capacity}"><button class="barline-handle${selected}" data-barline-key="${startKey}" data-boundary="${m}" data-kind="${kind}" aria-label="${row+1}段${boundary+1}小節の開始線を横移動">${barlineSvg(kind)}</button>${endLine}${scorePartsHtml(m)}${[3,2,1].map(s=>`<div class="string">${Array.from({length:capacity},(_,p)=>`<button class="cell ${cursorVisible&&m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
 }
 function render(){
-  const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,15);
+  const total=totalMeasures(),capacity=measureCapacity();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,capacity-1);
   state.preview=true;
-  q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=IS_ANNOTATION_PAGE;q("#meter").value=state.meter;q("#meter").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
+  q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=IS_ANNOTATION_PAGE;if(document.activeElement!==q("#meter"))q("#meter").value=meterLabel();q("#meter").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
   q("#rowCount").textContent=`${state.rows}段`;q("#measureCount").textContent=`${state.measuresPerRow}小節`;
   const row=Math.floor(state.m/state.measuresPerRow);
-  q("#status").textContent=`${row+1}段・${state.m%state.measuresPerRow+1}小節・${["","一","二","三"][state.s]}の糸・${Math.floor(state.p/4)+1}拍目`;
+  q("#status").textContent=`${row+1}段・${state.m%state.measuresPerRow+1}小節・${["","一","二","三"][state.s]}の糸・16分位置${state.p+1}/${capacity}`;
+  q("#keyboardStatus").textContent=keyboardBuffer?`入力中：${keyboardBuffer}_`:`キーボード：糸*音価*数字（例 3*16*19）`;
   q("#strings").innerHTML=[3,2,1].map(s=>`<button class="${s===state.s?"on":""}" data-s="${s}">${["","一","二","三"][s]}の糸</button>`).join("");
   q("#durations").innerHTML=[[4,"4分","下線なし"],[2,"8分","下線1本"],[1,"16分","下線2本"]].map(x=>`<button class="${x[0]===state.d?"on":""}" data-d="${x[0]}"><b>${x[1]}</b><small>${x[2]}</small></button>`).join("");
   q("#numbers").innerHTML=vals.map(v=>`<button data-v="${v}">${v}</button>`).join("");
@@ -499,18 +529,32 @@ function endDraw(event){
 }
 function changeLayout(rows,measures){
   rows=clamp(Number(rows)||1,1,20);measures=clamp(Number(measures)||1,1,12);
-  const newTotal=rows*measures,discard=state.notes.some(n=>n.m>=newTotal);
+  const oldMeasures=state.measuresPerRow,newTotal=rows*measures,discard=state.notes.some(n=>Math.floor(n.m/oldMeasures)>=rows||n.m%oldMeasures>=measures);
   if(discard&&!confirm("減らした範囲に入力済みの音があります。その音を削除して変更しますか？"))return false;
-  snap();const removed=state.notes.filter(n=>n.m>=newTotal).map(n=>anchorKey(n.m,n.s,n.p));removeLinkedSymbols(removed);state.rows=rows;state.measuresPerRow=measures;state.notes=state.notes.filter(n=>n.m<newTotal);state.scoreParts=(state.scoreParts||[]).filter(part=>part.m<newTotal);state.barlineKinds=Object.fromEntries(Object.entries(state.barlineKinds||{}).filter(([m])=>+m<newTotal));state.m=clamp(state.m,0,newTotal-1);render();return true;
+  snap();const keepPosition=m=>{const row=Math.floor(m/oldMeasures),local=m%oldMeasures;return row<rows&&local<measures?row*measures+local:null},removed=state.notes.filter(n=>keepPosition(n.m)===null).map(n=>anchorKey(n.m,n.s,n.p));removeLinkedSymbols(removed);
+  state.notes=state.notes.flatMap(note=>{const m=keepPosition(note.m);return m===null?[]:[{...note,m}]});
+  state.scoreParts=(state.scoreParts||[]).flatMap(part=>{const m=keepPosition(part.m);return m===null?[]:[{...part,m}]});
+  const offsets=[];(state.measureOffsets||[]).forEach((offset,m)=>{const next=keepPosition(m);if(next!==null)offsets[next]=offset});state.measureOffsets=offsets;
+  state.barlineKinds=Object.fromEntries(Object.entries(state.barlineKinds||{}).filter(([key])=>{const [row,boundary]=key.split(":").map(Number);return row<rows&&boundary<=measures}));
+  const current=keepPosition(state.m);state.rows=rows;state.measuresPerRow=measures;state.m=current===null?clamp(state.m,0,newTotal-1):current;lastInserted=null;render();return true;
 }
 function insert(value,isRest=false,duration=state.d){
-  snap();const d=Math.min(duration,16-state.p);
-  const insertedAt={m:state.m,s:state.s,p:state.p};
+  const d=duration,capacity=measureCapacity();
+  if(![1,2,4].includes(d))return false;
+  if(state.p+d>capacity){if(state.m>=totalMeasures()-1){alert("この音価は小節に収まりません。次の小節を追加してください。");return false}state.m++;state.p=0;lastInserted=null}
+  snap();
+  const insertedAt={m:state.m,s:state.s,p:state.p,d};
   state.notes=state.notes.filter(n=>!(n.m===state.m&&n.s===state.s&&n.p===state.p));
   state.notes.push(isRest?{m:state.m,s:state.s,p:state.p,d,rest:true}:{m:state.m,s:state.s,p:state.p,d,v:value,color:value==="○"?state.openColor:state.numberColor});
   lastInserted=insertedAt;
   cursorVisible=false;
-  const np=state.p+d;if(np<16)state.p=np;else if(state.m<totalMeasures()-1){state.m++;state.p=0}
+  const np=state.p+d;if(np<capacity)state.p=np;else if(state.m<totalMeasures()-1){state.m++;state.p=0}
+  return true;
+}
+function insertSpecified(stringNumber,noteValue,displayValue){
+  const durationMap={4:4,8:2,16:1},duration=durationMap[noteValue];if(!duration)return false;
+  if(lastInserted&&lastInserted.d===duration&&lastInserted.s!==stringNumber&&!state.notes.some(n=>n.m===lastInserted.m&&n.s===stringNumber&&n.p===lastInserted.p)){state.m=lastInserted.m;state.p=lastInserted.p}else if(lastInserted?.d!==duration)lastInserted=null;
+  state.s=stringNumber;state.d=duration;return insert(displayValue==="0"?"○":displayValue,false,duration);
 }
 function openNew(){
   q("#initialRows").value=state.rows;q("#initialMeasures").value=state.measuresPerRow;
@@ -542,9 +586,9 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.v){insert(b.dataset.v)}
   else if(b.dataset.rest){insert("",true,+b.dataset.rest)}
   else if(b.dataset.scorePart){snap();state.scoreParts=Array.isArray(state.scoreParts)?state.scoreParts:[];const part={id:uid(),kind:b.dataset.scorePart,m:state.m,p:state.p,x:0};state.scoreParts.push(part);selectedScoreTarget={type:"scorePart",id:part.id};cursorVisible=false}
-  else if(b.dataset.barKind){if(selectedScoreTarget?.type!=="barline"){alert("先に変更する小節線を譜面上で選択してください。");return}snap();state.barlineKinds={...(state.barlineKinds||{}),[selectedScoreTarget.m]:b.dataset.barKind}}
-  else if(b.id==="prev"){if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=15}}
-  else if(b.id==="next"){if(state.p<15)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
+  else if(b.dataset.barKind){if(selectedScoreTarget?.type!=="barline"){alert("先に変更する小節線を譜面上で選択してください。");return}snap();state.barlineKinds={...(state.barlineKinds||{}),[selectedScoreTarget.key]:b.dataset.barKind}}
+  else if(b.id==="prev"){lastInserted=null;if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacity()-1}}
+  else if(b.id==="next"){lastInserted=null;if(state.p<measureCapacity()-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
   else if(b.id==="resetPositions"&&confirm("数字・同じ記号・小節線の横位置を標準に戻しますか？")){snap();state.notes.forEach(note=>note.x=0);(state.scoreParts||[]).forEach(part=>part.x=0);state.measureOffsets=[]}
   else if(b.id==="delete"){
     if(selectedScoreTarget?.type==="scorePart"){
@@ -620,14 +664,14 @@ q("#annotations").addEventListener("pointercancel",()=>{draft=null;dragging=null
 let scoreDrag=null;
 q("#scoreArea").addEventListener("pointerdown",event=>{
   if(drawing)return;
-  const partButton=event.target.closest("[data-score-part-id]"),noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline]");
+  const partButton=event.target.closest("[data-score-part-id]"),noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline-key]");
   if(partButton&&state.scoreEditLayer==="notes"){
-    const part=(state.scoreParts||[]).find(entry=>entry.id===partButton.dataset.scorePartId);if(!part)return;selectedScoreTarget={type:"scorePart",id:part.id};selectedItemId=null;event.preventDefault();snap();const measure=partButton.closest(".measure"),rect=measure.getBoundingClientRect(),base=(part.p+.5)*rect.width/16;scoreDrag={type:"scorePart",part,startX:event.clientX,originX:part.x||0,min:-base+17,max:rect.width-base-17};partButton.classList.add("selected");partButton.setPointerCapture(event.pointerId);
+    const part=(state.scoreParts||[]).find(entry=>entry.id===partButton.dataset.scorePartId);if(!part)return;selectedScoreTarget={type:"scorePart",id:part.id};selectedItemId=null;event.preventDefault();snap();const measure=partButton.closest(".measure"),rect=measure.getBoundingClientRect(),base=(part.p+.5)*rect.width/measureCapacity();scoreDrag={type:"scorePart",part,startX:event.clientX,originX:part.x||0,min:-base+17,max:rect.width-base-17};partButton.classList.add("selected");partButton.setPointerCapture(event.pointerId);
   }else if(noteButton&&state.scoreEditLayer==="notes"){
     const [m,s,p]=noteButton.dataset.note.split(",").map(Number),note=state.notes.find(n=>n.m===m&&n.s===s&&n.p===p);
     if(!note)return;state.m=m;state.s=s;state.p=p;cursorVisible=true;lastInserted=null;selectedScoreTarget={type:"note",key:anchorKey(m,s,p)};selectedItemId=null;event.preventDefault();snap();const originX=note.rest?(note.x||0):columnX(m,p);scoreDrag={type:"note",notes:note.rest?[note]:columnNotes(m,p),m,p,startX:event.clientX,originX,bounds:noteMoveBounds(m,p,originX)};noteButton.classList.add("moving");noteButton.setPointerCapture(event.pointerId);
   }else if(barline&&state.scoreEditLayer==="staff"){
-    const m=+barline.dataset.barline;if(m%state.measuresPerRow===0&&!barline.dataset.end)return;selectedScoreTarget={type:"barline",m};selectedItemId=null;event.preventDefault();barline.classList.add("selected");if(barline.dataset.end)return;snap();scoreDrag={type:"barline",m,startX:event.clientX,left:m-1,right:m,leftOffset:state.measureOffsets?.[m-1]||0,rightOffset:state.measureOffsets?.[m]||0,leftWidth:measureWidth(m-1),rightWidth:measureWidth(m)};barline.setPointerCapture(event.pointerId);
+    const m=+barline.dataset.boundary,key=barline.dataset.barlineKey;if(m%state.measuresPerRow===0&&!barline.dataset.end)return;selectedScoreTarget={type:"barline",m,key};selectedItemId=null;event.preventDefault();barline.classList.add("selected");if(barline.dataset.end)return;snap();scoreDrag={type:"barline",m,startX:event.clientX,left:m-1,right:m,leftOffset:state.measureOffsets?.[m-1]||0,rightOffset:state.measureOffsets?.[m]||0,leftWidth:measureWidth(m-1),rightWidth:measureWidth(m)};barline.setPointerCapture(event.pointerId);
   }
 });
 q("#scoreArea").addEventListener("pointermove",event=>{
@@ -637,13 +681,13 @@ q("#scoreArea").addEventListener("pointermove",event=>{
     qAll(`[data-note^="${scoreDrag.m},"][data-note$=",${scoreDrag.p}"]`).forEach(element=>element.style.setProperty("transform",`translateX(${x}px)`));
     renderLayers(true);
   }else if(scoreDrag.type==="scorePart"){
-    const x=clamp(scoreDrag.originX+dx,scoreDrag.min,scoreDrag.max);scoreDrag.part.x=x;const button=q(`[data-score-part-id="${scoreDrag.part.id}"]`);if(button)button.style.left=`calc(${(scoreDrag.part.p+.5)*100/16}% + ${x}px)`;
+    const x=clamp(scoreDrag.originX+dx,scoreDrag.min,scoreDrag.max);scoreDrag.part.x=x;const button=q(`[data-score-part-id="${scoreDrag.part.id}"]`);if(button)button.style.left=`calc(${(scoreDrag.part.p+.5)*100/measureCapacity()}% + ${x}px)`;
   }else{
     state.measureOffsets=Array.isArray(state.measureOffsets)?state.measureOffsets:[];
     const bounded=clamp(dx,240-scoreDrag.leftWidth,scoreDrag.rightWidth-240);
     state.measureOffsets[scoreDrag.left]=scoreDrag.leftOffset+bounded;
     state.measureOffsets[scoreDrag.right]=scoreDrag.rightOffset-bounded;
-    const rightMeasure=q(`[data-barline="${scoreDrag.m}"]`)?.closest(".measure"),leftMeasure=rightMeasure?.previousElementSibling;
+    const rightMeasure=q(`[data-boundary="${scoreDrag.m}"]:not([data-end])`)?.closest(".measure"),leftMeasure=rightMeasure?.previousElementSibling;
     if(leftMeasure){const width=measureWidth(scoreDrag.left);leftMeasure.style.setProperty("--measure-width",`${width}px`);leftMeasure.style.setProperty("--measure-grow",String(width))}
     if(rightMeasure){const width=measureWidth(scoreDrag.right);rightMeasure.style.setProperty("--measure-width",`${width}px`);rightMeasure.style.setProperty("--measure-grow",String(width))}
   }
@@ -658,7 +702,27 @@ q("#openColor").addEventListener("change",event=>{snap();state.openColor=event.t
 q("#title").addEventListener("input",updateTitleWidth);
 q("#title").addEventListener("change",e=>{snap();state.title=e.target.value;render()});
 q("#tuning").addEventListener("change",e=>{snap();state.tuning=e.target.value;render()});
-q("#meter").addEventListener("change",e=>{snap();state.meter=e.target.value.trim()||defaults.meter;render()});
+q("#meter").addEventListener("focus",e=>{if(!IS_ANNOTATION_PAGE)e.target.value=state.meter});
+q("#meter").addEventListener("change",e=>{
+  const parsed=parseMeter(e.target.value);if(!parsed){alert("拍子を認識できません。2/4、4/4、6/8の形式で入力してください。\n分母は1・2・4・8・16に対応しています。");e.target.value=meterLabel();return}
+  if(state.notes.some(note=>note.p>=parsed.capacity)){alert("入力済みの音が新しい拍子の小節容量を超えます。先に音を移動または削除してください。");e.target.value=meterLabel();return}
+  snap();state.meter=parsed.signature;state.p=clamp(state.p,0,parsed.capacity-1);lastInserted=null;render();
+});
+q("#meter").addEventListener("blur",e=>{e.target.value=meterLabel()});
+document.addEventListener("keydown",event=>{
+  if(IS_ANNOTATION_PAGE||event.ctrlKey||event.metaKey||event.altKey)return;
+  const target=event.target;if(target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target?.isContentEditable)return;
+  const key=toAscii(event.key);
+  if(/^[0-9*]$/.test(key)){event.preventDefault();keyboardBuffer+=key;render();return}
+  if(event.key==="Backspace"&&keyboardBuffer){event.preventDefault();keyboardBuffer=keyboardBuffer.slice(0,-1);render();return}
+  if(event.key==="Escape"&&keyboardBuffer){event.preventDefault();keyboardBuffer="";render();return}
+  if(event.key==="Enter"&&keyboardBuffer){
+    event.preventDefault();const match=keyboardBuffer.match(/^([1-3])\*(4|8|16)\*(\d+)$/),entered=keyboardBuffer;keyboardBuffer="";
+    if(!match){alert(`入力形式を確認してください。\n「${entered}」は配置できません。\n例：3*16*19`);render();return}
+    insertSpecified(Number(match[1]),Number(match[2]),match[3]);render();return;
+  }
+  if(event.key==="ArrowRight"&&!keyboardBuffer){lastInserted=null;render()}
+});
 q("#scoreFileInput").addEventListener("change",async event=>{const file=event.target.files?.[0];event.target.value="";await importScoreFile(file)});
 q("#newForm").addEventListener("submit",e=>{e.preventDefault();
   if((state.notes.length||state.title!=="曲名入力")&&!confirm("現在の譜面を消して、新規作成しますか？"))return;
@@ -714,8 +778,8 @@ window.addEventListener("afterprint",()=>{
   render();
 });
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
-window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
-window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};drawing=false;render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
+window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
+window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};migrateState();drawing=false;render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
