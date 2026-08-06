@@ -68,6 +68,13 @@
     .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{z-index:1;top:calc(var(--note-height) + var(--rhythm-gap));height:0}
     .note.d1:not(.rest)::after{height:var(--rhythm-line-gap)}
     @media print{.measure{--row-height:18px!important;--note-height:14px!important;--rhythm-gap:2px!important;--rhythm-line-gap:3px!important}.note{height:var(--note-height)!important;line-height:0!important}.note b{height:var(--note-height)!important;line-height:var(--note-height)!important}.note:not(.open-note):not(.rest) b{transform:translateY(-1px)!important}.note.open-note b{line-height:var(--note-height)!important}}
+    /* v43: 譜線の実中心を数字・開放弦の唯一の縦座標にする */
+    .note{align-self:stretch;height:var(--row-height);line-height:0}
+    .note b{position:absolute;left:50%;top:50%;height:auto;min-height:var(--note-height);line-height:var(--note-height);transform:translate(-50%,-50%)}
+    .note:not(.open-note):not(.rest) b{transform:translate(-50%,-50%)}
+    .note.open-note b{top:50%;line-height:1;transform:translate(-50%,-50%)}
+    .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--note-height)/2 + var(--rhythm-gap))}
+    @media print{.note{align-self:stretch!important;height:var(--row-height)!important;line-height:0!important}.note b{position:absolute!important;left:50%!important;top:50%!important;height:auto!important;min-height:var(--note-height)!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%)!important}.note.open-note b{top:50%!important;line-height:1!important;transform:translate(-50%,-50%)!important}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--note-height)/2 + var(--rhythm-gap))!important}}
   </style>
 </head>
 <body class="annotation-page">
