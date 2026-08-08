@@ -27,7 +27,7 @@
     .measure::before,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure::before{left:0}.measure:last-child::after{right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));position:relative}
     .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:var(--yellow);box-shadow:inset 0 0 0 2px #c9a927}
-    .note{z-index:2;align-self:center;justify-self:center;position:relative;top:0;width:max-content;height:14px;border:0;background:none;padding:0;cursor:pointer;overflow:visible}.note b{display:inline-block;min-width:12px;background:var(--paper);padding:0 1px;font:600 var(--note-size)/14px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}.note.open-note b{font-size:28px;line-height:14px;font-weight:400;padding:0}
+    .note{z-index:2;grid-row:1;align-self:center;justify-self:center;position:relative;top:0;width:max-content;height:14px;border:0;background:none;padding:0;cursor:pointer;overflow:visible}.note b{display:inline-block;min-width:12px;background:var(--paper);padding:0 1px;font:600 var(--note-size)/14px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}.note.open-note b{font-size:28px;line-height:14px;font-weight:400;padding:0}
     .measure.on .note b{background:#fff9dd}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{content:"";position:absolute;left:50%;top:16px;bottom:auto;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor}.note.d1:not(.rest)::after{height:3px;border-bottom:1.5px solid currentColor}.note.rest.d2::after,.note.rest.d1::after{bottom:0}.note{position:relative}.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-family:Arial,sans-serif;font-size:var(--note-size);line-height:14px}
     .panel{margin-top:14px;padding:16px;background:#fffcf7;border:1px solid #c9bcad;border-radius:15px}.layout-bar{display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd2c5}
     .layout-controls{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.layout-controls strong{min-width:82px;text-align:center}.layout-controls button[aria-label]{width:42px;padding:6px;font-size:20px}
@@ -67,6 +67,13 @@
     .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{z-index:3;top:calc(50% + 8px);bottom:auto;width:14px;height:0}
     .note.d1:not(.rest)::after{height:3px}
     @media print{
+      /* 奏法が段境界・改ページ境界で欠けないよう、譜線の上側を段内領域として確保する。 */
+      .staff{
+        --print-technique-clearance:12px;
+        margin-top:max(0px,calc(var(--print-staff-gap,28px) - var(--print-technique-clearance)))!important;
+        padding-top:var(--print-technique-clearance)!important;
+      }
+      .staff.print-page-start{padding-top:var(--print-technique-clearance)!important}
       .measure{--row-height:18px!important;--note-height:14px!important}
       .note{align-self:stretch!important;height:var(--row-height)!important;line-height:0!important}
       .note b,.note.open-note b{left:50%!important;top:50%!important;height:var(--note-height)!important;min-height:0!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%)!important}
@@ -175,13 +182,26 @@ const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
 const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],lineStyle:"solid",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
-let drawing=false,draft=null,selectedItemId=null,dragging=null,printing=false;
+let drawing=false,draft=null,selectedItemId=null,dragging=null,printing=false,lastInserted=null;
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").trim()}
 function parseMeter(value){const raw=toAscii(value).replace(/\s+/g,"");let match=raw.match(/^(\d{1,2})\/(\d{1,2})$/);if(!match){const nums=raw.match(/(三十二|十六|十二|十一|十|一|二|三|四|五|六|七|八|九|\d+)/g);if(nums?.length>=2){const map={一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12,十六:16,三十二:32};match=[raw,String(map[nums[1]]||nums[1]),String(map[nums[0]]||nums[0])]}}if(!match)return null;const numerator=Number(match[1]),denominator=Number(match[2]);if(!Number.isInteger(numerator)||numerator<1||numerator>99||![1,2,4,8,16].includes(denominator))return null;const capacity=16*numerator/denominator;if(!Number.isInteger(capacity)||capacity<1||capacity>64)return null;return{numerator,denominator,capacity,signature:`${numerator}/${denominator}`}}
 function kanjiNumber(value){const digits=["","一","二","三","四","五","六","七","八","九"];if(value<10)return digits[value];if(value===10)return"十";if(value<20)return`十${digits[value-10]}`;const tens=Math.floor(value/10),ones=value%10;return`${digits[tens]}十${digits[ones]}`}
 function meterLabel(value=state.meter){const meter=parseMeter(value)||parseMeter(defaults.meter);return`${kanjiNumber(meter.denominator)}分ノ${kanjiNumber(meter.numerator)}拍子`}
 function measureCapacity(){return(parseMeter(state.meter)||parseMeter(defaults.meter)).capacity}
+function measureUsedDuration(m){
+  const events=new Map();
+  state.notes.filter(note=>note.m===m).forEach(note=>events.set(note.p,Math.max(events.get(note.p)||0,[1,2,4].includes(note.d)?note.d:1)));
+  return[...events.values()].reduce((sum,duration)=>sum+duration,0);
+}
+function nextMusicalPosition(m,duration){
+  const capacity=measureCapacity();
+  for(let target=m;target<totalMeasures();target++){
+    const used=measureUsedDuration(target);
+    if(used+duration<=capacity)return{m:target,p:used};
+  }
+  return null;
+}
 function barlineKey(row,boundary){return`${row}:${boundary}`}
 function migrateState(){const rawMeter=state.meter,parsed=parseMeter(rawMeter)||parseMeter(defaults.meter),legacy=String(rawMeter||"").includes("拍子"),oldRows=state.rows;if(legacy&&parsed.capacity<16&&state.notes.some(note=>note.p>=parsed.capacity)){const remap=(m,p)=>{const absolute=m*16+p;return{m:Math.floor(absolute/parsed.capacity),p:absolute%parsed.capacity}};state.notes=state.notes.map(note=>({...note,...remap(note.m,note.p)}));state.scoreParts=(state.scoreParts||[]).map(part=>({...part,...remap(part.m,part.p)}));state.layers=(state.layers||[]).map(layer=>({...layer,items:(layer.items||[]).map(item=>item.anchor?{...item,anchor:{...item.anchor,...remap(item.anchor.m,item.anchor.p)}}:item)}));const needed=Math.max(1,...state.notes.map(note=>note.m+1),...state.scoreParts.map(part=>part.m+1));state.rows=clamp(Math.ceil(needed/state.measuresPerRow),state.rows,20);state.measureOffsets=[];const cursor=remap(state.m,state.p);state.m=cursor.m;state.p=cursor.p}state.meter=parsed.signature;const old=state.barlineKinds&&typeof state.barlineKinds==="object"?state.barlineKinds:{};if(Object.keys(old).some(key=>!key.includes(":"))){const migrated={};for(let row=0;row<oldRows;row++){for(let boundary=0;boundary<=state.measuresPerRow;boundary++){const global=row*state.measuresPerRow+boundary;if(old[global])migrated[barlineKey(row,boundary)]=old[global]}}state.barlineKinds=migrated}}
 function load(){
@@ -491,10 +511,22 @@ function changeLayout(rows,measures){
   snap();state.rows=rows;state.measuresPerRow=measures;state.notes=state.notes.filter(n=>n.m<newTotal);state.m=clamp(state.m,0,newTotal-1);render();return true;
 }
 function insert(value,isRest=false,duration=state.d){
-  snap();const d=Math.min(duration,16-state.p);
+  const d=duration,capacity=measureCapacity();
+  if(![1,2,4].includes(d))return false;
+  const continuesChord=lastInserted&&lastInserted.d===d&&lastInserted.s!==state.s&&!state.notes.some(n=>n.m===lastInserted.m&&n.s===state.s&&n.p===lastInserted.p);
+  if(continuesChord){state.m=lastInserted.m;state.p=lastInserted.p}
+  else{
+    const target=nextMusicalPosition(state.m,d);
+    if(!target){alert("この音価を入れられる小節がありません。段または小節を追加してください。");return false}
+    if(target.m!==state.m)lastInserted=null;
+    state.m=target.m;state.p=target.p;
+  }
+  snap();
   state.notes=state.notes.filter(n=>!(n.m===state.m&&n.s===state.s&&n.p===state.p));
   state.notes.push(isRest?{m:state.m,s:state.s,p:state.p,d,rest:true}:{m:state.m,s:state.s,p:state.p,d,v:value,color:value==="○"?state.openColor:state.numberColor});
-  const np=state.p+d;if(np<16)state.p=np;else if(state.m<totalMeasures()-1){state.m++;state.p=0}
+  lastInserted={m:state.m,s:state.s,p:state.p,d};
+  const np=state.p+d;if(np<capacity)state.p=np;else if(state.m<totalMeasures()-1){state.m++;state.p=measureUsedDuration(state.m)}
+  return true;
 }
 function openNew(){
   q("#initialRows").value=state.rows;q("#initialMeasures").value=state.measuresPerRow;
@@ -514,9 +546,9 @@ function openPrintSettings(){
 }
 load();
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
-  if(b.dataset.s)state.s=+b.dataset.s;
+  if(b.dataset.s){const nextString=+b.dataset.s;if(lastInserted&&lastInserted.s!==nextString&&!state.notes.some(n=>n.m===lastInserted.m&&n.s===nextString&&n.p===lastInserted.p)){state.m=lastInserted.m;state.p=lastInserted.p}state.s=nextString}
   else if(b.dataset.d)state.d=+b.dataset.d;
-  else if(b.dataset.pos)[state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);
+  else if(b.dataset.pos){[state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);lastInserted=null}
   else if(b.dataset.v){insert(b.dataset.v)}
   else if(b.dataset.rest){insert("",true,+b.dataset.rest)}
   else if(b.id==="prev"){if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=15}}
