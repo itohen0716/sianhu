@@ -30,7 +30,7 @@
     .measure.custom-end::after{display:none}
     .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}
-    .note{z-index:2;align-self:center;justify-self:center;position:relative;top:0;width:max-content;height:14px;border:0;background:none;padding:0;cursor:ew-resize;overflow:visible;touch-action:none}.note.moving b{outline:2px solid #c9a927;border-radius:4px}.note b{display:inline-block;min-width:12px;background:var(--paper);padding:0 1px;font:600 var(--note-size)/14px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}.note.open-note b{font-size:28px;line-height:14px;font-weight:400;padding:0}
+    .note{z-index:2;grid-row:1;align-self:center;justify-self:center;position:relative;top:0;width:max-content;height:14px;border:0;background:none;padding:0;cursor:ew-resize;overflow:visible;touch-action:none}.note.moving b{outline:2px solid #c9a927;border-radius:4px}.note b{display:inline-block;min-width:12px;background:var(--paper);padding:0 1px;font:600 var(--note-size)/14px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}.note.open-note b{font-size:28px;line-height:14px;font-weight:400;padding:0}
     .measure.on .note b{background:#fff9dd}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{content:"";position:absolute;left:50%;top:16px;bottom:auto;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor}.note.d1:not(.rest)::after{height:3px;border-bottom:1.5px solid currentColor}.note.rest.d2::after,.note.rest.d1::after{bottom:0}.note{position:relative}.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-family:Arial,sans-serif;font-size:var(--note-size);line-height:14px}
     .panel{margin-top:14px;padding:16px;background:#fffcf7;border:1px solid #c9bcad;border-radius:15px}.layout-bar{display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd2c5}
     .layout-controls{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.layout-controls strong{min-width:82px;text-align:center}.layout-controls button[aria-label]{width:42px;padding:6px;font-size:20px}
@@ -77,6 +77,13 @@
     .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{z-index:3;top:calc(50% + 8px);bottom:auto;width:14px;height:0}
     .note.d1:not(.rest)::after{height:3px}
     @media print{
+      /* 奏法が段境界・改ページ境界で欠けないよう、譜線の上側を段内領域として確保する。 */
+      .staff{
+        --print-technique-clearance:12px;
+        margin-top:max(0px,calc(var(--print-staff-gap,28px) - var(--print-technique-clearance)))!important;
+        padding-top:var(--print-technique-clearance)!important;
+      }
+      .staff.print-page-start{padding-top:var(--print-technique-clearance)!important}
       .measure{--row-height:18px!important;--note-height:14px!important}
       .note{align-self:stretch!important;height:var(--row-height)!important;line-height:0!important}
       .note b,.note.open-note b{left:50%!important;top:50%!important;height:var(--note-height)!important;min-height:0!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%)!important}
@@ -240,6 +247,19 @@ function parseMeter(value){
 function kanjiNumber(value){const digits=["","一","二","三","四","五","六","七","八","九"];if(value<10)return digits[value];if(value===10)return"十";if(value<20)return`十${digits[value-10]}`;const tens=Math.floor(value/10),ones=value%10;return`${digits[tens]}十${digits[ones]}`}
 function meterLabel(value=state.meter){const meter=parseMeter(value)||parseMeter(defaults.meter);return`${kanjiNumber(meter.denominator)}分ノ${kanjiNumber(meter.numerator)}拍子`}
 function measureCapacity(){return(parseMeter(state.meter)||parseMeter(defaults.meter)).capacity}
+function measureUsedDuration(m){
+  const events=new Map();
+  state.notes.filter(note=>note.m===m).forEach(note=>events.set(note.p,Math.max(events.get(note.p)||0,[1,2,4].includes(note.d)?note.d:1)));
+  return[...events.values()].reduce((sum,duration)=>sum+duration,0);
+}
+function nextMusicalPosition(m,duration){
+  const capacity=measureCapacity();
+  for(let target=m;target<totalMeasures();target++){
+    const used=measureUsedDuration(target);
+    if(used+duration<=capacity)return{m:target,p:used};
+  }
+  return null;
+}
 function barlineKey(row,boundary){return`${row}:${boundary}`}
 function migrateState(){
   const rawMeter=state.meter,parsed=parseMeter(rawMeter)||parseMeter(defaults.meter),legacy=String(rawMeter||"").includes("拍子"),oldRows=state.rows;
@@ -637,14 +657,21 @@ function changeLayout(rows,measures){
 function insert(value,isRest=false,duration=state.d){
   const d=duration,capacity=measureCapacity();
   if(![1,2,4].includes(d))return false;
-  if(state.p+d>capacity){if(state.m>=totalMeasures()-1){alert("この音価は小節に収まりません。次の小節を追加してください。");return false}state.m++;state.p=0;lastInserted=null}
+  const continuesChord=lastInserted&&lastInserted.d===d&&lastInserted.s!==state.s&&!state.notes.some(n=>n.m===lastInserted.m&&n.s===state.s&&n.p===lastInserted.p);
+  if(continuesChord){state.m=lastInserted.m;state.p=lastInserted.p}
+  else{
+    const target=nextMusicalPosition(state.m,d);
+    if(!target){alert("この音価を入れられる小節がありません。段または小節を追加してください。");return false}
+    if(target.m!==state.m)lastInserted=null;
+    state.m=target.m;state.p=target.p;
+  }
   snap();
   const insertedAt={m:state.m,s:state.s,p:state.p,d};
   state.notes=state.notes.filter(n=>!(n.m===state.m&&n.s===state.s&&n.p===state.p));
   state.notes.push(isRest?{m:state.m,s:state.s,p:state.p,d,rest:true}:{m:state.m,s:state.s,p:state.p,d,v:value,color:value==="○"?state.openColor:state.numberColor});
   lastInserted=insertedAt;
   cursorVisible=false;
-  const np=state.p+d;if(np<capacity)state.p=np;else if(state.m<totalMeasures()-1){state.m++;state.p=0}
+  const np=state.p+d;if(np<capacity)state.p=np;else if(state.m<totalMeasures()-1){state.m++;state.p=measureUsedDuration(state.m)}
   return true;
 }
 function insertSpecified(stringNumber,noteValue,displayValue){
