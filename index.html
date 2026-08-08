@@ -84,7 +84,18 @@
     .note:not(.open-note):not(.rest) b{transform:translate(-50%,-50%)}
     .note.open-note b{top:50%;line-height:1;transform:translate(-50%,-50%)}
     .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--note-height)/2 + var(--rhythm-gap))}
-    @media print{.note{align-self:stretch!important;height:var(--row-height)!important;line-height:0!important}.note b{position:absolute!important;left:50%!important;top:50%!important;height:auto!important;min-height:var(--note-height)!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%)!important}.note.open-note b{top:50%!important;line-height:1!important;transform:translate(-50%,-50%)!important}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--note-height)/2 + var(--rhythm-gap))!important}}
+    @media print{.note{align-self:stretch!important;height:var(--row-height)!important;line-height:0!important}.note b{position:absolute!important;left:50%!important;top:50%!important;height:auto!important;min-height:var(--note-height)!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%)!important}.note.open-note b{top:50%!important;line-height:1!important;transform:translate(-50%,-50%)!important}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 6px)!important}}
+    /* v49: 18pxの糸間隔内で、字面中心・譜線・音価下線を一つの座標系へ統一 */
+    .note b,.note.open-note b{left:50%;top:50%;transform:translate(-50%,-50%)}
+    .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 6px);width:14px}
+    .note.d1:not(.rest)::after{height:3px}
+    @media print{
+      .print-technique{left:calc(50% + var(--tech-x,0px));top:calc(-18px + var(--tech-y,0px))}
+      .print-technique.below{top:calc(8px + var(--tech-y,0px))}
+      .note b,.note.open-note b{left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important}
+      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 6px)!important}
+      .note.d1:not(.rest)::after{height:3px!important}
+    }
   </style>
 </head>
 <body class="score-page">
