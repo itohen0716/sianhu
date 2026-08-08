@@ -59,32 +59,31 @@
     @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{--row-height:var(--print-row-height,34px);min-width:0!important;width:auto;flex:var(--print-measure-grow,1) 1 0}.labels{grid-template-rows:repeat(3,var(--print-row-height,34px));line-height:var(--print-row-height,34px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;padding-top:0}.note{height:calc(var(--print-row-height,34px) * .94)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell:nth-child(4n){border-right:0!important}.cell.cursor{background:none!important;box-shadow:none!important}.measure.on{background:transparent!important}.measure.on .note b{background:var(--paper)!important}.annotation-item.selected{filter:none!important}.meta{grid-template-columns:1fr 2fr 1fr}#tuning{-webkit-appearance:none;appearance:none;background-image:none;padding-right:4px}}
     .print-technique{display:none}
     @media print{.measure{--row-height:18px!important}.labels{grid-template-rows:repeat(3,18px)!important;line-height:18px!important}.note{top:0!important;height:14px!important}.note b{font-size:var(--note-size)!important;line-height:14px!important}.note.open-note b{font-size:28px!important;line-height:14px!important;font-weight:400!important}.annotation-item.symbol-item text{font-size:14px!important}.annotation-item.anchored-symbol{display:none!important}.print-technique{display:block;position:absolute;z-index:9;left:calc(50% + 6px + var(--tech-x,0px));top:calc(-22px + var(--tech-y,0px));width:var(--tech-width,42px);height:28px;overflow:visible;pointer-events:none;transform:translateX(-50%);color:var(--tech-color,#222)}.print-technique.below{top:calc(8px + var(--tech-y,0px))}.print-technique text{font-family:"Yu Mincho","Times New Roman",serif;font-size:14px;font-weight:700;fill:currentColor;text-anchor:middle}.print-technique path{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round}}
-    /* v41: 譜線・数字・音価下線の共通配置基準 */
-    .measure{--row-height:18px;--note-height:14px;--rhythm-gap:2px;--rhythm-line-gap:3px}
-    .note{display:flex;align-items:center;justify-content:center;height:var(--note-height);line-height:0;appearance:none;-webkit-appearance:none}
-    .note b{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;height:var(--note-height);font-size:var(--note-size);line-height:var(--note-height)}
-    .note:not(.open-note):not(.rest) b{transform:translateY(-1px)}
-    .note.open-note b{line-height:var(--note-height)}
-    .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{z-index:1;top:calc(var(--note-height) + var(--rhythm-gap));height:0}
-    .note.d1:not(.rest)::after{height:var(--rhythm-line-gap)}
-    @media print{.measure{--row-height:18px!important;--note-height:14px!important;--rhythm-gap:2px!important;--rhythm-line-gap:3px!important}.note{height:var(--note-height)!important;line-height:0!important}.note b{height:var(--note-height)!important;line-height:var(--note-height)!important}.note:not(.open-note):not(.rest) b{transform:translateY(-1px)!important}.note.open-note b{line-height:var(--note-height)!important}}
-    /* v43: 譜線の実中心を数字・開放弦の唯一の縦座標にする */
-    .note{align-self:stretch;height:var(--row-height);line-height:0}
-    .note b{position:absolute;left:50%;top:50%;height:auto;min-height:var(--note-height);line-height:var(--note-height);transform:translate(-50%,-50%)}
-    .note:not(.open-note):not(.rest) b{transform:translate(-50%,-50%)}
-    .note.open-note b{top:50%;line-height:1;transform:translate(-50%,-50%)}
-    .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--note-height)/2 + var(--rhythm-gap))}
-    @media print{.note{align-self:stretch!important;height:var(--row-height)!important;line-height:0!important}.note b{position:absolute!important;left:50%!important;top:50%!important;height:auto!important;min-height:var(--note-height)!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%)!important}.note.open-note b{top:50%!important;line-height:1!important;transform:translate(-50%,-50%)!important}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 6px)!important}}
-    /* v49: 18pxの糸間隔内で、字面中心・譜線・音価下線を一つの座標系へ統一 */
-    .note b,.note.open-note b{left:50%;top:50%;transform:translate(-50%,-50%)}
-    .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 6px);width:14px}
+    /* v50: 音符・音価線の座標指定をここだけに集約 */
+    .measure{--row-height:18px;--note-height:14px}
+    .note{align-self:stretch;position:relative;height:var(--row-height);line-height:0;appearance:none;-webkit-appearance:none}
+    .note b,.note.open-note b{position:absolute;z-index:2;left:50%;top:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:12px;height:var(--note-height);min-height:0;line-height:var(--note-height);transform:translate(-50%,-50%)}
+    .note.open-note b{font-size:28px;line-height:1}
+    .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{z-index:3;top:calc(50% + 8px);bottom:auto;width:14px;height:0}
     .note.d1:not(.rest)::after{height:3px}
     @media print{
-      .print-technique{left:calc(50% + var(--tech-x,0px));top:calc(-18px + var(--tech-y,0px))}
-      .print-technique.below{top:calc(8px + var(--tech-y,0px))}
-      .note b,.note.open-note b{left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important}
-      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 6px)!important}
+      .measure{--row-height:18px!important;--note-height:14px!important}
+      .note{align-self:stretch!important;height:var(--row-height)!important;line-height:0!important}
+      .note b,.note.open-note b{left:50%!important;top:50%!important;height:var(--note-height)!important;min-height:0!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%)!important}
+      .note.open-note b{font-size:28px!important;line-height:1!important}
+      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 8px)!important}
       .note.d1:not(.rest)::after{height:3px!important}
+      /* 印刷奏法は対応する数字の中心を唯一の原点にする。 */
+      .print-technique{
+        left:50%!important;
+        top:50%!important;
+        height:var(--tech-height,24px)!important;
+        transform:translate(calc(-50% + var(--tech-x,0px)),calc(-100% - 2px + var(--tech-y,0px)))!important;
+      }
+      .print-technique.below{
+        top:50%!important;
+        transform:translate(calc(-50% + var(--tech-x,0px)),calc(2px + var(--tech-y,0px)))!important;
+      }
     }
   </style>
 </head>
@@ -314,9 +313,9 @@ function printTechniqueHtml(n){
     const side=item.side==="below"?"below":"above",printOffset=techniquePrintOffset(item),offsetX=printOffset.x,offsetY=printOffset.y+(index*16),color=item.color||"#222222";
     if(item.text==="スリ"){
       const width=clamp(Number(item.slurWidth)||34,22,90),viewWidth=Math.max(42,width+8),center=viewWidth/2,left=center-width/2,right=center+width/2;
-      return `<svg class="print-technique ${side}" style="--tech-width:${viewWidth}px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 ${viewWidth} 28" aria-hidden="true"><text x="${center}" y="9">スリ</text><path d="M ${left} 22 Q ${center} 14 ${right} 22"/></svg>`;
+      return `<svg class="print-technique ${side}" style="--tech-width:${viewWidth}px;--tech-height:28px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 ${viewWidth} 28" aria-hidden="true"><text x="${center}" y="9">スリ</text><path d="M ${left} 22 Q ${center} 14 ${right} 22"/></svg>`;
     }
-    return `<svg class="print-technique ${side}" style="--tech-width:42px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 42 24" aria-hidden="true"><text x="21" y="16">${esc(item.text)}</text></svg>`;
+    return `<svg class="print-technique ${side}" style="--tech-width:42px;--tech-height:24px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 42 24" aria-hidden="true"><text x="21" y="16">${esc(item.text)}</text></svg>`;
   }).join("");
 }
 function noteHtml(n,m,s){
