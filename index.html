@@ -380,11 +380,16 @@ function moveSelectedBarline(amount){
   state.measureOffsets[right]=(state.measureOffsets[right]||0)-dx;
   return dx!==0;
 }
+function techniquePrintOffset(item){
+  const svg=q("#annotations"),view=svg?.viewBox?.baseVal,rect=svg?.getBoundingClientRect();
+  const scale=svg&&view&&rect&&view.width>0&&rect.width>0?rect.width/view.width:1;
+  return{x:(Number(item.offsetX)||0)*scale,y:(Number(item.offsetY)||0)*scale};
+}
 function printTechniqueHtml(n){
   const layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
   if(!layer||layer.visible===false)return"";
   return layer.items.filter(item=>item.type==="symbol"&&item.anchor&&anchorKey(item.anchor.m,item.anchor.s,item.anchor.p)===anchorKey(n.m,n.s,n.p)).map((item,index)=>{
-    const side=item.side==="below"?"below":"above",offsetX=Number(item.offsetX)||0,offsetY=(Number(item.offsetY)||0)+(index*16),color=item.color||"#222222";
+    const side=item.side==="below"?"below":"above",printOffset=techniquePrintOffset(item),offsetX=printOffset.x,offsetY=printOffset.y+(index*16),color=item.color||"#222222";
     if(item.text==="スリ"){
       const width=clamp(Number(item.slurWidth)||34,22,90),viewWidth=Math.max(42,width+8),center=viewWidth/2,left=center-width/2,right=center+width/2;
       return `<svg class="print-technique ${side}" style="--tech-width:${viewWidth}px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 ${viewWidth} 24" aria-hidden="true"><text x="${center}" y="7">スリ</text><path d="M ${left} 20 Q ${center} 12 ${right} 20"/></svg>`;
