@@ -83,16 +83,16 @@
       .note.open-note b{font-size:28px!important;line-height:1!important}
       .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 8px)!important}
       .note.d1:not(.rest)::after{height:3px!important}
-      /* 印刷奏法は対応する数字の中心を唯一の原点にする。 */
+      /* 印刷奏法は四分音符の数字を基準に、全段で同じ位置へ強制配置する。 */
       .print-technique{
         left:50%!important;
         top:50%!important;
         height:var(--tech-height,24px)!important;
-        transform:translate(-50%,calc(-100% + 2px))!important;
+        transform:translate(-50%,calc(-100% + 5px - var(--tech-y,0px)))!important;
       }
       .print-technique.below{
         top:50%!important;
-        transform:translate(-50%,2px)!important;
+        transform:translate(-50%,calc(5px + var(--tech-y,0px)))!important;
       }
     }
   </style>
@@ -401,9 +401,9 @@ function ensureTechniquePixelOffset(item){
   item.offsetYPx=(Number(item.offsetY)||0)*pxPerUnit;
   item.offsetUnit="css-px";
 }
-function techniquePrintOffset(item){
-  ensureTechniquePixelOffset(item);
-  return{x:Number(item.offsetXPx)||0,y:Number(item.offsetYPx)||0};
+function techniquePrintOffset(){
+  /* 印刷では入力画面の手動移動量を使わず、対応する数字へ強制的に揃える。 */
+  return{x:0,y:0};
 }
 function printTechniqueHtml(n){
   const layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
