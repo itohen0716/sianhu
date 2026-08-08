@@ -75,14 +75,14 @@
       .note.d1:not(.rest)::after{height:3px!important}
       /* 印刷奏法は四分音符の数字を基準に、全段で同じ位置へ強制配置する。 */
       .print-technique{
-        left:50%!important;
-        top:50%!important;
+        left:var(--print-tech-left,50%)!important;
+        top:var(--print-tech-top,50%)!important;
         height:var(--tech-height,24px)!important;
-        transform:translate(-50%,calc(-100% + 5px - var(--tech-y,0px)))!important;
+        transform:translate(-50%,-100%)!important;
       }
       .print-technique.below{
-        top:50%!important;
-        transform:translate(-50%,calc(5px + var(--tech-y,0px)))!important;
+        top:var(--print-tech-top,50%)!important;
+        transform:translate(-50%,0)!important;
       }
     }
   </style>
@@ -317,6 +317,24 @@ function printTechniqueHtml(n){
     }
     return `<svg class="print-technique ${side}" style="--tech-width:42px;--tech-height:24px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 42 24" aria-hidden="true"><text x="21" y="16">${esc(item.text)}</text></svg>`;
   }).join("");
+}
+function positionPrintTechniques(){
+  const gap=3;
+  qAll(".note").forEach(note=>{
+    const glyph=note.querySelector("b");
+    if(!glyph)return;
+    const noteRect=note.getBoundingClientRect(),glyphRect=glyph.getBoundingClientRect();
+    const centerX=glyphRect.left+glyphRect.width/2-noteRect.left;
+    note.querySelectorAll(".print-technique").forEach((technique,index)=>{
+      const above=!technique.classList.contains("below");
+      const stackOffset=index*16;
+      const anchorY=above
+        ?glyphRect.top-noteRect.top-gap-stackOffset
+        :glyphRect.bottom-noteRect.top+gap+stackOffset;
+      technique.style.setProperty("--print-tech-left",`${centerX.toFixed(2)}px`);
+      technique.style.setProperty("--print-tech-top",`${anchorY.toFixed(2)}px`);
+    });
+  });
 }
 function noteHtml(n,m,s){
   const value=n.rest?(rests.find(r=>r.d===n.d)||rests[0]).mark:n.v;
@@ -606,10 +624,15 @@ function applyPrintLayout(){
     }
   });
   renderLayers(true);
+  positionPrintTechniques();
 }
 window.addEventListener("beforeprint",applyPrintLayout);
 window.addEventListener("afterprint",()=>{
   printing=false;
+  qAll(".print-technique").forEach(technique=>{
+    technique.style.removeProperty("--print-tech-left");
+    technique.style.removeProperty("--print-tech-top");
+  });
   qAll(".staff").forEach(staff=>{
     staff.style.removeProperty("--print-staff-gap");
     staff.style.removeProperty("--print-row-height");
