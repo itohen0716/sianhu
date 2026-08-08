@@ -68,7 +68,7 @@
     @page{size:A4 portrait;margin:7mm}
     @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.editor-switcher,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{--row-height:var(--print-row-height,34px);min-width:0!important;width:auto;flex:var(--print-measure-grow,1) 1 0}.labels{grid-template-rows:repeat(3,var(--print-row-height,34px));line-height:var(--print-row-height,34px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;padding-top:0}.note{height:calc(var(--print-row-height,34px) * .94)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell:nth-child(4n){border-right:0!important}.cell.cursor{background:none!important;box-shadow:none!important}.measure.on{background:transparent!important}.measure.on .note b{background:var(--paper)!important}.annotation-item.selected,.score-part.selected,.barline-handle.selected .bar-symbol{filter:none!important}.note.moving b{outline:0!important}.barline-handle.selected::after{border-left-width:1.5px!important;border-left-color:var(--ink)!important}.meta{grid-template-columns:1fr 2fr 1fr}#tuning{-webkit-appearance:none;appearance:none;background-image:none;padding-right:4px}}
     .print-technique{display:none}
-    @media print{.measure{--row-height:18px!important}.labels{grid-template-rows:repeat(3,18px)!important;line-height:18px!important}.note{top:0!important;height:14px!important}.note b{font-size:var(--note-size)!important;line-height:14px!important}.note.open-note b{font-size:28px!important;line-height:14px!important;font-weight:400!important}.annotation-item.symbol-item text{font-size:14px!important}.annotation-item.anchored-symbol{display:none!important}.print-technique{display:block;position:absolute;z-index:9;left:calc(50% + var(--tech-x,0px));top:calc(-28px + var(--tech-y,0px));width:var(--tech-width,42px);height:24px;overflow:visible;pointer-events:none;transform:translateX(-50%);color:var(--tech-color,#222)}.print-technique.below{top:calc(22px + var(--tech-y,0px))}.print-technique text{font-family:"Yu Mincho","Times New Roman",serif;font-size:14px;font-weight:700;fill:currentColor;text-anchor:middle}.print-technique path{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round}}
+    @media print{.measure{--row-height:18px!important}.labels{grid-template-rows:repeat(3,18px)!important;line-height:18px!important}.note{top:0!important;height:14px!important}.note b{font-size:var(--note-size)!important;line-height:14px!important}.note.open-note b{font-size:28px!important;line-height:14px!important;font-weight:400!important}.annotation-item.symbol-item text{font-size:14px!important}.annotation-item.anchored-symbol{display:none!important}.print-technique{display:block;position:absolute;z-index:9;left:calc(50% + var(--tech-x,0px));top:calc(-24px + var(--tech-y,0px));width:var(--tech-width,42px);height:24px;overflow:visible;pointer-events:none;transform:translateX(-50%);color:var(--tech-color,#222)}.print-technique.below{top:calc(22px + var(--tech-y,0px))}.print-technique text{font-family:"Yu Mincho","Times New Roman",serif;font-size:14px;font-weight:700;fill:currentColor;text-anchor:middle}.print-technique path{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round}}
     /* v41: 譜線・数字・音価下線の共通配置基準 */
     .measure{--row-height:18px;--note-height:14px;--rhythm-gap:2px;--rhythm-line-gap:3px}
     .note{display:flex;align-items:center;justify-content:center;height:var(--note-height);line-height:0;appearance:none;-webkit-appearance:none}
@@ -380,10 +380,20 @@ function moveSelectedBarline(amount){
   state.measureOffsets[right]=(state.measureOffsets[right]||0)-dx;
   return dx!==0;
 }
-function techniquePrintOffset(item){
+function svgUnitsPerCssPx(){
   const svg=q("#annotations"),view=svg?.viewBox?.baseVal,rect=svg?.getBoundingClientRect();
-  const scale=svg&&view&&rect&&view.width>0&&rect.width>0?rect.width/view.width:1;
-  return{x:(Number(item.offsetX)||0)*scale,y:(Number(item.offsetY)||0)*scale};
+  return svg&&view&&rect&&view.width>0&&rect.width>0?view.width/rect.width:1;
+}
+function ensureTechniquePixelOffset(item){
+  if(item.offsetUnit==="css-px")return;
+  const pxPerUnit=1/svgUnitsPerCssPx();
+  item.offsetXPx=(Number(item.offsetX)||0)*pxPerUnit;
+  item.offsetYPx=(Number(item.offsetY)||0)*pxPerUnit;
+  item.offsetUnit="css-px";
+}
+function techniquePrintOffset(item){
+  ensureTechniquePixelOffset(item);
+  return{x:Number(item.offsetXPx)||0,y:Number(item.offsetYPx)||0};
 }
 function printTechniqueHtml(n){
   const layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
@@ -465,7 +475,9 @@ function syncLinkedSymbols(){
   layer.items.forEach(item=>{
     if(item.type!=="symbol"||!item.anchor)return;
     const point=noteAnchorPoint(item.anchor,item.side||"above");
-    if(point){item.x=point.x+(item.offsetX||0);item.y=point.y+(item.offsetY||0)}
+    ensureTechniquePixelOffset(item);
+    const unitsPerPx=svgUnitsPerCssPx();
+    if(point){item.x=point.x+(Number(item.offsetXPx)||0)*unitsPerPx;item.y=point.y+(Number(item.offsetYPx)||0)*unitsPerPx}
   });
 }
 function nearestPlayableNote(point){
@@ -569,7 +581,7 @@ function startDraw(event){
     const note=nearestPlayableNote(p);
     if(!note){alert("関連付ける数字または開放弦の近くをタップしてください。");return}
     snap();const side=state.symbolSide||"above",anchor={m:note.m,s:note.s,p:note.p};
-    const item={id:uid(),type:"symbol",x:p.x,y:p.y,text:state.selectedSymbol,color:state.drawColor,size:14,anchor,side,offsetX:0,offsetY:0,...(state.selectedSymbol==="スリ"?{slurWidth:28}:{})};
+    const item={id:uid(),type:"symbol",x:p.x,y:p.y,text:state.selectedSymbol,color:state.drawColor,size:14,anchor,side,offsetXPx:0,offsetYPx:0,offsetUnit:"css-px",...(state.selectedSymbol==="スリ"?{slurWidth:28}:{})};
     layer.items.push(item);selectedItemId=item.id;cursorVisible=false;render();return;
   }
   if(state.drawTool==="text"){const text=prompt("譜面に入れるコメントを入力してください。","");if(text&&text.trim()){snap();const item={id:uid(),type:"text",x:p.x,y:p.y,text:text.trim(),color:state.drawColor,size:state.textSize,background:state.textBackground};layer.items.push(item);selectedItemId=item.id;render()}return}
@@ -580,7 +592,12 @@ function translateItem(item,dx,dy){
   if(item.type==="pen")item.points=item.points.map(p=>({x:p.x+dx,y:p.y+dy}));
   else if(item.type==="text"||item.type==="symbol"){
     item.x+=dx;item.y+=dy;
-    if(item.type==="symbol"&&item.anchor){item.offsetX=(item.offsetX||0)+dx;item.offsetY=(item.offsetY||0)+dy}
+    if(item.type==="symbol"&&item.anchor){
+      ensureTechniquePixelOffset(item);
+      const pxPerUnit=1/svgUnitsPerCssPx();
+      item.offsetXPx=(Number(item.offsetXPx)||0)+dx*pxPerUnit;
+      item.offsetYPx=(Number(item.offsetYPx)||0)+dy*pxPerUnit;
+    }
   }else{item.x1+=dx;item.y1+=dy;item.x2+=dx;item.y2+=dy}
 }
 function moveDraw(event){
@@ -689,7 +706,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.symbol){state.drawTool="symbol";state.selectedSymbol=b.dataset.symbol;selectedItemId=null;drawing=true;renderLayers();return}
   else if(b.dataset.symbolSide){
     const side=b.dataset.symbolSide,item=selectedItem();snap();state.symbolSide=side;
-    if(item?.type==="symbol"){item.side=side;item.offsetY=0}
+    if(item?.type==="symbol"){item.side=side;ensureTechniquePixelOffset(item);item.offsetYPx=0;item.offsetY=0}
     else past.pop();
     render();return;
   }
