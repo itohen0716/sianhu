@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>絲庵 文化譜書き込み</title>
+  <link rel="stylesheet" href="./print-v2.css">
   <style>
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
     *{box-sizing:border-box}body{margin:0;background:#e5ded3;color:var(--ink);font-family:"Yu Gothic",sans-serif}
@@ -98,6 +99,7 @@
   </style>
 </head>
 <body class="annotation-page">
+<div id="printRootV2" class="shian-print-v2" aria-hidden="true"></div>
 <main class="app">
   <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>書き込み</h1><p class="base-layer-note">写譜は最下層の表示専用レイヤーです。</p></div><div class="actions"><a class="page-link" href="./index.html">♪ 写譜ページ</a><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
   <input id="scoreFileInput" type="file" accept=".shian-score.json,.json,application/json" hidden>
@@ -635,48 +637,14 @@ q("#manualPageRows").addEventListener("input",event=>{state.manualPageRows=event
 q("#printForm").addEventListener("submit",event=>{
   event.preventDefault();
   if(state.printMode==="manual"){const parsed=parseManualPageRows();if(!parsed.valid){q("#printError").textContent=parsed.message;return}}
-  save();q("#printDialog").close();render();requestAnimationFrame(()=>window.print());
+  save();q("#printDialog").close();applyPrintLayout();requestAnimationFrame(()=>window.print());
 });
 function applyPrintLayout(){
-  printing=true;
-  render();
-  const pageRows=currentPageRows(),staffs=qAll(".staff");
-  const printableHeight=283*96/25.4;
-  const titleGapExtra=20;
-  const metaHeight=q(".meta")?.getBoundingClientRect().height||34;
-  let staffIndex=0;
-  pageRows.forEach((count,pageIndex)=>{
-    const usableHeight=printableHeight-(pageIndex===0?metaHeight:0);
-    const distribute=count>=6;
-    const rowHeight=18;
-    const extraFirstGap=distribute&&pageIndex===0?titleGapExtra:0;
-    const staffGap=distribute
-      ?Math.max(8,(usableHeight-count*rowHeight*3-extraFirstGap)/(count+1))
-      :20;
-    const noteSize=14;
-    for(let row=0;row<count;row+=1){
-      const staff=staffs[staffIndex++];
-      if(!staff)break;
-      const gap=staffGap+(row===0?extraFirstGap:0);
-      staff.style.setProperty("--print-staff-gap",`${gap.toFixed(2)}px`);
-      staff.style.setProperty("--print-row-height",`${rowHeight}px`);
-      staff.style.setProperty("--print-note-size",`${noteSize.toFixed(2)}px`);
-      staff.querySelectorAll(".measure").forEach((measure,index)=>measure.style.setProperty("--print-measure-grow",String(measureWidth(rowStartMeasure(staffIndex-1)+index))));
-    }
-  });
-  renderLayers(true);
-  scalePrintNotePositions();
+  ShianPrintV2.render(state,{rootSelector:"#printRootV2",capacity:measureCapacity,measureWidth,columnX,barlineKey,pageRows:currentPageRows,meterLabel});
 }
 window.addEventListener("beforeprint",applyPrintLayout);
 window.addEventListener("afterprint",()=>{
-  printing=false;
-  qAll(".staff").forEach(staff=>{
-    staff.style.removeProperty("--print-staff-gap");
-    staff.style.removeProperty("--print-row-height");
-    staff.style.removeProperty("--print-note-size");
-    staff.querySelectorAll(".measure").forEach(measure=>measure.style.removeProperty("--print-measure-grow"));
-  });
-  render();
+  q("#printRootV2").replaceChildren();
 });
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
@@ -684,5 +652,6 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
+<script src="./print-v2.js"></script>
 </body>
 </html>

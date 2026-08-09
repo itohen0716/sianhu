@@ -110,9 +110,36 @@
       .print-technique.finger{display:flex!important;align-items:center;justify-content:center;width:42px!important;height:28px!important;font-family:"Yu Mincho","Times New Roman",serif;font-size:24px!important;font-weight:700!important;line-height:1!important;white-space:nowrap;transform:translate(-50%,calc(-100% - 2px))!important}
     }
     @media print{.range-selection-box{display:none!important}.annotation-item.range-selected{filter:none!important}.note.range-selected b{outline:0!important}}
+    /* v74: 編集DOMを印刷しない。保存データから生成した独立した印刷面だけを出力する。 */
+    .print-root{display:none}
+    @media print{
+      body>main.app{display:none!important}
+      .print-root{display:block!important;color:var(--ink);background:#fff;font-family:"Yu Gothic",sans-serif}
+      .print-page{width:196mm;min-height:283mm;margin:0;break-after:page;page-break-after:always;overflow:hidden}
+      .print-page:last-child{break-after:auto;page-break-after:auto}
+      .print-meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;height:34px;font:15px serif}
+      .print-meta-left{display:flex;align-items:flex-end;gap:6px}.print-title{justify-self:center;padding:4px 1em;border-bottom:1px solid #333;font:28px serif;text-align:center}.print-summary{text-align:right}
+      .print-staff{box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;padding-top:24px}
+      .print-score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}
+      .print-labels{display:grid;grid-template-rows:repeat(3,18px);padding-right:7px;font:12px/18px serif;text-align:right}
+      .print-score{display:flex;min-width:0;width:100%}
+      .print-measure{--print-capacity:8;position:relative;display:grid;grid-template-rows:repeat(3,18px);min-width:0;flex:var(--print-grow,1) 1 0}
+      .print-string{position:relative;height:18px}.print-string::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--ink)}
+      .print-measure:first-child::before,.print-measure:last-child::after{content:"";position:absolute;z-index:2;top:9px;bottom:9px;border-left:1.5px solid var(--ink)}
+      .print-measure:first-child::before{left:0}.print-measure:last-child::after{right:0}.print-measure.custom-end::after{display:none}
+      .print-barline{position:absolute;z-index:4;top:9px;bottom:9px;width:18px;color:var(--ink);transform:translateX(-50%)}
+      .print-barline.start{left:0}.print-barline.end{right:0;transform:translateX(50%)}.print-barline svg{display:block;width:18px;height:100%;overflow:visible}
+      .print-note{position:absolute;z-index:5;top:2px;left:var(--print-left);width:max-content;height:14px;transform:translateX(-50%);color:var(--note-color,#222)}
+      .print-note-glyph{display:flex;align-items:center;justify-content:center;min-width:12px;height:14px;padding:0 1px;background:#fffef9;font:600 var(--print-note-size,14px)/14px Arial;white-space:nowrap}
+      .print-note.open .print-note-glyph{font-size:28px;font-weight:400}.print-note.d2::after,.print-note.d1::after{content:"";position:absolute;left:50%;top:16px;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor}.print-note.d1::after{height:3px;border-bottom:1.5px solid currentColor}
+      .print-techniques{position:absolute;left:50%;top:0;transform:translateX(-50%);pointer-events:none}.print-technique-item{position:absolute;left:0;color:var(--tech-color,#222);white-space:nowrap;transform:translateX(-50%);font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}
+      .print-technique-item.above{bottom:18px}.print-technique-item.below{top:18px}.print-technique-item.finger{font-size:24px;line-height:1}.print-technique-item.symbol{font-size:14px}.print-technique-item.slur{width:var(--slur-width,42px);font-size:14px;text-align:center}.print-technique-item.slur::after{content:"";display:block;width:100%;height:8px;border-top:1.5px solid currentColor;border-radius:50%}
+      .print-score-part{position:absolute;z-index:3;top:9px;width:24px;height:36px;transform:translateX(-50%)}.print-score-part svg{width:100%;height:100%;overflow:visible}
+    }
   </style>
 </head>
 <body class="score-page">
+<div id="printRoot" class="print-root" aria-hidden="true"></div>
 <main class="app">
   <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>写譜</h1></div><div class="actions"><a class="page-link" href="./annotations.html">✎ 書き込みページ</a><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
   <input id="scoreFileInput" type="file" accept=".shian-score.json,.json,application/json" hidden>
@@ -340,6 +367,38 @@ function pageStartRows(pageRows=currentPageRows()){
   return starts;
 }
 function printPlanText(pageRows=currentPageRows()){return`${pageRows.length}ページ：${pageRows.map(count=>`${count}段`).join(" ＋ ")}`}
+function buildPrintModel(){
+  const techniqueLayer=state.layers.find(layer=>layer.id===TECHNIQUE_LAYER_ID),techniquesByAnchor=new Map();
+  if(techniqueLayer?.visible!==false){
+    (techniqueLayer?.items||[]).filter(item=>item.type==="symbol"&&item.anchor).forEach(item=>{
+      const key=anchorKey(Number(item.anchor.m),Number(item.anchor.s),Number(item.anchor.p));
+      if(!techniquesByAnchor.has(key))techniquesByAnchor.set(key,[]);
+      techniquesByAnchor.get(key).push({id:String(item.id||""),text:String(item.text||""),side:item.side==="below"?"below":"above",color:item.color||"#222222",offsetX:Number(item.offsetXPx)||0,offsetY:Number(item.offsetYPx)||0,slurWidth:clamp(Number(item.slurWidth)||34,22,90)});
+    });
+  }
+  const capacity=measureCapacity(),rows=Array.from({length:state.rows},(_,row)=>({
+    index:row,
+    measures:Array.from({length:measuresInRow(row)},(_,local)=>{
+      const m=rowStartMeasure(row)+local,width=measureWidth(m),notes=state.notes.filter(note=>note.m===m).map(note=>{
+        const key=anchorKey(note.m,note.s,note.p),x=note.rest?(Number(note.x)||0):columnX(note.m,note.p);
+        return{id:key,string:Number(note.s),position:Number(note.p),duration:[1,2,4].includes(note.d)?note.d:4,value:note.rest?"●":String(note.v||""),rest:Boolean(note.rest),open:!note.rest&&note.v==="○",color:note.rest?"#222222":(note.color||(note.v==="○"?state.openColor:state.numberColor)),leftRatio:clamp((Number(note.p)+.5)/capacity+x/width,0.005,.995),techniques:note.rest?[]:(techniquesByAnchor.get(key)||[])};
+      });
+      return{index:m,local,width,capacity,startKind:state.barlineKinds?.[barlineKey(row,local)]||"single",endKind:local===measuresInRow(row)-1?(state.barlineKinds?.[barlineKey(row,measuresInRow(row))]||"single"):"single",notes,parts:(state.scoreParts||[]).filter(part=>part.m===m).map(part=>({kind:part.kind==="same2"?"same2":"same1",leftRatio:clamp((Number(part.p)+.5)/capacity+(Number(part.x)||0)/width,.005,.995)}))};
+    })
+  }));
+  const pages=[],pageRows=currentPageRows();let cursor=0;
+  pageRows.forEach((count,pageIndex)=>{pages.push({index:pageIndex,rows:rows.slice(cursor,cursor+count)});cursor+=count});
+  return{version:2,title:String(state.title||"曲名入力"),tuning:String(state.tuning||""),meter:meterLabel(),pages};
+}
+function printBarlineHtml(kind,edge){if(kind==="single")return"";return`<span class="print-barline ${edge}" aria-hidden="true">${barlineSvg(kind)}</span>`}
+function printTechniqueModelHtml(item,index){const side=item.side==="below"?"below":"above",x=item.offsetX,y=item.offsetY+(index*16),style=`--tech-color:${esc(item.color)};margin-left:${x}px;${side==="above"?`margin-bottom:${-y}px`:`margin-top:${y}px`}`;if(["Ⅰ","Ⅱ","Ⅲ"].includes(item.text))return`<span class="print-technique-item finger ${side}" style="${style}">${esc(item.text)}</span>`;if(item.text==="スリ")return`<span class="print-technique-item slur ${side}" style="${style};--slur-width:${item.slurWidth}px">スリ</span>`;return`<span class="print-technique-item symbol ${side}" style="${style}">${esc(item.text)}</span>`}
+function printNoteModelHtml(note){return`<span class="print-note d${note.duration}${note.rest?" rest":""}${note.open?" open":""}" style="--print-left:${(note.leftRatio*100).toFixed(5)}%;--note-color:${esc(note.color)}"><span class="print-note-glyph">${esc(note.value)}</span>${note.techniques.length?`<span class="print-techniques">${note.techniques.map(printTechniqueModelHtml).join("")}</span>`:""}</span>`}
+function printMeasureModelHtml(measure){const customEnd=measure.endKind!=="single"?" custom-end":"";return`<div class="print-measure${customEnd}" style="--print-grow:${measure.width};--print-capacity:${measure.capacity}">${printBarlineHtml(measure.startKind,"start")}${printBarlineHtml(measure.endKind,"end")}${measure.parts.map(part=>`<span class="print-score-part" style="left:${(part.leftRatio*100).toFixed(5)}%">${samePartSvg(part.kind)}</span>`).join("")}${[3,2,1].map(string=>`<div class="print-string">${measure.notes.filter(note=>note.string===string).map(printNoteModelHtml).join("")}</div>`).join("")}</div>`}
+function renderPrintRoot(){
+  const model=buildPrintModel(),root=q("#printRoot");
+  root.innerHTML=model.pages.map(page=>`<section class="print-page" data-print-page="${page.index+1}">${page.index===0?`<div class="print-meta"><div class="print-meta-left"><span>〈</span><span>${esc(model.tuning)}</span><span>〉</span><span>${esc(model.meter)}</span></div><div class="print-title">${esc(model.title)}</div><div class="print-summary"></div></div>`:""}${page.rows.map(row=>`<section class="print-staff" style="height:${((283*96/25.4-(page.index===0?34:0))/page.rows.length).toFixed(2)}px"><div class="print-score-wrap"><div class="print-labels">${row.index===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="print-score">${row.measures.map(printMeasureModelHtml).join("")}</div></div></section>`).join("")}</section>`).join("");
+  root.dataset.printModelVersion=String(model.version);
+}
 function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function safeFileName(value){const name=String(value||"文化譜").trim().replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ");return(name&&name!=="曲名入力"?name:"文化譜").slice(0,80)}
 function updateTitleWidth(){const el=q("#title");if(!el)return;const length=Math.max(1,Array.from(el.value||"").length);el.style.width=`min(100%, ${length+2}em)`}
@@ -942,48 +1001,13 @@ q("#printForm").addEventListener("submit",event=>{
     const parsed=parseManualPageRows();
     if(!parsed.valid){q("#printError").textContent=parsed.message;return}
   }
-  save();q("#printDialog").close();render();requestAnimationFrame(()=>window.print());
+  save();q("#printDialog").close();renderPrintRoot();requestAnimationFrame(()=>window.print());
 });
 function applyPrintLayout(){
-  cursorVisible=false;
-  render();
-  const pageRows=currentPageRows(),staffs=qAll(".staff");
-  const printableHeight=283*96/25.4;
-  const titleGapExtra=20;
-  const metaHeight=q(".meta")?.getBoundingClientRect().height||34;
-  let staffIndex=0;
-  pageRows.forEach((count,pageIndex)=>{
-    const usableHeight=printableHeight-(pageIndex===0?metaHeight:0);
-    const distribute=count>=6;
-    const rowHeight=18;
-    const extraFirstGap=distribute&&pageIndex===0?titleGapExtra:0;
-    const staffGap=distribute
-      ?Math.max(8,(usableHeight-count*rowHeight*3-extraFirstGap)/(count+1))
-      :20;
-    const noteSize=14;
-    for(let row=0;row<count;row+=1){
-      const staff=staffs[staffIndex++];
-      if(!staff)break;
-      const gap=staffGap+(row===0?extraFirstGap:0);
-      staff.style.setProperty("--print-staff-gap",`${gap.toFixed(2)}px`);
-      staff.style.setProperty("--print-row-height",`${rowHeight}px`);
-      staff.style.setProperty("--print-note-size",`${noteSize.toFixed(2)}px`);
-      staff.querySelectorAll(".measure").forEach((measure,index)=>measure.style.setProperty("--print-measure-grow",String(measureWidth(rowStartMeasure(staffIndex-1)+index))));
-    }
-  });
-  renderLayers(true);
-  scalePrintNotePositions();
+  renderPrintRoot();
 }
 window.addEventListener("beforeprint",applyPrintLayout);
-window.addEventListener("afterprint",()=>{
-  qAll(".staff").forEach(staff=>{
-    staff.style.removeProperty("--print-staff-gap");
-    staff.style.removeProperty("--print-row-height");
-    staff.style.removeProperty("--print-note-size");
-    staff.querySelectorAll(".measure").forEach(measure=>measure.style.removeProperty("--print-measure-grow"));
-  });
-  render();
-});
+window.addEventListener("afterprint",()=>{q("#printRoot").replaceChildren()});
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
 window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};migrateState();drawing=false;render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
