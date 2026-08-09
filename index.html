@@ -137,9 +137,11 @@
       .print-score-part{position:absolute;z-index:3;top:9px;width:24px;height:36px;transform:translateX(-50%)}.print-score-part svg{width:100%;height:100%;overflow:visible}
     }
   </style>
+  <link rel="stylesheet" href="./print-v2.css">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
+<div id="printRootV2" class="shian-print-v2" aria-hidden="true"></div>
 <main class="app">
   <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>写譜</h1></div><div class="actions"><a class="page-link" href="./annotations.html">✎ 書き込みページ</a><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div></header>
   <input id="scoreFileInput" type="file" accept=".shian-score.json,.json,application/json" hidden>
@@ -1004,15 +1006,16 @@ q("#printForm").addEventListener("submit",event=>{
   save();q("#printDialog").close();renderPrintRoot();requestAnimationFrame(()=>window.print());
 });
 function applyPrintLayout(){
-  renderPrintRoot();
+  ShianPrintV2.render(state,{rootSelector:"#printRootV2",capacity:measureCapacity,measureWidth,columnX,barlineKey,pageRows:currentPageRows,meterLabel});
 }
 window.addEventListener("beforeprint",applyPrintLayout);
-window.addEventListener("afterprint",()=>{q("#printRoot").replaceChildren()});
+window.addEventListener("afterprint",()=>{q("#printRootV2").replaceChildren()});
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
 window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};migrateState();drawing=false;render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
+<script src="./print-v2.js"></script>
 </body>
 </html>
