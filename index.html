@@ -665,7 +665,12 @@ function renderLayers(skipSave=false){
   svg.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);svg.setAttribute("preserveAspectRatio","xMinYMin meet");
   syncLinkedSymbols();
   const layer=activeLayer();
-  svg.innerHTML=layer.visible===false?"":`<g data-layer="${layer.id}">${layer.items.map(itemHtml).join("")}</g>`;
+  /* 写譜ページでも書き込みレイヤーを閲覧できるよう、全表示レイヤーを
+     同じSVGへ描画する。編集対象は従来どおり奏法レイヤーだけに限定する。 */
+  svg.innerHTML=state.layers
+    .filter(item=>item.visible!==false)
+    .map(item=>`<g data-layer="${item.id}">${item.items.map(itemHtml).join("")}</g>`)
+    .join("");
   const scoreLayer=["notes","staff","technique"].includes(state.scoreEditLayer)?state.scoreEditLayer:"notes";
   state.scoreEditLayer=scoreLayer;document.body.dataset.scoreLayer=scoreLayer;
   q("#layerSwitches").innerHTML=`<button class="layer-chip fixed ${scoreLayer==="technique"?"on":""} ${layer.visible===false?"hidden":""}" data-score-layer="technique">奏法<small>${layer.visible===false?"非表示":"表示中"}・${layer.items.length}件・削除不可</small></button><button class="layer-chip fixed ${scoreLayer==="notes"?"on":""}" data-score-layer="notes">数字・開放弦<small>選択・横移動・削除</small></button><button class="layer-chip fixed ${scoreLayer==="staff"?"on":""}" data-score-layer="staff">譜線・小節線<small>小節線の選択・横移動</small></button>`;
@@ -1012,6 +1017,8 @@ window.addEventListener("beforeprint",applyPrintLayout);
 window.addEventListener("afterprint",()=>{q("#printRootV2").replaceChildren()});
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
+document.querySelector('.page-link[href="./annotations.html"]')?.addEventListener("click",save);
+window.addEventListener("pagehide",save);
 window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};migrateState();drawing=false;render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();

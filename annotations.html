@@ -52,7 +52,7 @@
     .dialog-actions button{min-height:44px;padding:9px 18px;border:1px solid #bcae9e;border-radius:9px;background:#fff}.dialog-actions .primary{background:var(--blue);color:#fff;border-color:var(--blue)}
     .print-options{display:grid;gap:10px;margin-top:14px}.print-options label{display:flex;align-items:center;gap:8px;font-weight:600}.print-options input[type=text]{width:100%;padding:10px;border:1px solid #bcae9e;border-radius:9px}.print-plan{margin:10px 0 0;padding:10px;border-radius:9px;background:var(--pale);font-weight:600;color:#285366}.print-error{min-height:1.5em;margin:7px 0 0;color:#9d4036;font-size:13px}.manual-print[hidden]{display:none}
     .page-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #477d91;border-radius:9px;background:#477d91;color:#fff;padding:8px 12px;text-decoration:none}
-    body.score-page .layer-panel,body.score-page .annotation-svg{display:none}
+    body.score-page .layer-panel{display:none}
     body.annotation-page .panel,body.annotation-page .note-color-panel,body.annotation-page #newScore{display:none}
     body.annotation-page #scoreArea{pointer-events:none}
     .base-layer-note{margin:8px 0 0;color:#75695d;font-size:12px}
@@ -648,6 +648,8 @@ window.addEventListener("afterprint",()=>{
 });
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
+document.querySelector('.page-link[href="./index.html"]')?.addEventListener("click",save);
+window.addEventListener("pagehide",save);
 window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState();render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
