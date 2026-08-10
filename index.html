@@ -114,7 +114,7 @@
     .print-root{display:none}
     @media print{
       body>main.app{display:none!important}
-      .print-root{display:block!important;color:var(--ink);background:#fff;font-family:"Yu Gothic",sans-serif}
+      .print-root{display:none!important}
       .print-page{width:196mm;min-height:283mm;margin:0;break-after:page;page-break-after:always;overflow:hidden}
       .print-page:last-child{break-after:auto;page-break-after:auto}
       .print-meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;height:34px;font:15px serif}
@@ -1008,7 +1008,7 @@ q("#printForm").addEventListener("submit",event=>{
     const parsed=parseManualPageRows();
     if(!parsed.valid){q("#printError").textContent=parsed.message;return}
   }
-  save();q("#printDialog").close();renderPrintRoot();requestAnimationFrame(()=>window.print());
+  save();q("#printDialog").close();applyPrintLayout();requestAnimationFrame(()=>window.print());
 });
 function applyPrintLayout(){
   ShianPrintV2.render(state,{rootSelector:"#printRootV2",capacity:measureCapacity,measureWidth,columnX,barlineKey,pageRows:currentPageRows,meterLabel});
