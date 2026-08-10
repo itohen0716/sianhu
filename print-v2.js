@@ -21,19 +21,24 @@
     (state.layers||[]).filter(layer=>layer.id!=="technique-layer"&&layer.printEnabled!==false).forEach(layer=>(layer.items||[]).forEach(item=>{
       const raw=sourcePoints(item).filter(point=>Number.isFinite(point?.x)&&Number.isFinite(point?.y));if(!raw.length)return;
       const client=raw.map(toClient),centerY=client.reduce((sum,p)=>sum+p.y,0)/client.length;
-      const target=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-centerY)<Math.abs(best.rect.top+best.rect.height/2-centerY)?current:best,wraps[0]);
-      /* 横・縦とも譜面本体に対する相対座標へ変換する。
-         画面の段高を印刷SVGへ直接渡すと、譜線下のコメントほど下へずれる。 */
-      const points=client.map(point=>({
-        x:(point.x-target.rect.left)*1000/target.rect.width,
-        y:(point.y-target.rect.top)*PRINT_SCORE_HEIGHT/target.rect.height
-      }));
-      const normalized={...item,pointsNormalized:points};if(!result.has(target.row))result.set(target.row,[]);result.get(target.row).push(normalized);
+      const anchor=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-centerY)<Math.abs(best.rect.top+best.rect.height/2-centerY)?current:best,wraps[0]);
+      /* 各頂点を最寄り段へ個別に関連付ける。
+         一本の自由線を一段だけへ関連付けると、段をまたぐ線の移動後に形と位置が崩れる。 */
+      const points=client.map(point=>{
+        const target=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-point.y)<Math.abs(best.rect.top+best.rect.height/2-point.y)?current:best,wraps[0]);
+        return{
+          x:(point.x-target.rect.left)*1000/target.rect.width,
+          y:(point.y-target.rect.top)*PRINT_SCORE_HEIGHT/target.rect.height,
+          row:target.row
+        };
+      });
+      const normalized={...item,anchorRow:anchor.row,pointsNormalized:points};if(!result.has(anchor.row))result.set(anchor.row,[]);result.get(anchor.row).push(normalized);
     }));
     return result;
   }
-  function annotationHtml(item){
-    const pts=item.pointsNormalized||[],color=esc(item.color||"#222"),dash=item.lineStyle==="dashed"?' stroke-dasharray="8 7"':"",common=`stroke="${color}" stroke-width="2.5"${dash} fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
+  function annotationHtml(item,staffHeight){
+    const anchorRow=Number(item.anchorRow)||0;
+    const pts=(item.pointsNormalized||[]).map(point=>({...point,y:point.y+((Number(point.row)||0)-anchorRow)*staffHeight})),color=esc(item.color||"#222"),dash=item.lineStyle==="dashed"?' stroke-dasharray="8 7"':"",common=`stroke="${color}" stroke-width="2.5"${dash} fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
     if(item.type==="pen")return`<polyline ${common} points="${pts.map(p=>`${p.x},${p.y}`).join(" ")}"/>`;
     if(item.type==="rect"&&pts.length>1)return`<rect ${common} x="${Math.min(pts[0].x,pts[1].x)}" y="${Math.min(pts[0].y,pts[1].y)}" width="${Math.abs(pts[1].x-pts[0].x)}" height="${Math.abs(pts[1].y-pts[0].y)}" rx="5"/>`;
     if(item.type==="arrow"&&pts.length>1){const [a,b]=pts,angle=Math.atan2(b.y-a.y,b.x-a.x),size=16,p1={x:b.x-size*Math.cos(angle-.55),y:b.y-size*Math.sin(angle-.55)},p2={x:b.x-size*Math.cos(angle+.55),y:b.y-size*Math.sin(angle+.55)};return`<line ${common} x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><polyline ${common} points="${p1.x},${p1.y} ${b.x},${b.y} ${p2.x},${p2.y}"/>`}
@@ -58,7 +63,7 @@
     const measureHtml=measure=>`<div class="pv2-measure" style="--grow:${measure.width}"><span class="pv2-boundary start${measure.startKind!=="single"?" custom":""}">${measure.startKind==="single"?"":barSvg(measure.startKind)}</span>${measure.endKind!=="single"?`<span class="pv2-boundary end custom">${barSvg(measure.endKind)}</span>`:""}${measure.parts.map(part=>`<span class="pv2-part" style="left:${(part.left*100).toFixed(5)}%">${sameSvg(part.kind)}</span>`).join("")}${[3,2,1].map(string=>`<div class="pv2-string">${measure.notes.filter(note=>Number(note.s)===string).map(noteHtml).join("")}</div>`).join("")}</div>`;
     /* 曲名・調子・拍子は固定し、譜面と全レイヤーだけを一体で下げる。
        同じラッパーを全ページで使うため、最終ページでも開始位置と段間隔が変わらない。 */
-    root.innerHTML=pages.map(page=>`<section class="pv2-page">${page.index===0?`<div class="pv2-meta"><div class="pv2-meta-left"><span>〈</span><span>${esc(state.tuning||"")}</span><span>〉</span><span>${esc(meterLabel())}</span></div><div class="pv2-title">${esc(state.title||"曲名入力")}</div><div></div></div>`:""}<div class="pv2-staffs">${page.rows.map(row=>`<section class="pv2-staff" style="height:${sharedStaffHeight.toFixed(2)}px"><div class="pv2-wrap"><div class="pv2-labels">${row.row===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="pv2-score">${row.measures.map(measureHtml).join("")}${row.annotations.length?`<svg class="pv2-overlay" viewBox="0 0 1000 ${PRINT_SCORE_HEIGHT}" preserveAspectRatio="none">${row.annotations.map(annotationHtml).join("")}</svg>`:""}</div></div></section>`).join("")}</div></section>`).join("");
+    root.innerHTML=pages.map(page=>`<section class="pv2-page">${page.index===0?`<div class="pv2-meta"><div class="pv2-meta-left"><span>〈</span><span>${esc(state.tuning||"")}</span><span>〉</span><span>${esc(meterLabel())}</span></div><div class="pv2-title">${esc(state.title||"曲名入力")}</div><div></div></div>`:""}<div class="pv2-staffs">${page.rows.map(row=>`<section class="pv2-staff" style="height:${sharedStaffHeight.toFixed(2)}px"><div class="pv2-wrap"><div class="pv2-labels">${row.row===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="pv2-score">${row.measures.map(measureHtml).join("")}${row.annotations.length?`<svg class="pv2-overlay" viewBox="0 0 1000 ${PRINT_SCORE_HEIGHT}" preserveAspectRatio="none">${row.annotations.map(item=>annotationHtml(item,sharedStaffHeight)).join("")}</svg>`:""}</div></div></section>`).join("")}</div></section>`).join("");
     root.dataset.modelVersion="2";root.dataset.noteCount=String((state.notes||[]).length);root.dataset.annotationCount=String([...annotations.values()].flat().length);
   }
   global.ShianPrintV2={render};
