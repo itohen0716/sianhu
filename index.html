@@ -1013,7 +1013,12 @@ q("#printForm").addEventListener("submit",event=>{
 function applyPrintLayout(){
   ShianPrintV2.render(state,{rootSelector:"#printRootV2",capacity:measureCapacity,measureWidth,columnX,barlineKey,pageRows:currentPageRows,meterLabel});
 }
-window.addEventListener("beforeprint",applyPrintLayout);
+function ensurePrintLayout(){
+  /* 印刷ダイアログからは通常画面の座標で既に生成済み。
+     beforeprint 時に印刷CSS適用後の座標で再生成すると、書き込みだけがずれる。 */
+  if(!q("#printRootV2").childElementCount)applyPrintLayout();
+}
+window.addEventListener("beforeprint",ensurePrintLayout);
 window.addEventListener("afterprint",()=>{q("#printRootV2").replaceChildren()});
 window.addEventListener("resize",()=>{applyPreview()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});

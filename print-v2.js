@@ -3,6 +3,7 @@
   const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
   const key=(m,s,p)=>`${m},${s},${p}`;
+  const PRINT_SCORE_HEIGHT=54;
   const line=(x,width=1.5)=>`<line x1="${x}" y1="0" x2="${x}" y2="68" stroke="currentColor" stroke-width="${width}"/>`;
   const dots=x=>`<circle cx="${x}" cy="23" r="2.2" fill="currentColor"/><circle cx="${x}" cy="45" r="2.2" fill="currentColor"/>`;
   function barSvg(kind){if(kind==="single")return"";if(kind==="double")return`<svg viewBox="0 0 18 68">${line(7)}${line(11)}</svg>`;if(kind==="repeat-start")return`<svg viewBox="0 0 18 68">${line(5)}${line(9)}${dots(15)}</svg>`;if(kind==="repeat-end")return`<svg viewBox="0 0 18 68">${dots(3)}${line(9)}${line(13)}</svg>`;return`<svg viewBox="0 0 18 68">${line(6)}${line(12,4)}</svg>`}
@@ -21,7 +22,12 @@
       const raw=sourcePoints(item).filter(point=>Number.isFinite(point?.x)&&Number.isFinite(point?.y));if(!raw.length)return;
       const client=raw.map(toClient),centerY=client.reduce((sum,p)=>sum+p.y,0)/client.length;
       const target=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-centerY)<Math.abs(best.rect.top+best.rect.height/2-centerY)?current:best,wraps[0]);
-      const points=client.map(point=>({x:(point.x-target.rect.left)*1000/target.rect.width,y:point.y-target.rect.top}));
+      /* 横・縦とも譜面本体に対する相対座標へ変換する。
+         画面の段高を印刷SVGへ直接渡すと、譜線下のコメントほど下へずれる。 */
+      const points=client.map(point=>({
+        x:(point.x-target.rect.left)*1000/target.rect.width,
+        y:(point.y-target.rect.top)*PRINT_SCORE_HEIGHT/target.rect.height
+      }));
       const normalized={...item,pointsNormalized:points};if(!result.has(target.row))result.set(target.row,[]);result.get(target.row).push(normalized);
     }));
     return result;
@@ -52,7 +58,7 @@
     const measureHtml=measure=>`<div class="pv2-measure" style="--grow:${measure.width}"><span class="pv2-boundary start${measure.startKind!=="single"?" custom":""}">${measure.startKind==="single"?"":barSvg(measure.startKind)}</span>${measure.endKind!=="single"?`<span class="pv2-boundary end custom">${barSvg(measure.endKind)}</span>`:""}${measure.parts.map(part=>`<span class="pv2-part" style="left:${(part.left*100).toFixed(5)}%">${sameSvg(part.kind)}</span>`).join("")}${[3,2,1].map(string=>`<div class="pv2-string">${measure.notes.filter(note=>Number(note.s)===string).map(noteHtml).join("")}</div>`).join("")}</div>`;
     /* 曲名・調子・拍子は固定し、譜面と全レイヤーだけを一体で下げる。
        同じラッパーを全ページで使うため、最終ページでも開始位置と段間隔が変わらない。 */
-    root.innerHTML=pages.map(page=>`<section class="pv2-page">${page.index===0?`<div class="pv2-meta"><div class="pv2-meta-left"><span>〈</span><span>${esc(state.tuning||"")}</span><span>〉</span><span>${esc(meterLabel())}</span></div><div class="pv2-title">${esc(state.title||"曲名入力")}</div><div></div></div>`:""}<div class="pv2-staffs">${page.rows.map(row=>`<section class="pv2-staff" style="height:${sharedStaffHeight.toFixed(2)}px"><div class="pv2-wrap"><div class="pv2-labels">${row.row===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="pv2-score">${row.measures.map(measureHtml).join("")}${row.annotations.length?`<svg class="pv2-overlay" viewBox="0 0 1000 120" preserveAspectRatio="none">${row.annotations.map(annotationHtml).join("")}</svg>`:""}</div></div></section>`).join("")}</div></section>`).join("");
+    root.innerHTML=pages.map(page=>`<section class="pv2-page">${page.index===0?`<div class="pv2-meta"><div class="pv2-meta-left"><span>〈</span><span>${esc(state.tuning||"")}</span><span>〉</span><span>${esc(meterLabel())}</span></div><div class="pv2-title">${esc(state.title||"曲名入力")}</div><div></div></div>`:""}<div class="pv2-staffs">${page.rows.map(row=>`<section class="pv2-staff" style="height:${sharedStaffHeight.toFixed(2)}px"><div class="pv2-wrap"><div class="pv2-labels">${row.row===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="pv2-score">${row.measures.map(measureHtml).join("")}${row.annotations.length?`<svg class="pv2-overlay" viewBox="0 0 1000 ${PRINT_SCORE_HEIGHT}" preserveAspectRatio="none">${row.annotations.map(annotationHtml).join("")}</svg>`:""}</div></div></section>`).join("")}</div></section>`).join("");
     root.dataset.modelVersion="2";root.dataset.noteCount=String((state.notes||[]).length);root.dataset.annotationCount=String([...annotations.values()].flat().length);
   }
   global.ShianPrintV2={render};
