@@ -14,7 +14,7 @@
     if(!svgRect.width||!svgRect.height||!view.width||!view.height)return new Map();
     /* 書き込みは糸名欄を除いた譜面本体を基準にする。印刷側も同じ基準なので、
        画面幅が変わっても矢印・枠・コメントが対象の音から離れない。 */
-    const wraps=staffs.map((staff,row)=>({row,rect:(staff.querySelector(".score-scroll")||staff.querySelector(".score-wrap")).getBoundingClientRect()})),result=new Map();
+    const wraps=staffs.map((staff,row)=>({row,rect:(staff.querySelector(".score")||staff.querySelector(".score-scroll")||staff.querySelector(".score-wrap")).getBoundingClientRect()})),result=new Map();
     const toClient=point=>({x:svgRect.left+point.x*svgRect.width/view.width,y:svgRect.top+point.y*svgRect.height/view.height});
     const sourcePoints=item=>item.type==="pen"?(item.points||[]):item.type==="text"||item.type==="symbol"?[{x:item.x,y:item.y}]:[{x:item.x1,y:item.y1},{x:item.x2,y:item.y2}];
     (state.layers||[]).filter(layer=>layer.id!=="technique-layer"&&layer.printEnabled!==false).forEach(layer=>(layer.items||[]).forEach(item=>{
