@@ -5,8 +5,9 @@
   .shian-print-v2{display:block!important;color:#332c25;background:#fff!important;font-family:"Yu Gothic",sans-serif}
   .pv2-page{width:196mm;min-height:283mm;overflow:hidden;background:#fff!important;break-after:page;page-break-after:always}
   .pv2-page:last-child{break-after:auto;page-break-after:auto}
-  .pv2-meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;height:34px;font:15px serif}
-  .pv2-meta-left{display:flex;align-items:flex-end;gap:6px}.pv2-title{justify-self:center;padding:4px 1em;border-bottom:1px solid #333;font:28px serif;text-align:center}
+  .pv2-meta{position:relative;display:block;height:46px;overflow:visible;color:#332c25!important;font:15px/24px serif;visibility:visible!important}
+  .pv2-meta-left{position:absolute;left:0;bottom:5px;display:flex;align-items:flex-end;gap:6px;min-width:max-content;color:#332c25!important;line-height:24px;white-space:nowrap;visibility:visible!important}
+  .pv2-title{position:absolute;left:50%;bottom:0;max-width:50%;padding:0 1em 3px;border-bottom:1px solid #333;color:#332c25!important;font:28px/36px serif;text-align:center;white-space:nowrap;transform:translateX(-50%);visibility:visible!important}
   .pv2-staffs{position:relative;padding-top:12mm;background:#fff!important}
   .pv2-staff{box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;padding-top:24px}
   .pv2-wrap{position:relative;display:grid;grid-template-columns:55px minmax(0,1fr)}
