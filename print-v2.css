@@ -1,23 +1,77 @@
-.shian-print-v2{display:none}
-@media print{
-  body>main.app{display:none!important}
-  .shian-print-v2{display:block!important;color:#332c25;background:#fff;font-family:"Yu Gothic",sans-serif}
-  .pv2-page{width:196mm;min-height:283mm;overflow:hidden;break-after:page;page-break-after:always}
-  .pv2-page:last-child{break-after:auto;page-break-after:auto}
-  .pv2-meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;height:34px;font:15px serif}
-  .pv2-meta-left{display:flex;align-items:flex-end;gap:6px}.pv2-title{justify-self:center;padding:4px 1em;border-bottom:1px solid #333;font:28px serif;text-align:center}
-  .pv2-staffs{padding-top:12mm}
-  .pv2-staff{box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;padding-top:24px}
-  .pv2-wrap{position:relative;display:grid;grid-template-columns:55px minmax(0,1fr)}
-  .pv2-labels{display:grid;grid-template-rows:repeat(3,18px);padding-right:7px;font:12px/18px serif;text-align:right}
-  .pv2-score{position:relative;display:flex;width:100%;min-width:0}.pv2-measure{position:relative;display:grid;grid-template-rows:repeat(3,18px);min-width:0;flex:var(--grow,1) 1 0}
-  .pv2-string{position:relative;height:18px}.pv2-string::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid #332c25}
-  .pv2-boundary{position:absolute;z-index:4;left:0;top:9px;bottom:9px;width:0;border-left:1.5px solid #332c25;color:#332c25}.pv2-boundary.end{left:auto;right:0}.pv2-boundary.custom{border-left:0}.pv2-boundary svg{position:absolute;top:0;left:-9px;display:block;width:18px;height:100%;overflow:visible}.pv2-measure:last-of-type::after{content:"";position:absolute;z-index:2;right:0;top:9px;bottom:9px;border-left:1.5px solid #332c25}.pv2-measure:last-of-type:has(>.pv2-boundary.end)::after{display:none}
-  .pv2-bar{position:absolute;z-index:4;top:9px;bottom:9px;width:18px;color:#332c25;transform:translateX(-50%)}.pv2-bar.start{left:0}.pv2-bar.end{right:0;transform:translateX(50%)}.pv2-bar svg{display:block;width:18px;height:100%;overflow:visible}
-  .pv2-note{position:absolute;z-index:5;top:2px;left:var(--left);width:max-content;height:14px;transform:translateX(-50%);color:var(--note-color,#222)}
-  .pv2-glyph{display:flex;align-items:center;justify-content:center;min-width:12px;height:14px;padding:0 1px;background:#fffef9;font:600 14px/14px Arial;white-space:nowrap}.pv2-note.open .pv2-glyph{font-size:28px;font-weight:400}
-  .pv2-note.d2::after,.pv2-note.d1::after{content:"";position:absolute;left:50%;top:16px;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor}.pv2-note.d1::after{height:3px;border-bottom:1.5px solid currentColor}
-  .pv2-techniques{position:absolute;left:50%;top:0;transform:translateX(-50%)}.pv2-tech{position:absolute;left:0;color:var(--tech-color,#222);white-space:nowrap;transform:translateX(-50%);font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}.pv2-tech.above{bottom:-1px}.pv2-tech.below{top:18px}.pv2-tech.finger{font-size:14px!important;line-height:14px!important;font-weight:700!important}.pv2-tech.symbol{font-size:14px;line-height:14px}.pv2-tech.slur{width:var(--slur-width,42px);font-size:14px;line-height:14px;text-align:center}.pv2-tech.slur::after{content:"";display:block;width:100%;height:8px;border-top:1.5px solid currentColor;border-radius:50%}
-  .pv2-part{position:absolute;z-index:3;top:9px;width:24px;height:36px;transform:translateX(-50%)}.pv2-part svg{width:100%;height:100%;overflow:visible}
-  .pv2-overlay{position:absolute;z-index:20;left:0;top:0;width:100%;height:54px;overflow:visible;pointer-events:none}.pv2-overlay text{font-family:"Yu Gothic","Noto Sans JP",sans-serif}.pv2-overlay .roman{font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}
+.shian-print-v2 {
+  display: none;
+}
+
+@media print {
+  body > main.app,
+  body > .print-root {
+    display: none !important;
+  }
+
+  .shian-print-v2 {
+    display: block !important;
+    color: #332c25;
+    background: #fff;
+    font-family: "Yu Gothic", sans-serif;
+  }
+
+  .pv3-page {
+    box-sizing: border-box;
+    width: 196mm;
+    height: 283mm;
+    margin: 0;
+    overflow: hidden;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .pv3-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .pv3-meta {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    align-items: end;
+    height: 34px;
+    font: 15px serif;
+  }
+
+  .pv3-meta-left {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .pv3-title {
+    justify-self: center;
+    padding: 4px 1em;
+    border-bottom: 1px solid #333;
+    font: 28px serif;
+    text-align: center;
+  }
+
+  .pv3-score-gap {
+    box-sizing: border-box;
+    width: 100%;
+    padding-top: 12mm;
+  }
+
+  .pv3-snapshot {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+  }
+
+  .pv3-foreign-viewport {
+    position: relative;
+    overflow: hidden;
+    background: #fffef9;
+  }
+
+  .pv3-page:not(:first-child) .pv3-score-gap {
+    padding-top: calc(34px + 12mm);
+  }
 }
