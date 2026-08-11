@@ -56,11 +56,11 @@
     body.annotation-page .panel,body.annotation-page .note-color-panel,body.annotation-page #newScore{display:none}
     body.annotation-page #scoreArea{pointer-events:none}
     .base-layer-note{margin:8px 0 0;color:#75695d;font-size:12px}
-    /* v86: 文化譜の表示寸法を保ち、書き込み部品だけを右帯へ移動する。 */
+    /* v87: 文化譜の表示寸法を保ち、書き込み部品だけを左帯へ移動する。 */
     .app{max-width:1510px}
-    .workspace-shell{display:grid;grid-template-columns:minmax(0,1100px) 380px;gap:16px;align-items:start;margin-top:12px}
-    .workspace-shell>.paper{margin-top:0;min-width:0}
-    .tool-rail{min-width:0;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto;padding-right:3px}
+    .workspace-shell{display:grid;grid-template-columns:380px minmax(0,1100px);gap:16px;align-items:start;margin-top:12px}
+    .workspace-shell>.paper{grid-column:2;margin-top:0;min-width:0}
+    .tool-rail{grid-column:1;grid-row:1;min-width:0;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto;padding-left:3px}
     .tool-rail>.layer-panel{margin-top:0;margin-bottom:12px}
     .tool-rail .layer-top{align-items:stretch;flex-direction:column}
     .tool-rail .layer-top>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
@@ -71,7 +71,7 @@
     .tool-rail .colors{margin-left:0;width:100%}
     .tool-rail .edit-tools button{flex:1 1 44%}
     .tool-rail .color-settings{flex-direction:column}
-    @media(max-width:1250px){.app{max-width:1100px}.workspace-shell{grid-template-columns:1fr}.tool-rail{position:static;max-height:none;overflow:visible}.tool-rail .layer-card{grid-template-columns:minmax(110px,1fr) auto}.tool-rail .color-settings{flex-direction:row}}
+    @media(max-width:1250px){.app{max-width:1100px}.workspace-shell{grid-template-columns:1fr}.workspace-shell>.paper,.tool-rail{grid-column:auto;grid-row:auto}.tool-rail{position:static;max-height:none;overflow:visible;padding-left:0}.tool-rail .layer-card{grid-template-columns:minmax(110px,1fr) auto}.tool-rail .color-settings{flex-direction:row}}
     @media print{.workspace-shell{display:block;margin:0}.tool-rail{display:none!important}}
     @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.nums{grid-template-columns:repeat(5,1fr)}.nums button{min-height:54px}.rests{grid-template-columns:repeat(2,1fr)}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}.colors{margin-left:0}.draw-tools button{flex:1 0 28%}.layer-card{grid-template-columns:1fr}}
     @page{size:A4 portrait;margin:7mm}
