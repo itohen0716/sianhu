@@ -437,11 +437,11 @@ async function importScoreFile(file){
     alert(`「${state.title||"文化譜"}」を読み込みました。`);
   }catch(error){console.error(error);alert(`読み込めませんでした。\n${error instanceof Error?error.message:"ファイルを確認してください。"}`)}
 }
-function save(){
+function save(forceReplace=false){
   try{
     const latest=JSON.parse(localStorage.getItem(KEY)||"null")||{};
     const current=serializable();
-    const merged=IS_ANNOTATION_PAGE
+    const merged=forceReplace?current:IS_ANNOTATION_PAGE
       ?{...latest,...current,notes:latest.notes||current.notes,title:latest.title||current.title,rows:latest.rows||current.rows,measuresPerRow:latest.measuresPerRow||current.measuresPerRow,rowMeasureCounts:latest.rowMeasureCounts||current.rowMeasureCounts,numberColor:latest.numberColor||current.numberColor,openColor:latest.openColor||current.openColor}
       :{...current,layers:[current.layers.find(layer=>layer.id===TECHNIQUE_LAYER_ID),...(latest.layers||current.layers).filter(layer=>layer.id!==TECHNIQUE_LAYER_ID)].filter(Boolean),activeLayerId:TECHNIQUE_LAYER_ID};
     localStorage.setItem(KEY,JSON.stringify(merged));Object.assign(state,merged);hasSaved=true;
@@ -833,7 +833,19 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
     if(len===state.notes.length)past.pop();else removeLinkedSymbols([key]);
     selectedScoreTarget=null;lastInserted=null;
   }
-  else if(b.id==="clear"&&(state.notes.length||state.scoreParts?.length||Object.keys(state.barlineKinds||{}).length)&&confirm("譜面の入力内容をすべて削除しますか？")){snap();removeLinkedSymbols(state.notes.map(n=>anchorKey(n.m,n.s,n.p)));state.notes=[];state.scoreParts=[];state.barlineKinds={};state.m=0;state.s=1;state.p=0}
+  else if(b.id==="clear"){
+    const hasAnnotations=(state.layers||[]).some(layer=>Array.isArray(layer.items)&&layer.items.length);
+    const hasScoreContent=state.notes.length||state.scoreParts?.length||Object.keys(state.barlineKinds||{}).length;
+    if((hasScoreContent||hasAnnotations)&&confirm("譜面と書き込みの入力内容をすべて削除しますか？")){
+      snap();
+      state.notes=[];state.scoreParts=[];state.barlineKinds={};
+      state.layers=(state.layers||[]).map(layer=>({...layer,items:[]}));
+      state.m=0;state.s=1;state.p=0;
+      selectedItemId=null;selectedScoreTarget=null;lastInserted=null;drawing=false;cursorVisible=false;
+      q("#printRootV2")?.replaceChildren();
+      save(true);
+    }
+  }
   else if(b.id==="undo"&&past.length){future.unshift(JSON.stringify(serializable()));Object.assign(state,JSON.parse(past.pop()));selectedItemId=null}
   else if(b.id==="redo"&&future.length){past.push(JSON.stringify(serializable()));Object.assign(state,JSON.parse(future.shift()));selectedItemId=null}
   else if(b.id==="addRow"){changeLayout(state.rows+1,measuresInRow(measureLocation(state.m).row));return}
