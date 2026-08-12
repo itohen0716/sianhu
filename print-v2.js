@@ -24,11 +24,11 @@
     return{items,wraps};
   }
   function annotationHtml(item){
-    const pts=item.pointsNormalized||[],color=esc(item.color||"#222"),dash=item.lineStyle==="dashed"?' stroke-dasharray="8 7"':"",common=`stroke="${color}" stroke-width="2.5"${dash} fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
+    const pts=item.pointsNormalized||[],color=esc(item.color||"#222"),dash=item.lineStyle==="dashed"?' stroke-dasharray="8 7"':"",detailScale=Number(item.printDetailScale)||1.15,common=`stroke="${color}" stroke-width="2.5"${dash} fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
     if(item.type==="pen")return`<polyline ${common} points="${pts.map(p=>`${p.x},${p.y}`).join(" ")}"/>`;
     if(item.type==="rect"&&pts.length>1)return`<rect ${common} x="${Math.min(pts[0].x,pts[1].x)}" y="${Math.min(pts[0].y,pts[1].y)}" width="${Math.abs(pts[1].x-pts[0].x)}" height="${Math.abs(pts[1].y-pts[0].y)}" rx="5"/>`;
-    if(item.type==="arrow"&&pts.length>1){const [a,b]=pts,angle=Math.atan2(b.y-a.y,b.x-a.x),size=16,p1={x:b.x-size*Math.cos(angle-.55),y:b.y-size*Math.sin(angle-.55)},p2={x:b.x-size*Math.cos(angle+.55),y:b.y-size*Math.sin(angle+.55)};return`<line ${common} x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><polyline ${common} points="${p1.x},${p1.y} ${b.x},${b.y} ${p2.x},${p2.y}"/>`}
-    if(item.type==="text"&&pts[0]){const p=pts[0],size=Number(item.size)||20,bg=item.background==="none"?"none":item.background==="translucent"?"rgba(255,255,255,.72)":"#fff",width=Math.max(55,String(item.text||"").length*size*.95),height=size*1.55;return`<rect x="${p.x-7}" y="${p.y-height+5}" width="${width+14}" height="${height}" rx="7" fill="${bg}"/><text x="${p.x}" y="${p.y}" fill="${color}" font-size="${size}" font-weight="600">${esc(item.text)}</text>`}
+    if(item.type==="arrow"&&pts.length>1){const [a,b]=pts,angle=Math.atan2(b.y-a.y,b.x-a.x),size=16*detailScale,p1={x:b.x-size*Math.cos(angle-.55),y:b.y-size*Math.sin(angle-.55)},p2={x:b.x-size*Math.cos(angle+.55),y:b.y-size*Math.sin(angle+.55)};return`<line ${common} x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><polyline ${common} points="${p1.x},${p1.y} ${b.x},${b.y} ${p2.x},${p2.y}"/>`}
+    if(item.type==="text"&&pts[0]){const p=pts[0],size=(Number(item.size)||20)*detailScale,bg=item.background==="none"?"none":item.background==="translucent"?"rgba(255,255,255,.72)":"#fff",width=Math.max(55,String(item.text||"").length*size*.95),height=size*1.55;return`<rect x="${p.x-7}" y="${p.y-height+5}" width="${width+14}" height="${height}" rx="7" fill="${bg}"/><text x="${p.x}" y="${p.y}" fill="${color}" font-size="${size}" font-weight="600">${esc(item.text)}</text>`}
     return"";
   }
   function captureScoreGeometry(){
@@ -54,14 +54,13 @@
        最終ページの段数が少なくても再均等配置せず、余白はページ下部へ残す。 */
     const firstPageRowCount=Math.max(1,pages[0]?.rows.length||pageCounts[0]||1),availableHeight=283*96/25.4-46,fixedReferenceRows=state.lyricsMode?7:10;
     const sharedStaffHeight=availableHeight/(firstPageRowCount<=5?fixedReferenceRows:firstPageRowCount);
-    const mapPoint=point=>{
-      const wraps=annotationCapture.wraps,target=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-point.y)<Math.abs(best.rect.top+best.rect.height/2-point.y)?current:best,wraps[0]);
-      const sourceWidth=Math.max(1,target.rect.width),uniformScale=printScoreWidth/sourceWidth,x=(point.x-target.rect.left)*1000/sourceWidth;
-      /* 横方向と同じ実倍率をY方向にも使用する。段の開始位置だけは
-         印刷の段間隔へ合わせ、部品自体の高さ・角度・文字位置は変形させない。 */
-      return{x,y:target.row*sharedStaffHeight+(point.y-target.rect.top)*uniformScale};
-    };
-    const mappedAnnotations=annotationCapture.items.map(item=>({...item,pointsNormalized:item.clientPoints.map(mapPoint)}));
+    const mappedAnnotations=annotationCapture.items.map(item=>{
+      const centerY=item.clientPoints.reduce((sum,point)=>sum+point.y,0)/Math.max(1,item.clientPoints.length),wraps=annotationCapture.wraps,target=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-centerY)<Math.abs(best.rect.top+best.rect.height/2-centerY)?current:best,wraps[0]),sourceWidth=Math.max(1,target.rect.width),horizontalScale=printScoreWidth/sourceWidth,verticalScale=horizontalScale*1.2;
+      /* 部品内の全頂点で同じ基準段・倍率を使う。右へ約6px、下へ約6px補正し、
+         v103で残った左上ずれと、短くなり過ぎた縦寸法を戻す。 */
+      const pointsNormalized=item.clientPoints.map(point=>({x:(point.x-target.rect.left)*1000/sourceWidth+9,y:target.row*sharedStaffHeight+(point.y-target.rect.top)*verticalScale+6}));
+      return{...item,pointsNormalized,printDetailScale:1.15};
+    });
     const techniqueHtml=(item,index)=>{const side=item.side==="below"?"below":"above",x=Number(item.offsetXPx)||0,y=(Number(item.offsetYPx)||0)+index*16,style=`--tech-color:${esc(item.color||"#222")};margin-left:${x}px;${side==="above"?`margin-bottom:${-y}px`:`margin-top:${y}px`}`;if(["Ⅰ","Ⅱ","Ⅲ"].includes(item.text))return`<span class="pv2-tech finger ${side}" style="${style}">${esc(item.text)}</span>`;if(item.text==="スリ")return`<span class="pv2-tech slur ${side}" style="${style};--slur-width:${clamp(Number(item.slurWidth)||34,22,90)}px">スリ</span>`;return`<span class="pv2-tech symbol ${side}" style="${style}">${esc(item.text)}</span>`};
     const noteHtml=note=>`<span class="pv2-note d${[1,2,4].includes(note.d)?note.d:4}${note.rest?" rest":""}${!note.rest&&note.v==="○"?" open":""}" style="--left:${(note.left*100).toFixed(5)}%;--note-color:${esc(note.rest?"#222":(note.color||(note.v==="○"?state.openColor:state.numberColor)))}"><span class="pv2-glyph">${esc(note.value)}</span>${note.techniques.length?`<span class="pv2-techniques">${note.techniques.map(techniqueHtml).join("")}</span>`:""}</span>`;
     /* 通常小節線も実要素として必ず描画し、印刷時の疑似要素処理に依存しない。 */

@@ -1118,7 +1118,7 @@ document.addEventListener("keydown",event=>{
     insertSpecified(Number(match[1]),Number(match[2]),match[3]);render();return;
   }
   if(event.key==="Enter"&&!keyboardBuffer&&lastInserted){event.preventDefault();lastInserted=null;q("#keyboardStatus").textContent="塊を終了しました。次の音を入力できます。";return}
-  if((event.key==="ArrowLeft"||event.key==="ArrowRight")&&!keyboardBuffer){event.preventDefault();snap();if(!nudgeCurrentSelection(event.key==="ArrowLeft"?-4:4))past.pop();render()}
+  if((event.key==="ArrowLeft"||event.key==="ArrowRight")&&!keyboardBuffer){event.preventDefault();snap();if(!nudgeCurrentSelection(event.key==="ArrowLeft"?-4:4)){past.pop();q(event.key==="ArrowLeft"?"#prev":"#next").click();return}render()}
 });
 document.addEventListener("keyup",event=>{if(event.key==="Shift")updateRangeSelectMode(false)});
 window.addEventListener("blur",()=>updateRangeSelectMode(false));
