@@ -48,22 +48,18 @@
     const techniqueLayer=(state.layers||[]).find(layer=>layer.id==="technique-layer"),techMap=new Map();
     if(techniqueLayer?.visible!==false)(techniqueLayer?.items||[]).filter(item=>item.type==="symbol"&&item.anchor).forEach(item=>{const k=key(item.anchor.m,item.anchor.s,item.anchor.p);if(!techMap.has(k))techMap.set(k,[]);techMap.get(k).push(item)});
     const annotationCapture=captureAnnotations(state),geometry=captureScoreGeometry(),rows=counts.map((count,row)=>({row,measures:Array.from({length:count},(_,local)=>{const m=starts[row]+local,width=measureWidth(m);return{m,local,width,startKind:state.barlineKinds?.[barKey(row,local)]||"single",endKind:local===count-1?(state.barlineKinds?.[barKey(row,count)]||"single"):"single",notes:(state.notes||[]).filter(note=>note.m===m).map(note=>{const x=note.rest?(Number(note.x)||0):columnX(note.m,note.p),id=key(note.m,note.s,note.p),measured=geometry.noteLeft.get(id);return{...note,left:Number.isFinite(measured)?measured:clamp((Number(note.p)+.5)/capacity+x/width,.005,.995),value:note.rest?"●":String(note.v||""),techniques:note.rest?[]:(techMap.get(id)||[])} }),parts:(state.scoreParts||[]).filter(part=>part.m===m).map(part=>{const measured=geometry.partLeft.get(String(part.id||""));return{...part,left:Number.isFinite(measured)?measured:clamp((Number(part.p)+.5)/capacity+(Number(part.x)||0)/width,.005,.995)}})}})}));
-    const printLyricsWidth=196*96/25.4-55;rows.forEach(item=>{const sourceWidth=geometry.lyricsWidth.get(item.row)||1000;item.lyrics=state.lyricsMode?String(state.lyrics?.[item.row]||""):"";item.lyricsSourceWidth=sourceWidth;item.lyricsScale=printLyricsWidth/sourceWidth});
+    const printScoreWidth=196*96/25.4-55,printLyricsWidth=printScoreWidth;rows.forEach(item=>{const sourceWidth=geometry.lyricsWidth.get(item.row)||1000;item.lyrics=state.lyricsMode?String(state.lyrics?.[item.row]||""):"";item.lyricsSourceWidth=sourceWidth;item.lyricsScale=printLyricsWidth/sourceWidth});
     const pageCounts=options.pageRows(),pages=[];let cursor=0;pageCounts.forEach((count,index)=>{pages.push({index,rows:rows.slice(cursor,cursor+count)});cursor+=count});
     /* 段間隔は1ページ目の指定段数から一度だけ決め、全ページで共有する。
        最終ページの段数が少なくても再均等配置せず、余白はページ下部へ残す。 */
     const firstPageRowCount=Math.max(1,pages[0]?.rows.length||pageCounts[0]||1),availableHeight=283*96/25.4-46,fixedReferenceRows=state.lyricsMode?7:10;
     const sharedStaffHeight=availableHeight/(firstPageRowCount<=5?fixedReferenceRows:firstPageRowCount);
-    const scoreHeight=state.lyricsMode?94:54;
     const mapPoint=point=>{
       const wraps=annotationCapture.wraps,target=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-point.y)<Math.abs(best.rect.top+best.rect.height/2-point.y)?current:best,wraps[0]);
-      const x=(point.x-target.rect.left)*1000/Math.max(1,target.rect.width);
-      let row=target.row,y;
-      if(point.y>=target.rect.top&&point.y<=target.rect.bottom)y=row*sharedStaffHeight+(point.y-target.rect.top)*scoreHeight/Math.max(1,target.rect.height);
-      else if(point.y>target.rect.bottom&&wraps[row+1]){const next=wraps[row+1].rect;y=row*sharedStaffHeight+scoreHeight+(point.y-target.rect.bottom)*(sharedStaffHeight-scoreHeight)/Math.max(1,next.top-target.rect.bottom)}
-      else if(point.y<target.rect.top&&wraps[row-1]){const previous=wraps[row-1].rect;row-=1;y=row*sharedStaffHeight+scoreHeight+(point.y-previous.bottom)*(sharedStaffHeight-scoreHeight)/Math.max(1,target.rect.top-previous.bottom)}
-      else y=row*sharedStaffHeight+(point.y-target.rect.top)*scoreHeight/Math.max(1,target.rect.height);
-      return{x,y};
+      const sourceWidth=Math.max(1,target.rect.width),uniformScale=printScoreWidth/sourceWidth,x=(point.x-target.rect.left)*1000/sourceWidth;
+      /* 横方向と同じ実倍率をY方向にも使用する。段の開始位置だけは
+         印刷の段間隔へ合わせ、部品自体の高さ・角度・文字位置は変形させない。 */
+      return{x,y:target.row*sharedStaffHeight+(point.y-target.rect.top)*uniformScale};
     };
     const mappedAnnotations=annotationCapture.items.map(item=>({...item,pointsNormalized:item.clientPoints.map(mapPoint)}));
     const techniqueHtml=(item,index)=>{const side=item.side==="below"?"below":"above",x=Number(item.offsetXPx)||0,y=(Number(item.offsetYPx)||0)+index*16,style=`--tech-color:${esc(item.color||"#222")};margin-left:${x}px;${side==="above"?`margin-bottom:${-y}px`:`margin-top:${y}px`}`;if(["Ⅰ","Ⅱ","Ⅲ"].includes(item.text))return`<span class="pv2-tech finger ${side}" style="${style}">${esc(item.text)}</span>`;if(item.text==="スリ")return`<span class="pv2-tech slur ${side}" style="${style};--slur-width:${clamp(Number(item.slurWidth)||34,22,90)}px">スリ</span>`;return`<span class="pv2-tech symbol ${side}" style="${style}">${esc(item.text)}</span>`};
