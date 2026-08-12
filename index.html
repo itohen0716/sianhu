@@ -35,7 +35,7 @@
     .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}
     .note{z-index:2;grid-row:1;align-self:center;justify-self:center;position:relative;top:0;width:max-content;height:14px;border:0;background:none;padding:0;cursor:ew-resize;overflow:visible;touch-action:none}.note.moving b,.note.range-selected b{outline:2px solid #c9a927;border-radius:4px}.note b{display:inline-block;min-width:12px;background:var(--paper);padding:0 1px;font:600 var(--note-size)/14px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}.note.open-note b{font-size:28px;line-height:14px;font-weight:400;padding:0}
-    .range-selection-box{position:fixed;z-index:10000;border:2px solid #477d91;background:rgba(71,125,145,.14);pointer-events:none}.range-selection-count{margin-left:6px;color:#285366;font-weight:700}
+    .range-selection-box{position:fixed;z-index:10000;border:2px solid #477d91;background:rgba(71,125,145,.14);pointer-events:none}.range-selection-count{margin-left:6px;color:#285366;font-weight:700}.paper.range-select-mode,.paper.range-select-mode *{-webkit-user-select:none!important;user-select:none!important}.paper.range-moving{cursor:grabbing}
     .measure.on .note b{background:#fff9dd}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{content:"";position:absolute;left:50%;top:16px;bottom:auto;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor}.note.d1:not(.rest)::after{height:3px;border-bottom:1.5px solid currentColor}.note.rest.d2::after,.note.rest.d1::after{content:"";position:absolute;left:50%;top:calc(50% + 8px);width:14px;height:0;transform:translateX(-50%);border-top:1.5px solid currentColor}.note.rest.d1::after{height:3px;border-bottom:1.5px solid currentColor}.note{position:relative}.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-family:Arial,sans-serif;font-size:var(--note-size);line-height:14px}
     .panel{margin-top:14px;padding:16px;background:#fffcf7;border:1px solid #c9bcad;border-radius:15px}.layout-bar{display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd2c5}
     .layout-controls{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.layout-controls strong{min-width:82px;text-align:center}.layout-controls button[aria-label]{width:42px;padding:6px;font-size:20px}
@@ -292,13 +292,19 @@
       </ul>
     </section>
     <section>
-      <h3>範囲選択して削除する</h3>
+      <h3>範囲選択する・解除する</h3>
       <ol>
         <li><code>Shift</code>キーを押しながら、譜面の空白部分からドラッグして囲みます。</li>
         <li>枠に触れた音・開放弦・休符・奏法が、まとめて選択されます。</li>
-        <li><code>Delete</code>キーまたは<code>Backspace</code>キーを押すと、一括削除できます。</li>
+        <li><code>Shift</code>キーを押しながら、画面をクリックすると解除されます。</li>
       </ol>
-      <p><small>文字の入力中は、<code>Backspace</code>キーが文字の削除に使われます。小節線は範囲削除の対象外です。</small></p>
+    </section>
+    <section>
+      <h3>範囲選択時の操作</h3>
+      <ol>
+        <li><code>Delete</code>キーまたは<code>Backspace</code>キーを押すと、一括削除できます。<br>文字の入力中は、<code>Backspace</code>キーが文字の削除に使われます。小節線は範囲削除の対象外です。</li>
+        <li>まとめて移動できます。</li>
+      </ol>
     </section>
     <div class="dialog-actions"><button type="button" id="closeKeyboardHelp" class="primary">閉じる</button></div>
   </div>
@@ -313,7 +319,7 @@ const TECHNIQUE_LAYER_ID="technique-layer";
 const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="";
-let rangeDrag=null,rangeBox=null;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
+let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").replace(/[＊×]/g,"*").trim()}
 function parseMeter(value){
@@ -515,6 +521,18 @@ function noteMoveBounds(m,p,originX=columnX(m,p)){
   if(next!==undefined){const el=q(`[data-note^="${m},"][data-note$=",${next}"]`);if(el)max=Math.min(max,originX+(el.getBoundingClientRect().left-6-noteRect.right))}
   if(min>max)return{min:originX,max:originX};
   return{min,max};
+}
+function rangeNoteMoveBounds(m,p,originX=columnX(m,p)){
+  const selected=q(`[data-note^="${m},"][data-note$=",${p}"]`),measure=selected?.closest(".measure");
+  if(!measure||!selected)return{min:-120,max:120};
+  const measureRect=measure.getBoundingClientRect(),noteRect=selected.getBoundingClientRect();
+  let min=originX+(measureRect.left+5-noteRect.left),max=originX+(measureRect.right-5-noteRect.right);
+  const selectedColumns=new Set([...rangeNoteKeys].map(key=>key.split(",").map(Number)).filter(([measureNumber])=>measureNumber===m).map(([, ,position])=>position));
+  const columns=[...new Set(state.notes.filter(note=>note.m===m&&note.p!==p&&!selectedColumns.has(note.p)).map(note=>note.p))].sort((a,b)=>a-b);
+  const previous=[...columns].reverse().find(value=>value<p),next=columns.find(value=>value>p);
+  if(previous!==undefined){const el=q(`[data-note^="${m},"][data-note$=",${previous}"]`);if(el)min=Math.max(min,originX+(el.getBoundingClientRect().right+6-noteRect.left))}
+  if(next!==undefined){const el=q(`[data-note^="${m},"][data-note$=",${next}"]`);if(el)max=Math.min(max,originX+(el.getBoundingClientRect().left-6-noteRect.right))}
+  return min>max?{min:originX,max:originX}:{min,max};
 }
 function moveSelectedBarline(amount){
   const m=selectedScoreTarget?.m;
@@ -940,7 +958,8 @@ q("#annotations").addEventListener("pointerdown",startDraw);
 q("#annotations").addEventListener("pointermove",moveDraw);
 q("#annotations").addEventListener("pointerup",endDraw);
 q("#annotations").addEventListener("pointercancel",()=>{draft=null;dragging=null});
-function clearRangeSelection(){rangeNoteKeys.clear();rangeTechniqueIds.clear();qAll(".range-selected").forEach(element=>element.classList.remove("range-selected"))}
+function updateRangeSelectMode(active){shiftHeld=active;q(".paper")?.classList.toggle("range-select-mode",active)}
+function clearRangeSelection(){rangeNoteKeys.clear();rangeTechniqueIds.clear();rangeMove=null;q(".paper")?.classList.remove("range-moving");qAll(".range-selected").forEach(element=>element.classList.remove("range-selected"))}
 function selectionRect(startX,startY,endX,endY){return{left:Math.min(startX,endX),top:Math.min(startY,endY),right:Math.max(startX,endX),bottom:Math.max(startY,endY)}}
 function intersects(a,b){return a.left<=b.right&&a.right>=b.left&&a.top<=b.bottom&&a.bottom>=b.top}
 function updateRangeBox(event){
@@ -952,7 +971,7 @@ function finishRangeSelection(event){
   qAll("#scoreArea .note[data-note]").forEach(element=>{if(intersects(rect,element.getBoundingClientRect())){rangeNoteKeys.add(element.dataset.note);element.classList.add("range-selected")}});
   qAll("#annotations .annotation-item.symbol-item[data-item]").forEach(element=>{if(intersects(rect,element.getBoundingClientRect())){rangeTechniqueIds.add(element.dataset.item);element.classList.add("range-selected")}});
   rangeBox?.remove();rangeBox=null;rangeDrag=null;selectedScoreTarget=null;selectedItemId=null;lastInserted=null;
-  const count=rangeNoteKeys.size+rangeTechniqueIds.size;q("#keyboardStatus").textContent=count?`${count}件を選択中：【Delete】で削除できます。`:"範囲内に選択できる音・休符・奏法がありません。";
+  const count=rangeNoteKeys.size+rangeTechniqueIds.size;q("#keyboardStatus").textContent=count?`${count}件を選択中：ドラッグで移動、【Delete】で削除できます。`:"範囲内に選択できる音・休符・奏法がありません。";
 }
 q(".paper").addEventListener("pointerdown",event=>{
   if(IS_ANNOTATION_PAGE||!event.shiftKey||(!q("#scoreArea").contains(event.target)&&!q("#annotations").contains(event.target)))return;
@@ -962,12 +981,26 @@ q(".paper").addEventListener("pointerdown",event=>{
 document.addEventListener("pointermove",event=>{if(rangeDrag){event.preventDefault();updateRangeBox(event)}});
 document.addEventListener("pointerup",event=>{if(rangeDrag){event.preventDefault();finishRangeSelection(event)}});
 document.addEventListener("pointercancel",()=>{if(rangeDrag){rangeBox?.remove();rangeBox=null;rangeDrag=null}});
+document.addEventListener("selectionstart",event=>{if(shiftHeld&&q(".paper")?.contains(event.target))event.preventDefault()});
+q(".paper").addEventListener("dragstart",event=>{if(event.shiftKey||shiftHeld)event.preventDefault()});
+function beginRangeMove(event){
+  if(event.shiftKey||!(rangeNoteKeys.size||rangeTechniqueIds.size))return false;
+  const selectedNotes=state.notes.filter(note=>rangeNoteKeys.has(anchorKey(note.m,note.s,note.p))),groups=new Map();
+  selectedNotes.forEach(note=>{const id=note.rest?`rest:${anchorKey(note.m,note.s,note.p)}`:`column:${note.m},${note.p}`;if(!groups.has(id)){const origin=note.rest?(Number(note.x)||0):columnX(note.m,note.p);groups.set(id,{notes:note.rest?[note]:columnNotes(note.m,note.p),m:note.m,p:note.p,origin,bounds:rangeNoteMoveBounds(note.m,note.p,origin)})}});
+  const techniqueLayer=state.layers.find(layer=>layer.id===TECHNIQUE_LAYER_ID),techniques=(techniqueLayer?.items||[]).filter(item=>rangeTechniqueIds.has(item.id)).map(item=>{ensureTechniquePixelOffset(item);return{item,originXPx:Number(item.offsetXPx)||0,originX:Number(item.x)||0,linked:item.anchor&&rangeNoteKeys.has(anchorKey(item.anchor.m,item.anchor.s,item.anchor.p))}});
+  const minDx=Math.max(...[...groups.values()].map(group=>group.bounds.min-group.origin)),maxDx=Math.min(...[...groups.values()].map(group=>group.bounds.max-group.origin));
+  event.preventDefault();event.stopImmediatePropagation();snap();rangeMove={startX:event.clientX,groups:[...groups.values()],techniques,minDx:Number.isFinite(minDx)?minDx:-Infinity,maxDx:Number.isFinite(maxDx)?maxDx:Infinity,pointerId:event.pointerId};
+  q(".paper").classList.add("range-moving");event.currentTarget.setPointerCapture?.(event.pointerId);return true;
+}
+q("#annotations").addEventListener("pointerdown",event=>{if(event.target.closest(".range-selected"))beginRangeMove(event)},true);
 let scoreDrag=null;
 q("#scoreArea").addEventListener("pointerdown",event=>{
   if(drawing)return;
   const partButton=event.target.closest("[data-score-part-id]"),noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline-key]");
   if(partButton&&state.scoreEditLayer==="notes"){
     const part=(state.scoreParts||[]).find(entry=>entry.id===partButton.dataset.scorePartId);if(!part)return;selectedScoreTarget={type:"scorePart",id:part.id};selectedItemId=null;event.preventDefault();snap();const measure=partButton.closest(".measure"),rect=measure.getBoundingClientRect(),base=(part.p+.5)*rect.width/measureCapacity();scoreDrag={type:"scorePart",part,startX:event.clientX,originX:part.x||0,min:-base+17,max:rect.width-base-17};partButton.classList.add("selected");partButton.setPointerCapture(event.pointerId);
+  }else if(noteButton&&state.scoreEditLayer==="notes"&&rangeNoteKeys.has(noteButton.dataset.note)&&rangeNoteKeys.size){
+    beginRangeMove(event);noteButton.setPointerCapture(event.pointerId);
   }else if(noteButton&&state.scoreEditLayer==="notes"){
     const [m,s,p]=noteButton.dataset.note.split(",").map(Number),note=state.notes.find(n=>n.m===m&&n.s===s&&n.p===p);
     if(!note)return;state.m=m;state.s=s;state.p=p;cursorVisible=true;lastInserted=null;selectedScoreTarget={type:"note",key:anchorKey(m,s,p)};selectedItemId=null;event.preventDefault();snap();const originX=note.rest?(note.x||0):columnX(m,p);scoreDrag={type:"note",notes:note.rest?[note]:columnNotes(m,p),m,p,startX:event.clientX,originX,bounds:noteMoveBounds(m,p,originX)};noteButton.classList.add("moving");noteButton.setPointerCapture(event.pointerId);
@@ -976,6 +1009,7 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
   }
 });
 q("#scoreArea").addEventListener("pointermove",event=>{
+  if(rangeMove){event.preventDefault();const dx=clamp(event.clientX-rangeMove.startX,rangeMove.minDx,rangeMove.maxDx);rangeMove.groups.forEach(group=>{group.notes.forEach(note=>{note.x=group.origin+dx});group.notes.forEach(note=>{const element=q(`[data-note="${anchorKey(note.m,note.s,note.p)}"]`);if(element)element.style.setProperty("transform",`translateX(${group.origin+dx}px)`)})});rangeMove.techniques.forEach(entry=>{if(!entry.linked){entry.item.offsetXPx=entry.originXPx+dx;entry.item.x=entry.originX+dx*svgUnitsPerCssPx()}});renderLayers(true);q(".paper").classList.add("range-moving");return}
   if(!scoreDrag)return;event.preventDefault();const dx=event.clientX-scoreDrag.startX;
   if(scoreDrag.type==="note"){
     const x=clamp(scoreDrag.originX+dx,scoreDrag.bounds.min,scoreDrag.bounds.max);scoreDrag.notes.forEach(note=>note.x=x);
@@ -993,8 +1027,10 @@ q("#scoreArea").addEventListener("pointermove",event=>{
     if(rightMeasure){const width=measureWidth(scoreDrag.right);rightMeasure.style.setProperty("--measure-width",`${width}px`);rightMeasure.style.setProperty("--measure-grow",String(width))}
   }
 });
-q("#scoreArea").addEventListener("pointerup",()=>{if(!scoreDrag)return;scoreDrag=null;save();render()});
-q("#scoreArea").addEventListener("pointercancel",()=>{scoreDrag=null;render()});
+q("#scoreArea").addEventListener("pointerup",()=>{if(rangeMove){rangeMove=null;q(".paper").classList.remove("range-moving");save();render();return}if(!scoreDrag)return;scoreDrag=null;save();render()});
+q("#scoreArea").addEventListener("pointercancel",()=>{if(rangeMove){rangeMove=null;q(".paper").classList.remove("range-moving")}scoreDrag=null;render()});
+q("#annotations").addEventListener("pointermove",event=>{if(!rangeMove)return;event.preventDefault();const dx=clamp(event.clientX-rangeMove.startX,rangeMove.minDx,rangeMove.maxDx);rangeMove.groups.forEach(group=>group.notes.forEach(note=>{note.x=group.origin+dx}));rangeMove.techniques.forEach(entry=>{if(!entry.linked){entry.item.offsetXPx=entry.originXPx+dx;entry.item.x=entry.originX+dx*svgUnitsPerCssPx()}});render()});
+q("#annotations").addEventListener("pointerup",()=>{if(!rangeMove)return;rangeMove=null;q(".paper").classList.remove("range-moving");save();render()});
 q("#itemColor").addEventListener("change",event=>{const item=selectedItem();if(item){snap();item.color=event.target.value}else state.drawColor=event.target.value;render()});
 q("#textSize").addEventListener("change",event=>{const item=selectedItem(),value=+event.target.value;state.textSize=value;if(item?.type==="text"){snap();item.size=value}render()});
 q("#textBackground").addEventListener("change",event=>{const item=selectedItem();state.textBackground=event.target.value;if(item?.type==="text"){snap();item.background=event.target.value}render()});
@@ -1011,6 +1047,7 @@ q("#meter").addEventListener("change",e=>{
 });
 q("#meter").addEventListener("blur",e=>{e.target.value=meterLabel()});
 document.addEventListener("keydown",event=>{
+  if(event.key==="Shift")updateRangeSelectMode(true);
   if(IS_ANNOTATION_PAGE||event.ctrlKey||event.metaKey||event.altKey)return;
   const target=event.target;if(target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target?.isContentEditable)return;
   if(!keyboardBuffer&&(event.key==="Delete"||event.key==="Backspace")&&(rangeNoteKeys.size||rangeTechniqueIds.size)){
@@ -1036,6 +1073,8 @@ document.addEventListener("keydown",event=>{
   }
   if(event.key==="ArrowRight"&&!keyboardBuffer){lastInserted=null;render()}
 });
+document.addEventListener("keyup",event=>{if(event.key==="Shift")updateRangeSelectMode(false)});
+window.addEventListener("blur",()=>updateRangeSelectMode(false));
 q("#scoreFileInput").addEventListener("change",async event=>{const file=event.target.files?.[0];event.target.value="";await importScoreFile(file)});
 q("#newForm").addEventListener("submit",e=>{e.preventDefault();
   if((state.notes.length||state.title!=="曲名入力")&&!confirm("現在の譜面を消して、新規作成しますか？"))return;
