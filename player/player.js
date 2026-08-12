@@ -52,7 +52,7 @@ function updateTransport(){$("#playPause").textContent=playing?"Ⅱ":"▶";$("#p
 function setTempo(next){const resume=playing;if(resume)pause();tempo=clamp(Math.round(next),40,180);$("#tempo").value=String(tempo);$("#tempoValue").textContent=`${tempo} BPM`;if(resume)play()}
 function renderCounts(){const labels=["一","二","三","四","五","六","七","八"];$(".counts").innerHTML=labels.map((label,index)=>`<button type="button" data-count="${index+1}" class="${index+1===count?"on":""}" aria-pressed="${index+1===count}">${label}</button>`).join("")}
 
-window.addEventListener("message",event=>{if(event.source!==window.opener||event.data?.type!=="SHIAN_SCORE_UPDATE")return;receivePayload(event.data.payload)});
+window.addEventListener("message",event=>{if(event.origin!==location.origin)return;const validSource=event.source===window.opener||event.source===window.parent;if(!validSource)return;if(event.data?.type==="SHIAN_SCORE_UPDATE")receivePayload(event.data.payload);else if(event.data?.type==="SHIAN_PLAYER_STOP")stop(true)});
 $(".counts").addEventListener("click",event=>{const button=event.target.closest("[data-count]");if(!button)return;count=Number(button.dataset.count);stop(true);renderCounts();if(score)setStatus(`${score.tuning}・${count}本`)});
 $("#tempo").addEventListener("input",event=>setTempo(Number(event.target.value)));
 $("#tempoDown").addEventListener("click",()=>setTempo(tempo-5));$("#tempoUp").addEventListener("click",()=>setTempo(tempo+5));
