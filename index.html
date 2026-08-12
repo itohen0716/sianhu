@@ -176,7 +176,7 @@
   <input id="scoreFileInput" type="file" accept=".shian-score.json,.json,application/json" hidden>
   <div class="workspace-shell">
   <div class="score-viewport" aria-label="文化譜表示領域">
-  <div class="actions score-toolbar"><a class="page-link" href="./annotations.html">✎ 書き込みページ</a><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div>
+  <div class="actions score-toolbar"><a class="page-link" href="./annotations.html">✎ 書き込みページ</a><button id="playScore" aria-label="入力中の文化譜を演奏">▶ 演奏</button><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div>
   <section class="paper">
     <div class="meta"><div class="score-meta"><span>〈</span><select id="tuning" aria-label="調弦"><option>本調子</option><option selected>二上り</option><option>三下り</option></select><span>〉</span><input id="meter" value="四分ノ二拍子" aria-label="拍子" title="2/4の形式で入力"></div><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
     <div id="scoreArea"></div>
@@ -444,6 +444,16 @@ function renderPrintRoot(){
   root.dataset.printModelVersion=String(model.version);
 }
 function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function openScorePlayer(){
+  if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
+  save();
+  const payload={format:"shian-live-score",version:1,sentAt:Date.now(),score:{title:String(state.title||""),tuning:String(state.tuning||"二上り"),meter:String(state.meter||"2/4"),notes:state.notes.map(note=>({m:Number(note.m)||0,s:Number(note.s)||1,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),rest:Boolean(note.rest)}))}};
+  try{sessionStorage.setItem("shian-live-player-score",JSON.stringify(payload))}catch(error){console.warn("演奏データを一時保存できませんでした。",error)}
+  const player=window.open("./player/index.html","shianScorePlayer","popup=yes,width=430,height=360,resizable=yes,scrollbars=no");
+  if(!player){alert("プレーヤーを開けませんでした。ブラウザのポップアップを許可してください。");return}
+  const send=()=>{try{player.postMessage({type:"SHIAN_SCORE_UPDATE",payload},"*")}catch(error){console.warn("プレーヤーへ譜面を送れませんでした。",error)}};
+  send();setTimeout(send,250);setTimeout(send,800);player.focus();
+}
 function safeFileName(value){const name=String(value||"文化譜").trim().replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ");return(name&&name!=="曲名入力"?name:"文化譜").slice(0,80)}
 function updateTitleWidth(){const el=q("#title");if(!el)return;const length=Math.max(1,Array.from(el.value||"").length);el.style.width=`min(100%, ${length+2}em)`}
 function downloadScoreBlob(blob,fileName){
@@ -923,6 +933,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="addMeasure"){changeLayout(state.rows,measuresInRow(measureLocation(state.m).row)+1);return}
   else if(b.id==="removeMeasure"){changeLayout(state.rows,measuresInRow(measureLocation(state.m).row)-1);return}
   else if(b.id==="newScore"){openNew();return}
+  else if(b.id==="playScore"){openScorePlayer();return}
   else if(b.id==="saveScoreFile"){exportScoreFile();return}
   else if(b.id==="loadScoreFile"){q("#scoreFileInput").click();return}
   else if(b.id==="printPreview"){openPrintSettings();return}
