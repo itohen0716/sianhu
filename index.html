@@ -36,7 +36,7 @@
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}
     .note{z-index:2;grid-row:1;align-self:center;justify-self:center;position:relative;top:0;width:max-content;height:14px;border:0;background:none;padding:0;cursor:ew-resize;overflow:visible;touch-action:none}.note.moving b,.note.range-selected b{outline:2px solid #c9a927;border-radius:4px}.note b{display:inline-block;min-width:12px;background:var(--paper);padding:0 1px;font:600 var(--note-size)/14px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}.note.open-note b{font-size:28px;line-height:14px;font-weight:400;padding:0}
     .range-selection-box{position:fixed;z-index:10000;border:2px solid #477d91;background:rgba(71,125,145,.14);pointer-events:none}.range-selection-count{margin-left:6px;color:#285366;font-weight:700}.paper.range-select-mode,.paper.range-select-mode *{-webkit-user-select:none!important;user-select:none!important}.paper.range-moving{cursor:grabbing}
-    .measure.on .note b{background:#fff9dd}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{content:"";position:absolute;left:50%;top:16px;bottom:auto;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor}.note.d1:not(.rest)::after{height:3px;border-bottom:1.5px solid currentColor}.note.rest.d2::after,.note.rest.d1::after{content:"";position:absolute;left:50%;top:calc(50% + 8px);width:14px;height:0;transform:translateX(-50%);border-top:1.5px solid currentColor}.note.rest.d1::after{height:3px;border-bottom:1.5px solid currentColor}.note{position:relative}.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-family:Arial,sans-serif;font-size:var(--note-size);line-height:14px}
+    .measure.on .note b{background:#fff9dd}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{content:"";position:absolute;z-index:3;left:50%;top:14px;bottom:auto;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor;pointer-events:none}.note.d1:not(.rest)::after{height:3px;border-bottom:1.5px solid currentColor}.note.rest.d2::after,.note.rest.d1::after{content:"";position:absolute;z-index:3;left:50%;top:calc(50% + 6px);width:14px;height:0;transform:translateX(-50%);border-top:1.5px solid currentColor;pointer-events:none}.note.rest.d1::after{height:3px;border-bottom:1.5px solid currentColor}.note{position:relative}.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-family:Arial,sans-serif;font-size:var(--note-size);line-height:14px}
     .panel{margin-top:14px;padding:16px;background:#fffcf7;border:1px solid #c9bcad;border-radius:15px}.layout-bar{display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd2c5}
     .layout-controls{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.layout-controls strong{min-width:82px;text-align:center}.layout-controls button[aria-label]{width:42px;padding:6px;font-size:20px}
     .status{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--pale);padding:10px;border-radius:10px}.status.status-bottom{margin-top:12px}.status strong{display:block;color:#285366}
@@ -446,17 +446,32 @@ function renderPrintRoot(){
 function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function safeFileName(value){const name=String(value||"文化譜").trim().replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ");return(name&&name!=="曲名入力"?name:"文化譜").slice(0,80)}
 function updateTitleWidth(){const el=q("#title");if(!el)return;const length=Math.max(1,Array.from(el.value||"").length);el.style.width=`min(100%, ${length+2}em)`}
-function exportScoreFile(){
+function downloadScoreBlob(blob,fileName){
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download=fileName;document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function exportScoreFile(){
   save();
   const defaultName=safeFileName(state.title);
+  const payload={format:"shian-bunkafu",version:1,exportedAt:new Date().toISOString(),score:serializable()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
+  if(typeof window.showSaveFilePicker==="function"){
+    try{
+      const handle=await window.showSaveFilePicker({suggestedName:`${defaultName}.shian-score.json`,types:[{description:"絲庵 文化譜",accept:{"application/json":[".json"]}}]});
+      const writable=await handle.createWritable();
+      try{await writable.write(blob);await writable.close()}catch(error){try{await writable.abort()}catch{}throw error}
+      return;
+    }catch(error){
+      if(error?.name==="AbortError")return;
+      console.error("保存先を指定した保存に失敗しました。",error);
+      alert("指定した場所へ保存できませんでした。ブラウザのダウンロード保存へ切り替えます。");
+    }
+  }
   const enteredName=prompt("保存する文化譜の名前を入力してください。",defaultName);
   if(enteredName===null)return;
   const fileName=safeFileName(enteredName.replace(/(?:\.shian-score)?\.json$/i,""));
-  const payload={format:"shian-bunkafu",version:1,exportedAt:new Date().toISOString(),score:serializable()};
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
-  const url=URL.createObjectURL(blob),link=document.createElement("a");
-  link.href=url;link.download=`${fileName}.shian-score.json`;document.body.appendChild(link);link.click();link.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  downloadScoreBlob(blob,`${fileName}.shian-score.json`);
 }
 function validatedImportedScore(value){
   const score=value?.format==="shian-bunkafu"?value.score:value;
@@ -644,12 +659,13 @@ function removeLinkedSymbols(keys){
   const layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
   if(layer)layer.items=layer.items.filter(item=>!item.anchor||!targets.has(anchorKey(item.anchor.m,item.anchor.s,item.anchor.p)));
 }
-function noteAnchorPoint(anchor,side="above"){
+function noteAnchorPoint(anchor,side="above",symbolText=""){
   const svg=q("#annotations"),note=q(`[data-note="${anchorKey(anchor.m,anchor.s,anchor.p)}"]`);
   if(!svg||!note)return null;
   const svgRect=svg.getBoundingClientRect(),glyphRect=(note.querySelector("b")||note).getBoundingClientRect(),view=svg.viewBox.baseVal;
   if(!svgRect.width||!svgRect.height)return null;
-  const gap=Math.max(8,glyphRect.height*.28);
+  const isFinger=["Ⅰ","Ⅱ","Ⅲ"].includes(symbolText);
+  const gap=isFinger?Math.max(14,glyphRect.height*.65):Math.max(8,glyphRect.height*.28);
   return{
     x:(glyphRect.left+glyphRect.width/2-svgRect.left)*view.width/svgRect.width,
     y:((side==="below"?glyphRect.bottom+gap:glyphRect.top-gap)-svgRect.top)*view.height/svgRect.height
@@ -660,7 +676,7 @@ function syncLinkedSymbols(){
   if(!layer)return;
   layer.items.forEach(item=>{
     if(item.type!=="symbol"||!item.anchor)return;
-    const point=noteAnchorPoint(item.anchor,item.side||"above");
+    const point=noteAnchorPoint(item.anchor,item.side||"above",item.text);
     ensureTechniquePixelOffset(item);
     const unitsPerPx=svgUnitsPerCssPx();
     if(point){item.x=point.x+(Number(item.offsetXPx)||0)*unitsPerPx;item.y=point.y+(Number(item.offsetYPx)||0)*unitsPerPx}
