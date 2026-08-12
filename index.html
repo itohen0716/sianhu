@@ -20,7 +20,7 @@
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected,.annotation-item.range-selected{filter:drop-shadow(0 0 4px #f2c500)}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;font:15px serif}.score-meta{display:flex;align-items:flex-end;gap:6px}.score-meta select,.score-meta input{border:0;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
     .meta input{border:0;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}.meta #title{justify-self:center;width:8em;max-width:100%;box-sizing:border-box;border-bottom:1px solid #333;padding:4px 1em}
-    .staff{margin-top:28px}
+    .staff{margin-top:28px}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:8px}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/32px serif;text-align:right}.lyrics-input{box-sizing:border-box;width:100%;height:32px;padding:3px 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,18px);font:12px/18px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
     .score{display:flex;width:max-content;min-width:100%}.measure{--row-height:18px;--note-size:14px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}
@@ -214,6 +214,7 @@
     <div class="layout-bar staff-only">
       <div class="layout-controls"><span>段数</span><button id="removeRow" aria-label="段を減らす">−</button><strong id="rowCount"></strong><button id="addRow" aria-label="段を増やす">＋</button></div>
       <div class="layout-controls"><span>1段の小節数</span><button id="removeMeasure" aria-label="小節を減らす">−</button><strong id="measureCount"></strong><button id="addMeasure" aria-label="小節を増やす">＋</button></div>
+      <label class="lyrics-mode-toggle"><input id="lyricsMode" type="checkbox">歌詞あり</label>
     </div>
     <div class="controls notes-only">
       <fieldset><legend>1. 糸を選ぶ</legend><div id="strings" class="seg"></div></fieldset>
@@ -252,7 +253,7 @@
 <dialog id="printDialog">
   <form id="printForm" class="dialog-body">
     <h2>印刷設定</h2>
-    <p>10段までは1ページ、11段以上は均等に分割します。</p>
+    <p>歌詞なしは最大10段、歌詞ありは最大7段を基準に均等分割します。</p>
     <div class="print-options">
       <label><input type="radio" name="printMode" value="auto" checked> 自動で均等分割</label>
       <label><input type="radio" name="printMode" value="manual"> ページごとの段数を指定</label>
@@ -319,7 +320,7 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="";
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
@@ -351,6 +352,7 @@ function nextMusicalPosition(m,duration){
 }
 function barlineKey(row,boundary){return`${row}:${boundary}`}
 function normalizeRowMeasureCounts(){const fallback=clamp(Number(state.measuresPerRow)||4,1,12),source=Array.isArray(state.rowMeasureCounts)?state.rowMeasureCounts:[];state.rowMeasureCounts=Array.from({length:state.rows},(_,row)=>clamp(Number(source[row])||fallback,1,12));state.measuresPerRow=state.rowMeasureCounts[0]||fallback}
+function normalizeLyrics(){const source=Array.isArray(state.lyrics)?state.lyrics:[];state.lyrics=Array.from({length:state.rows},(_,row)=>String(source[row]||""));state.lyricsMode=Boolean(state.lyricsMode)}
 function measuresInRow(row){return state.rowMeasureCounts?.[row]||state.measuresPerRow}
 function rowStartMeasure(row){return state.rowMeasureCounts.slice(0,row).reduce((sum,count)=>sum+count,0)}
 function measureLocation(m){let start=0;for(let row=0;row<state.rows;row++){const count=measuresInRow(row);if(m<start+count)return{row,local:m-start,start,count};start+=count}const row=Math.max(0,state.rows-1),count=measuresInRow(row);return{row,local:Math.max(0,count-1),start:rowStartMeasure(row),count}}
@@ -364,7 +366,7 @@ function migrateState(){
     const needed=Math.max(1,...state.notes.map(note=>note.m+1),...state.scoreParts.map(part=>part.m+1));state.rows=clamp(Math.ceil(needed/state.measuresPerRow),state.rows,20);state.measureOffsets=[];
     const cursor=remap(state.m,state.p);state.m=cursor.m;state.p=cursor.p;
   }
-  state.meter=parsed.signature;normalizeRowMeasureCounts();
+  state.meter=parsed.signature;normalizeRowMeasureCounts();normalizeLyrics();
   const old=state.barlineKinds&&typeof state.barlineKinds==="object"?state.barlineKinds:{};
   if(Object.keys(old).some(key=>!key.includes(":"))){const migrated={};for(let row=0;row<oldRows;row++){for(let boundary=0;boundary<=state.measuresPerRow;boundary++){const global=row*state.measuresPerRow+boundary;if(old[global])migrated[barlineKey(row,boundary)]=old[global]}}state.barlineKinds=migrated}
 }
@@ -386,14 +388,14 @@ function ensureTechniqueLayer(){
   layer.name="奏法";layer.fixed=true;state.activeLayerId=TECHNIQUE_LAYER_ID;
 }
 function automaticPageRows(rowCount=state.rows){
-  const pages=Math.max(1,Math.ceil(rowCount/10)),base=Math.floor(rowCount/pages),extra=rowCount%pages;
+  const maxRows=state.lyricsMode?7:10,pages=Math.max(1,Math.ceil(rowCount/maxRows)),base=Math.floor(rowCount/pages),extra=rowCount%pages;
   return Array.from({length:pages},(_,index)=>base+(index<extra?1:0));
 }
 function parseManualPageRows(value=state.manualPageRows){
   const normalized=String(value).replace(/[、，]/g,",").trim();
   if(!normalized)return{valid:false,rows:[],message:"各ページの段数を入力してください。"};
   const rows=normalized.split(",").map(part=>Number(part.trim()));
-  if(rows.some(count=>!Number.isInteger(count)||count<1||count>10))return{valid:false,rows:[],message:"各ページは1～10段で、カンマ区切りで指定してください。"};
+  const maxRows=state.lyricsMode?7:10;if(rows.some(count=>!Number.isInteger(count)||count<1||count>maxRows))return{valid:false,rows:[],message:`各ページは1～${maxRows}段で、カンマ区切りで指定してください。`};
   const total=rows.reduce((sum,count)=>sum+count,0);
   if(total!==state.rows)return{valid:false,rows,message:`合計を現在の${state.rows}段にしてください（入力合計：${total}段）。`};
   return{valid:true,rows,message:""};
@@ -443,7 +445,7 @@ function renderPrintRoot(){
   root.innerHTML=model.pages.map(page=>`<section class="print-page" data-print-page="${page.index+1}">${page.index===0?`<div class="print-meta"><div class="print-meta-left"><span>〈</span><span>${esc(model.tuning)}</span><span>〉</span><span>${esc(model.meter)}</span></div><div class="print-title">${esc(model.title)}</div><div class="print-summary"></div></div>`:""}${page.rows.map(row=>`<section class="print-staff" style="height:${((283*96/25.4-(page.index===0?34:0))/page.rows.length).toFixed(2)}px"><div class="print-score-wrap"><div class="print-labels">${row.index===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="print-score">${row.measures.map(printMeasureModelHtml).join("")}</div></div></section>`).join("")}</section>`).join("");
   root.dataset.printModelVersion=String(model.version);
 }
-function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
@@ -640,6 +642,7 @@ function measureHtml(m){
   const capacity=measureCapacity(),width=measureWidth(m),notes=state.notes.filter(note=>note.m===m&&!note.rest),maxOnString=Math.max(0,...[1,2,3].map(stringNumber=>notes.filter(note=>note.s===stringNumber).length)),noteSize=maxOnString>=8?13:14,kind=state.barlineKinds?.[startKey]||"single",atRowEnd=boundary===rowMeasures-1,endKind=state.barlineKinds?.[endKey]||"single",endSelected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.key===endKey?" selected":"",endLine=atRowEnd?`<button class="barline-handle endline-handle${endSelected}" data-barline-key="${endKey}" data-boundary="${m+1}" data-end="true" data-kind="${endKind}" aria-label="${row+1}段末の小節線を選択">${barlineSvg(endKind)}</button>`:"";return `<div class="measure ${m===state.m?"on":""}${atRowEnd&&endKind!=="single"?" custom-end":""}" style="--measure-width:${width}px;--measure-grow:${width};--meter-columns:${capacity};--note-size:${noteSize}px"><button class="barline-handle${selected}" data-barline-key="${startKey}" data-boundary="${m}" data-kind="${kind}" aria-label="${row+1}段${boundary+1}小節の開始線を横移動">${barlineSvg(kind)}</button>${endLine}${scorePartsHtml(m)}${[3,2,1].map(s=>`<div class="string">${Array.from({length:capacity},(_,p)=>`<button class="cell ${cursorVisible&&m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}</div>`;
 }
 function render(){
+  normalizeLyrics();
   const total=totalMeasures(),capacity=measureCapacity();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,capacity-1);
   state.preview=true;
   q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=IS_ANNOTATION_PAGE;if(document.activeElement!==q("#meter"))q("#meter").value=meterLabel();q("#meter").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
@@ -651,7 +654,8 @@ function render(){
   q("#numbers").innerHTML=vals.map(v=>`<button data-v="${v}">${v}</button>`).join("");
   q("#rests").innerHTML=`<button data-v="○"><span class="mark">○</span>開放弦</button>`+rests.map(r=>`<button data-rest="${r.d}"><span class="mark">${r.mark}</span>${r.label}</button>`).join("");
   const printStarts=pageStartRows();
-  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div></section>`).join("");
+  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div>${state.lyricsMode?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"></div>`:""}</section>`).join("");
+  q(".paper").classList.toggle("lyrics-mode",state.lyricsMode);q("#lyricsMode").checked=state.lyricsMode;
   q(".paper").classList.toggle("preview-mode",state.preview);
   q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;
   q("#numberColor").value=state.numberColor;q("#openColor").value=state.openColor;
@@ -1038,6 +1042,8 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
     const m=+barline.dataset.boundary,key=barline.dataset.barlineKey,isRowStart=measureLocation(m).local===0&&!barline.dataset.end;selectedScoreTarget={type:"barline",m,key};selectedItemId=null;event.preventDefault();barline.classList.add("selected");if(isRowStart||barline.dataset.end)return;snap();scoreDrag={type:"barline",m,startX:event.clientX,left:m-1,right:m,leftOffset:state.measureOffsets?.[m-1]||0,rightOffset:state.measureOffsets?.[m]||0,leftWidth:measureWidth(m-1),rightWidth:measureWidth(m)};barline.setPointerCapture(event.pointerId);
   }
 });
+q("#lyricsMode").addEventListener("change",event=>{snap();state.lyricsMode=event.target.checked;render()});
+q("#scoreArea").addEventListener("input",event=>{const input=event.target.closest("[data-lyrics-row]");if(!input)return;const row=Number(input.dataset.lyricsRow);if(Number.isInteger(row)&&row>=0&&row<state.rows){state.lyrics[row]=input.value;save()}});
 q("#scoreArea").addEventListener("pointermove",event=>{
   if(rangeMove){event.preventDefault();const dx=clamp(event.clientX-rangeMove.startX,rangeMove.minDx,rangeMove.maxDx);rangeMove.groups.forEach(group=>{group.notes.forEach(note=>{note.x=group.origin+dx});group.notes.forEach(note=>{const element=q(`[data-note="${anchorKey(note.m,note.s,note.p)}"]`);if(element)element.style.setProperty("transform",`translateX(${group.origin+dx}px)`)})});rangeMove.techniques.forEach(entry=>{if(!entry.linked){entry.item.offsetXPx=entry.originXPx+dx;entry.item.x=entry.originX+dx*svgUnitsPerCssPx()}});renderLayers(true);q(".paper").classList.add("range-moving");return}
   if(!scoreDrag)return;event.preventDefault();const dx=event.clientX-scoreDrag.startX;
