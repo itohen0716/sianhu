@@ -26,7 +26,8 @@
     .score{display:flex;width:max-content;min-width:100%}.measure{--row-height:18px;--note-size:14px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}
     .measure:last-child{border-right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));position:relative}
     .barline-handle{position:absolute;z-index:7;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);left:-18px;width:36px;border:0;background:transparent;touch-action:none;cursor:ew-resize}.barline-handle::after{content:"";position:absolute;left:17px;top:0;bottom:0;border-left:1.5px solid var(--ink)}.barline-handle:hover::after,.barline-handle:focus-visible::after,.barline-handle.selected::after{border-left:4px solid #c9a927}.measure:first-child>.barline-handle,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure:first-child>.barline-handle{cursor:pointer}.measure:last-child::after{right:0}
-    .barline-handle.endline-handle{left:auto;right:0;cursor:pointer}
+    /* 段末記号はSVG外枠ではなく、実際に見える外側線を譜線終端へ合わせる。 */
+    .barline-handle.endline-handle{left:auto;right:-3px;cursor:pointer}
     .barline-handle.endline-handle::after{left:auto;right:0}
     .barline-handle.endline-handle .bar-symbol{left:auto;right:0}
     .measure:first-child>.barline-handle .bar-symbol{left:18px}
