@@ -48,7 +48,7 @@
     .layer-chip.fixed::before{content:"🔒 ";font-size:12px}.annotation-item.symbol-item text{font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}
     dialog{width:min(92vw,480px);border:1px solid #bbaea0;border-radius:16px;padding:0;box-shadow:0 18px 50px #0005}dialog::backdrop{background:#332c2588}
     .dialog-body{padding:22px}.dialog-body h2{margin:0 0 8px;font:600 24px serif}.dialog-body p{margin:0 0 18px;color:#6d6257}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .form-grid label{font-size:13px;font-weight:bold}.form-grid input{width:100%;margin-top:6px;padding:11px;border:1px solid #bcae9e;border-radius:9px;font-size:18px}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+    .form-grid label{font-size:13px;font-weight:bold}.form-grid input{width:100%;margin-top:6px;padding:11px;border:1px solid #bcae9e;border-radius:9px;font-size:18px}.comment-textarea{display:block;width:100%;min-height:140px;resize:vertical;padding:11px;border:1px solid #bcae9e;border-radius:9px;font:16px/1.5 "Yu Gothic",sans-serif}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
     .dialog-actions button{min-height:44px;padding:9px 18px;border:1px solid #bcae9e;border-radius:9px;background:#fff}.dialog-actions .primary{background:var(--blue);color:#fff;border-color:var(--blue)}
     .print-options{display:grid;gap:10px;margin-top:14px}.print-options label{display:flex;align-items:center;gap:8px;font-weight:600}.print-options input[type=text]{width:100%;padding:10px;border:1px solid #bcae9e;border-radius:9px}.print-plan{margin:10px 0 0;padding:10px;border-radius:9px;background:var(--pale);font-weight:600;color:#285366}.print-error{min-height:1.5em;margin:7px 0 0;color:#9d4036;font-size:13px}.manual-print[hidden]{display:none}
     .page-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #477d91;border-radius:9px;background:#477d91;color:#fff;padding:8px 12px;text-decoration:none}
@@ -149,7 +149,7 @@
       <label>線の種類 <select id="lineStyle"><option value="solid">実線</option><option value="dashed">点線</option></select></label>
       <label>枠の横 <input id="rectWidth" type="number" inputmode="numeric" min="10" max="900" step="5" value="100" aria-label="枠の横幅"></label>
       <label>枠の縦 <input id="rectHeight" type="number" inputmode="numeric" min="10" max="1200" step="5" value="100" aria-label="枠の縦幅"></label>
-      <label>コメント文字サイズ <select id="textSize"><option value="16">小</option><option value="20" selected>中</option><option value="26">大</option><option value="34">特大</option></select></label>
+      <label>コメント文字サイズ <select id="textSize"><option value="12">極小</option><option value="16">小</option><option value="20" selected>中</option><option value="26">大</option><option value="34">特大</option></select></label>
       <label>コメント背景 <select id="textBackground"><option value="white">白</option><option value="translucent">半透明</option><option value="none">なし</option></select></label>
     </div>
     <p id="layerHelp" class="layer-help">「描画を開始」を押すと、選択中の個人レイヤーへ書き込めます。</p>
@@ -209,6 +209,14 @@
     <div class="dialog-actions"><button type="button" id="cancelPrint">取消</button><button type="submit" class="primary">印刷プレビューを開く</button></div>
   </form>
 </dialog>
+<dialog id="commentDialog">
+  <form id="commentForm" class="dialog-body">
+    <h2 id="commentDialogTitle">コメントを入力</h2>
+    <p>Enterキーで改行できます。行間は文字サイズに合わせて変わります。</p>
+    <textarea id="commentText" class="comment-textarea" maxlength="1000" aria-label="コメント本文"></textarea>
+    <div class="dialog-actions"><button type="button" id="cancelComment">取消</button><button type="submit" class="primary">確定</button></div>
+  </form>
+</dialog>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1));
@@ -218,7 +226,7 @@ const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
 const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],lineStyle:"solid",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
-let drawing=false,draft=null,selectedItemId=null,dragging=null,printing=false,lastInserted=null;
+let drawing=false,draft=null,selectedItemId=null,dragging=null,printing=false,lastInserted=null,commentDialogResolve=null;
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").trim()}
 function parseMeter(value){const raw=toAscii(value).replace(/\s+/g,"");let match=raw.match(/^(\d{1,2})\/(\d{1,2})$/);if(!match){const nums=raw.match(/(三十二|十六|十二|十一|十|一|二|三|四|五|六|七|八|九|\d+)/g);if(nums?.length>=2){const map={一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12,十六:16,三十二:32};match=[raw,String(map[nums[1]]||nums[1]),String(map[nums[0]]||nums[0])]}}if(!match)return null;const numerator=Number(match[1]),denominator=Number(match[2]);if(!Number.isInteger(numerator)||numerator<1||numerator>99||![1,2,4,8,16].includes(denominator))return null;const capacity=16*numerator/denominator;if(!Number.isInteger(capacity)||capacity<1||capacity>64)return null;return{numerator,denominator,capacity,signature:`${numerator}/${denominator}`}}
@@ -485,6 +493,12 @@ function syncLinkedSymbols(){
 }
 function esc(value){return String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]))}
 function pointsAttr(points){return points.map(point=>`${point.x},${point.y}`).join(" ")}
+function commentLayout(item,sizeScale=1){
+  const size=(Number(item.size)||20)*sizeScale,lines=String(item.text||"").replace(/\r\n?/g,"\n").split("\n"),lineHeight=size*1.35;
+  const longest=Math.max(1,...lines.map(line=>Array.from(line).length)),width=Math.max(size*2.5,longest*size*.95),height=size*1.55+(lines.length-1)*lineHeight;
+  return{size,lines,lineHeight,width,height,top:item.y-size*1.05-5};
+}
+function commentTextSvg(item,layout){return layout.lines.map((line,index)=>`<tspan x="${item.x}" dy="${index?layout.lineHeight:0}">${line?esc(line):"&#160;"}</tspan>`).join("")}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":"";
   const dash=(item.lineStyle||"solid")==="dashed"?' stroke-dasharray="8 7"':"";
@@ -505,9 +519,8 @@ function itemHtml(item){
     const fingerClass=["Ⅰ","Ⅱ","Ⅲ"].includes(item.text)?" finger-symbol":"";
     return `<g class="annotation-item symbol-item anchored-symbol${fingerClass} text-item${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text></g>`;
   }
-  const background=item.background||"white",bg=background==="none"?"none":background==="translucent"?"rgba(255,255,255,.72)":"#fff";
-  const size=item.size||20,width=Math.max(55,item.text.length*size*.95),height=size*1.55;
-  return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${item.y-height+5}" width="${width+14}" height="${height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}" font-weight="600">${esc(item.text)}</text></g>`;
+  const background=item.background||"white",bg=background==="none"?"none":background==="translucent"?"rgba(255,255,255,.72)":"#fff",layout=commentLayout(item);
+  return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${layout.top}" width="${layout.width+14}" height="${layout.height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${layout.size}" font-weight="600">${commentTextSvg(item,layout)}</text></g>`;
 }
 function renderLayers(){
   ensureTechniqueLayer();
@@ -564,7 +577,15 @@ function renameLayer(){
   if(name===null||!name.trim()||name.trim()===layer.name)return;
   snap();layer.name=name.trim();render();
 }
-function startDraw(event){
+function requestComment(initialValue="",title="コメントを入力"){
+  if(commentDialogResolve)return Promise.resolve(null);
+  q("#commentDialogTitle").textContent=title;q("#commentText").value=String(initialValue||"");q("#commentDialog").showModal();
+  requestAnimationFrame(()=>{q("#commentText").focus();q("#commentText").setSelectionRange(q("#commentText").value.length,q("#commentText").value.length)});
+  return new Promise(resolve=>{commentDialogResolve=resolve});
+}
+function finishCommentDialog(value){const resolve=commentDialogResolve;commentDialogResolve=null;if(q("#commentDialog").open)q("#commentDialog").close();if(resolve)resolve(value)}
+async function editSelectedComment(){const item=selectedItem();if(item?.type!=="text")return;const text=await requestComment(item.text,"コメントを編集");if(text===null||!text.trim())return;snap();item.text=text.trim();render()}
+async function startDraw(event){
   if(!drawing)return;const layer=activeLayer();if(!layer||layer.id===TECHNIQUE_LAYER_ID){addLayer();return}
   const p=pointFromEvent(event);
   if(state.drawTool==="select"){
@@ -573,7 +594,7 @@ function startDraw(event){
     selectedItemId=id;const item=selectedItem();if(!item)return;
     event.preventDefault();snap();dragging={item,last:p};q("#annotations").setPointerCapture(event.pointerId);renderLayers();return;
   }
-  if(state.drawTool==="text"){const text=prompt("譜面に入れるコメントを入力してください。","");if(text&&text.trim()){snap();const item={id:uid(),type:"text",x:p.x,y:p.y,text:text.trim(),color:state.drawColor,size:state.textSize,background:state.textBackground};layer.items.push(item);selectedItemId=item.id;render()}return}
+  if(state.drawTool==="text"){const text=await requestComment("","譜面に入れるコメント");if(text&&text.trim()){snap();const item={id:uid(),type:"text",x:p.x,y:p.y,text:text.trim(),color:state.drawColor,size:state.textSize,background:state.textBackground};layer.items.push(item);selectedItemId=item.id;render()}return}
   if(state.drawTool==="eraser"){const target=event.target.closest("[data-item]");if(target){snap();layer.items=layer.items.filter(item=>item.id!==target.dataset.item);render()}return}
   event.preventDefault();q("#annotations").setPointerCapture(event.pointerId);draft={type:state.drawTool,start:p,points:[p]};
 }
@@ -675,7 +696,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.tool){state.drawTool=b.dataset.tool;renderLayers();return}
   else if(b.dataset.color){state.drawColor=b.dataset.color;renderLayers();return}
   else if(b.id==="deleteItem"){const layer=activeLayer(),item=selectedItem();if(layer&&item){snap();layer.items=layer.items.filter(x=>x.id!==item.id);selectedItemId=null;render()}return}
-  else if(b.id==="editComment"){const item=selectedItem();if(item?.type==="text"){const text=prompt("コメントを編集してください。",item.text);if(text!==null&&text.trim()){snap();item.text=text.trim();render()}}return}
+  else if(b.id==="editComment"){editSelectedComment();return}
   else if(b.id==="bringFront"){const layer=activeLayer(),item=selectedItem();if(layer&&item){snap();layer.items=layer.items.filter(x=>x.id!==item.id);layer.items.push(item);render()}return}
   else if(b.id==="applySelectedNoteColor"){const note=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);if(note&&!note.rest){snap();note.color=q("#selectedNoteColor").value;note.individualColor=true;render()}return}
   else if(b.id==="resetSelectedNoteColor"){const note=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);if(note&&!note.rest){snap();note.individualColor=false;note.color=note.v==="○"?state.openColor:state.numberColor;render()}return}
@@ -688,6 +709,9 @@ q("#annotations").addEventListener("pointerdown",startDraw);
 q("#annotations").addEventListener("pointermove",moveDraw);
 q("#annotations").addEventListener("pointerup",endDraw);
 q("#annotations").addEventListener("pointercancel",()=>{draft=null;dragging=null});
+q("#commentForm").addEventListener("submit",event=>{event.preventDefault();const text=q("#commentText").value;finishCommentDialog(text.trim()?text:null)});
+q("#cancelComment").addEventListener("click",()=>finishCommentDialog(null));
+q("#commentDialog").addEventListener("cancel",event=>{event.preventDefault();finishCommentDialog(null)});
 q("#itemColor").addEventListener("change",event=>{const item=selectedItem();if(item){snap();item.color=event.target.value}else state.drawColor=event.target.value;render()});
 q("#lineStyle").addEventListener("change",event=>{const value=event.target.value==="dashed"?"dashed":"solid",item=selectedItem();state.lineStyle=value;if(item&&["pen","arrow","rect"].includes(item.type)){snap();item.lineStyle=value}render()});
 function resizeSelectedRect(axis,value){const item=selectedItem();if(item?.type!=="rect")return;const next=clamp(Number(value)||10,10,axis==="x"?900:1200);snap();if(axis==="x"){const direction=item.x2>=item.x1?1:-1;item.x2=item.x1+direction*next}else{const direction=item.y2>=item.y1?1:-1;item.y2=item.y1+direction*next}render()}

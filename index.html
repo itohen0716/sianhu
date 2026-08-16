@@ -207,7 +207,7 @@
     <div id="slurWidthControls" class="slur-width-controls" hidden><strong>スリの⌒の長さ</strong><button id="slurShorter">− 短く</button><button id="slurLonger">＋ 長く</button><small id="slurWidthValue"></small></div>
     <div class="color-settings">
       <label>記号色 <input id="itemColor" type="color" value="#222222"></label>
-      <label hidden>文字サイズ <select id="textSize"><option value="24" selected>標準</option></select></label>
+      <label hidden>文字サイズ <select id="textSize"><option value="12">極小</option><option value="24" selected>標準</option></select></label>
       <label hidden>背景 <select id="textBackground"><option value="none">なし</option></select></label>
     </div>
     <p id="layerHelp" class="layer-help">奏法・指番号を選び、関連付ける数字または開放弦をタップします。音の移動・削除にも追従します。</p>
@@ -732,6 +732,12 @@ function nearestPlayableNote(point){
 }
 function esc(value){return String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]))}
 function pointsAttr(points){return points.map(point=>`${point.x},${point.y}`).join(" ")}
+function commentLayout(item,sizeScale=1){
+  const size=(Number(item.size)||20)*sizeScale,lines=String(item.text||"").replace(/\r\n?/g,"\n").split("\n"),lineHeight=size*1.35;
+  const longest=Math.max(1,...lines.map(line=>Array.from(line).length)),width=Math.max(size*2.5,longest*size*.95),height=size*1.55+(lines.length-1)*lineHeight;
+  return{size,lines,lineHeight,width,height,top:item.y-size*1.05-5};
+}
+function commentTextSvg(item,layout){return layout.lines.map((line,index)=>`<tspan x="${item.x}" dy="${index?layout.lineHeight:0}">${line?esc(line):"&#160;"}</tspan>`).join("")}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeTechniqueIds.has(item.id)?" range-selected":"";
   const common=`class="annotation-item${selected}" data-item="${item.id}" stroke="${item.color}" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
@@ -751,9 +757,8 @@ function itemHtml(item){
     const fingerClass=["Ⅰ","Ⅱ","Ⅲ"].includes(item.text)?" finger-symbol":"";
     return `<g class="annotation-item symbol-item anchored-symbol${fingerClass} text-item${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text></g>`;
   }
-  const background=item.background||"white",bg=background==="none"?"none":background==="translucent"?"rgba(255,255,255,.72)":"#fff";
-  const size=item.size||20,width=Math.max(55,item.text.length*size*.95),height=size*1.55;
-  return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${item.y-height+5}" width="${width+14}" height="${height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}" font-weight="600">${esc(item.text)}</text></g>`;
+  const background=item.background||"white",bg=background==="none"?"none":background==="translucent"?"rgba(255,255,255,.72)":"#fff",layout=commentLayout(item);
+  return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${layout.top}" width="${layout.width+14}" height="${layout.height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${layout.size}" font-weight="600">${commentTextSvg(item,layout)}</text></g>`;
 }
 function renderLayers(skipSave=false){
   ensureTechniqueLayer();
