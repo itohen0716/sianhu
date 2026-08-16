@@ -16,7 +16,7 @@
     .paper.preview-mode .score{width:100%;min-width:0}
     .paper.preview-mode .measure{min-width:0;width:auto;flex:var(--measure-grow,384) 1 0}
     .paper.preview-mode .string{grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr))}
-    .paper.annotating{touch-action:none}.annotation-svg{position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none}.paper.annotating .annotation-svg{pointer-events:auto}
+    .paper.annotating{touch-action:none}.annotation-underlay-svg,.annotation-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.annotation-underlay-svg{z-index:0}.annotation-svg{z-index:8}.paper>.meta,.paper>#scoreArea{position:relative;z-index:1}.paper.annotating .annotation-svg{pointer-events:auto}
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected,.annotation-item.range-selected{filter:drop-shadow(0 0 4px #f2c500)}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;font:15px serif}.score-meta{display:flex;align-items:flex-end;gap:6px}.score-meta select,.score-meta input{border:0;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
     .meta input{border:0;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}.meta #title{justify-self:center;width:8em;max-width:100%;box-sizing:border-box;border-bottom:1px solid #333;padding:4px 1em}
@@ -182,6 +182,7 @@
   <div class="score-viewport" aria-label="文化譜表示領域">
   <div class="actions score-toolbar"><a class="page-link" href="./annotations.html">✎ 書き込みページ</a><button id="playScore" aria-label="入力中の文化譜を演奏">▶ 演奏</button><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="newScore">＋ 新規作成</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div>
   <section class="paper">
+    <svg id="annotationUnderlay" class="annotation-underlay-svg" aria-hidden="true"></svg>
     <div class="meta"><div class="score-meta"><span>〈</span><select id="tuning" aria-label="調弦"><option>本調子</option><option selected>二上り</option><option>三下り</option></select><span>〉</span><input id="meter" value="四分ノ二拍子" aria-label="拍子" title="2/4の形式で入力"></div><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
     <div id="scoreArea"></div>
     <svg id="annotations" class="annotation-svg" aria-label="書き込みレイヤー"></svg>
@@ -325,7 +326,7 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#d8c88a",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="";
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
@@ -450,7 +451,7 @@ function renderPrintRoot(){
   root.innerHTML=model.pages.map(page=>`<section class="print-page" data-print-page="${page.index+1}">${page.index===0?`<div class="print-meta"><div class="print-meta-left"><span>〈</span><span>${esc(model.tuning)}</span><span>〉</span><span>${esc(model.meter)}</span></div><div class="print-title">${esc(model.title)}</div><div class="print-summary"></div></div>`:""}${page.rows.map(row=>`<section class="print-staff" style="height:${((283*96/25.4-(page.index===0?34:0))/page.rows.length).toFixed(2)}px"><div class="print-score-wrap"><div class="print-labels">${row.index===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="print-score">${row.measures.map(printMeasureModelHtml).join("")}</div></div></section>`).join("")}</section>`).join("");
   root.dataset.printModelVersion=String(model.version);
 }
-function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
@@ -738,9 +739,11 @@ function commentLayout(item,sizeScale=1){
   return{size,lines,lineHeight,width,height,top:item.y-size*1.05-5};
 }
 function commentTextSvg(item,layout){return layout.lines.map((line,index)=>`<tspan x="${item.x}" dy="${index?layout.lineHeight:0}">${line?esc(line):"&#160;"}</tspan>`).join("")}
+function markerUnderlayHtml(item){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||"#d8c88a")}" fill-opacity="${clamp(Number(item.opacity)||.25,.1,.45)}"/>`}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeTechniqueIds.has(item.id)?" range-selected":"";
   const common=`class="annotation-item${selected}" data-item="${item.id}" stroke="${item.color}" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
+  if(item.type==="marker")return"";
   if(item.type==="pen")return `<polyline ${common} points="${pointsAttr(item.points)}"/>`;
   if(item.type==="rect")return `<rect ${common} x="${Math.min(item.x1,item.x2)}" y="${Math.min(item.y1,item.y2)}" width="${Math.abs(item.x2-item.x1)}" height="${Math.abs(item.y2-item.y1)}" rx="5"/>`;
   if(item.type==="arrow"){
@@ -762,7 +765,7 @@ function itemHtml(item){
 }
 function renderLayers(skipSave=false){
   ensureTechniqueLayer();
-  const svg=q("#annotations"),paper=q(".paper");
+  const svg=q("#annotations"),underlay=q("#annotationUnderlay"),paper=q(".paper");
   const rect=svg.getBoundingClientRect(),logicalWidth=1000,logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
   if(state.annotationCoordVersion!==2){
     state.layers.forEach(layer=>layer.items.forEach(item=>{
@@ -773,13 +776,14 @@ function renderLayers(skipSave=false){
     }));
     state.annotationCoordVersion=2;
   }
-  svg.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);svg.setAttribute("preserveAspectRatio","xMinYMin meet");
+  [svg,underlay].forEach(element=>{element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);element.setAttribute("preserveAspectRatio","xMinYMin meet")});
   syncLinkedSymbols();
   const layer=activeLayer();
   /* 写譜ページでも書き込みレイヤーを閲覧できるよう、全表示レイヤーを
      同じSVGへ描画する。編集対象は従来どおり奏法レイヤーだけに限定する。 */
-  svg.innerHTML=state.layers
-    .filter(item=>item.visible!==false)
+  const visibleLayers=state.layers.filter(item=>item.visible!==false);
+  underlay.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type==="marker").map(markerUnderlayHtml).join("")}</g>`).join("");
+  svg.innerHTML=visibleLayers
     .map(item=>`<g data-layer="${item.id}">${item.items.map(itemHtml).join("")}</g>`)
     .join("");
   const scoreLayer=["notes","staff","technique"].includes(state.scoreEditLayer)?state.scoreEditLayer:"notes";
