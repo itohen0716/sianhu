@@ -36,9 +36,9 @@
     .measure.custom-end::after{display:none}
     .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
     .cell{border:0;background:none;padding:0;min-width:0}.cell:nth-child(4n){border-right:1px solid #477d9120}.cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}
-    .note{z-index:2;grid-row:1;align-self:center;justify-self:center;position:relative;top:0;width:max-content;height:14px;border:0;background:none;padding:0;cursor:ew-resize;overflow:visible;touch-action:none}.note.moving b,.note.range-selected b{outline:2px solid #c9a927;border-radius:4px}.note b{display:inline-block;min-width:12px;background:var(--paper);padding:0 1px;font:600 var(--note-size)/14px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222)}.note.open-note b{font-size:28px;line-height:14px;font-weight:400;padding:0}
+    .note{z-index:2;grid-row:1;align-self:center;justify-self:center;position:relative;top:0;width:max-content;height:14px;border:0;background:none;padding:0;cursor:ew-resize;overflow:visible;touch-action:none}.note.moving b,.note.range-selected b{outline:2px solid #c9a927;border-radius:4px}.note b{display:inline-block;min-width:12px;background:transparent;padding:0 1px;font:600 var(--note-size)/14px Arial;text-align:center;white-space:nowrap;color:var(--note-color,#222);-webkit-text-stroke:.3px var(--paper);paint-order:stroke fill}.note.open-note b{font-size:28px;line-height:14px;font-weight:400;padding:0}
     .range-selection-box{position:fixed;z-index:10000;border:2px solid #477d91;background:rgba(71,125,145,.14);pointer-events:none}.range-selection-count{margin-left:6px;color:#285366;font-weight:700}.paper.range-select-mode,.paper.range-select-mode *{-webkit-user-select:none!important;user-select:none!important}.paper.range-moving{cursor:grabbing}
-    .measure.on .note b{background:#fff9dd}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{content:"";position:absolute;z-index:3;left:50%;top:14px;bottom:auto;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor;pointer-events:none}.note.d1:not(.rest)::after{height:3px;border-bottom:1.5px solid currentColor}.note.rest.d2::after,.note.rest.d1::after{content:"";position:absolute;z-index:3;left:50%;top:calc(50% + 6px);width:14px;height:0;transform:translateX(-50%);border-top:1.5px solid currentColor;pointer-events:none}.note.rest.d1::after{height:3px;border-bottom:1.5px solid currentColor}.note{position:relative}.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-family:Arial,sans-serif;font-size:var(--note-size);line-height:14px}
+    .measure.on .note b{background:transparent}.note.d2:not(.rest)::after,.note.d1:not(.rest)::after{content:"";position:absolute;z-index:3;left:50%;top:14px;bottom:auto;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor;pointer-events:none}.note.d1:not(.rest)::after{height:3px;border-bottom:1.5px solid currentColor}.note.rest.d2::after,.note.rest.d1::after{content:"";position:absolute;z-index:3;left:50%;top:calc(50% + 6px);width:14px;height:0;transform:translateX(-50%);border-top:1.5px solid currentColor;pointer-events:none}.note.rest.d1::after{height:3px;border-bottom:1.5px solid currentColor}.note{position:relative}.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-family:Arial,sans-serif;font-size:var(--note-size);line-height:14px}
     .panel{margin-top:14px;padding:16px;background:#fffcf7;border:1px solid #c9bcad;border-radius:15px}.layout-bar{display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd2c5}
     .layout-controls{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.layout-controls strong{min-width:82px;text-align:center}.layout-controls button[aria-label]{width:42px;padding:6px;font-size:20px}
     .status{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--pale);padding:10px;border-radius:10px}.status.status-bottom{margin-top:12px}.status strong{display:block;color:#285366}
@@ -168,6 +168,7 @@
       .print-technique-item.above{bottom:18px}.print-technique-item.below{top:18px}.print-technique-item.finger{font-size:24px;line-height:1}.print-technique-item.symbol{font-size:14px}.print-technique-item.slur{width:var(--slur-width,42px);font-size:14px;text-align:center}.print-technique-item.slur::after{content:"";display:block;width:100%;height:8px;border-top:1.5px solid currentColor;border-radius:50%}
       .print-score-part{position:absolute;z-index:3;top:9px;width:24px;height:36px;transform:translateX(-50%)}.print-score-part svg{width:100%;height:100%;overflow:visible}
     }
+    @media print{.measure.on .note b{background:transparent!important}}
   </style>
   <link rel="stylesheet" href="./print-v2.css">
 </head>
@@ -326,7 +327,7 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#d8c88a",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#f4df59",markerStyleVersion:2,numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="";
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
@@ -379,7 +380,7 @@ function migrateState(){
 function load(){
   try{
     const current=JSON.parse(localStorage.getItem(KEY));
-    if(current&&Array.isArray(current.notes)){state={...defaults,...current,annotationCoordVersion:current.annotationCoordVersion||1};migrateState();ensureTechniqueLayer();hasSaved=true;return}
+    if(current&&Array.isArray(current.notes)){state={...defaults,...current,annotationCoordVersion:current.annotationCoordVersion||1,markerStyleVersion:current.markerStyleVersion||1};migrateState();ensureTechniqueLayer();hasSaved=true;return}
     const old=JSON.parse(localStorage.getItem(OLD_KEY));
     if(old&&Array.isArray(old.notes)){state={...defaults,notes:old.notes.map(n=>n.v==="0"?{...n,v:"○"}:n),title:old.title||defaults.title};ensureTechniqueLayer();hasSaved=true}
   }catch(error){console.warn("保存データを読み込めませんでした。",error)}
@@ -387,6 +388,11 @@ function load(){
 }
 function ensureTechniqueLayer(){
   if(!Array.isArray(state.layers))state.layers=[];
+  if(state.markerStyleVersion!==2){
+    const colorMap={"#d8c88a":"#f4df59","#afc8d3":"#8fd3e2","#b8c6cf":"#8fd3e2","#b9cbaf":"#a8d8a0","#d8b8b2":"#f2a9a0","#c5b8d3":"#c6b3e6"};
+    state.layers.forEach(entry=>(entry.items||[]).forEach(item=>{if(item.type==="marker"){item.color=colorMap[String(item.color||"").toLowerCase()]||item.color||"#f4df59";item.opacity=.4}}));
+    state.markerColor=colorMap[String(state.markerColor||"").toLowerCase()]||"#f4df59";state.markerStyleVersion=2;
+  }
   let layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
   if(!layer){layer={id:TECHNIQUE_LAYER_ID,name:"奏法",visible:true,fixed:true,items:[]};state.layers.unshift(layer)}
   layer.items.forEach(item=>{if(item.type==="symbol"&&(item.text==="[スリ]"||item.text==="スリ")){item.text="スリ";item.slurWidth=clamp(Number(item.slurWidth)||34,22,90)}});
@@ -451,7 +457,7 @@ function renderPrintRoot(){
   root.innerHTML=model.pages.map(page=>`<section class="print-page" data-print-page="${page.index+1}">${page.index===0?`<div class="print-meta"><div class="print-meta-left"><span>〈</span><span>${esc(model.tuning)}</span><span>〉</span><span>${esc(model.meter)}</span></div><div class="print-title">${esc(model.title)}</div><div class="print-summary"></div></div>`:""}${page.rows.map(row=>`<section class="print-staff" style="height:${((283*96/25.4-(page.index===0?34:0))/page.rows.length).toFixed(2)}px"><div class="print-score-wrap"><div class="print-labels">${row.index===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="print-score">${row.measures.map(printMeasureModelHtml).join("")}</div></div></section>`).join("")}</section>`).join("");
   root.dataset.printModelVersion=String(model.version);
 }
-function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function serializable(){return{notes:state.notes,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,markerStyleVersion:state.markerStyleVersion,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
@@ -500,7 +506,7 @@ function validatedImportedScore(value){
   const meter=parseMeter(score.meter||defaults.meter);if(!meter)throw new Error("拍子データを認識できません。");
   const importedCapacity=String(score.meter||"").includes("拍子")?Math.max(16,meter.capacity):meter.capacity;
   const total=rowMeasureCounts.reduce((sum,count)=>sum+count,0);if(score.notes.some(note=>!note||!Number.isInteger(note.m)||!Number.isInteger(note.s)||!Number.isInteger(note.p)||note.m<0||note.m>=total||note.s<1||note.s>3||note.p<0||note.p>=importedCapacity))throw new Error("音符データに不正な位置があります。");
-  return{...defaults,...score,rows,measuresPerRow:measures,rowMeasureCounts,notes:score.notes,scoreParts:Array.isArray(score.scoreParts)?score.scoreParts:[],barlineKinds:score.barlineKinds&&typeof score.barlineKinds==="object"?score.barlineKinds:{},layers:score.layers};
+  return{...defaults,...score,rows,measuresPerRow:measures,rowMeasureCounts,markerStyleVersion:score.markerStyleVersion||1,notes:score.notes,scoreParts:Array.isArray(score.scoreParts)?score.scoreParts:[],barlineKinds:score.barlineKinds&&typeof score.barlineKinds==="object"?score.barlineKinds:{},layers:score.layers};
 }
 async function importScoreFile(file){
   if(!file)return;
@@ -739,7 +745,7 @@ function commentLayout(item,sizeScale=1){
   return{size,lines,lineHeight,width,height,top:item.y-size*1.05-5};
 }
 function commentTextSvg(item,layout){return layout.lines.map((line,index)=>`<tspan x="${item.x}" dy="${index?layout.lineHeight:0}">${line?esc(line):"&#160;"}</tspan>`).join("")}
-function markerUnderlayHtml(item){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||"#d8c88a")}" fill-opacity="${clamp(Number(item.opacity)||.25,.1,.45)}"/>`}
+function markerUnderlayHtml(item){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||"#f4df59")}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeTechniqueIds.has(item.id)?" range-selected":"";
   const common=`class="annotation-item${selected}" data-item="${item.id}" stroke="${item.color}" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;

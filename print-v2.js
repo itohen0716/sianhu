@@ -39,7 +39,7 @@
   }
   function markerHtml(item){
     const pts=item.pointsNormalized||[];if(item.type!=="marker"||pts.length<2)return"";
-    const x=Math.min(pts[0].x,pts[1].x),y=Math.min(pts[0].y,pts[1].y),width=Math.abs(pts[1].x-pts[0].x),height=Math.abs(pts[1].y-pts[0].y),color=esc(item.color||"#d8c88a"),opacity=clamp(Number(item.opacity)||.25,.1,.45);
+    const x=Math.min(pts[0].x,pts[1].x),y=Math.min(pts[0].y,pts[1].y),width=Math.abs(pts[1].x-pts[0].x),height=Math.abs(pts[1].y-pts[0].y),color=esc(item.color||"#f4df59"),opacity=clamp(Number(item.opacity)||.4,.1,.55);
     return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${color}" fill-opacity="${opacity}"/>`;
   }
   function captureScoreGeometry(){
