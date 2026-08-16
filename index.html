@@ -927,13 +927,25 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
     state.s=nextString;
   }
   else if(b.dataset.d)state.d=+b.dataset.d;
-  else if(b.dataset.pos){[state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);cursorVisible=true;lastInserted=null}
+  else if(b.dataset.pos){
+    [state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);
+    /* 入力位置を選んだ時点で、直前に移動した数字・小節線・書き込みの
+       選択状態を完全に終了する。以後の左右キーは入力位置を動かす。 */
+    clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;
+    cursorVisible=true;lastInserted=null;
+  }
   else if(b.dataset.v){insert(b.dataset.v)}
   else if(b.dataset.rest){insert("",true,+b.dataset.rest)}
   else if(b.dataset.scorePart){snap();state.scoreParts=Array.isArray(state.scoreParts)?state.scoreParts:[];const part={id:uid(),kind:b.dataset.scorePart,m:state.m,p:state.p,x:0};state.scoreParts.push(part);selectedScoreTarget={type:"scorePart",id:part.id};cursorVisible=false}
   else if(b.dataset.barKind){if(selectedScoreTarget?.type!=="barline"){alert("先に変更する小節線を譜面上で選択してください。");return}snap();state.barlineKinds={...(state.barlineKinds||{}),[selectedScoreTarget.key]:b.dataset.barKind}}
-  else if(b.id==="prev"){lastInserted=null;if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacity()-1}}
-  else if(b.id==="next"){lastInserted=null;if(state.p<measureCapacity()-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
+  else if(b.id==="prev"){
+    clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;lastInserted=null;
+    if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacity()-1}
+  }
+  else if(b.id==="next"){
+    clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;lastInserted=null;
+    if(state.p<measureCapacity()-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}
+  }
   else if(b.id==="resetPositions"&&confirm("数字・同じ記号・小節線の横位置を標準に戻しますか？")){snap();state.notes.forEach(note=>note.x=0);(state.scoreParts||[]).forEach(part=>part.x=0);state.measureOffsets=[]}
   else if(b.id==="delete"){
     if(selectedScoreTarget?.type==="scorePart"){
