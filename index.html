@@ -53,7 +53,8 @@
     .bottom{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;color:#766b60}.clear{border:1px solid #d1aaa1;border-radius:9px;background:#fff;color:#9d4036;padding:9px}
     .editor-switcher,.layer-panel,.note-color-panel{margin-top:12px;padding:14px;background:#f8f3eb;border:1px solid #c9bcad;border-radius:15px}.editor-switcher h2,.editor-panel-title{margin:0;font:600 18px serif}.layer-top,.layer-switches,.draw-tools,.colors,.edit-tools,.color-settings{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.layer-top{justify-content:space-between}
     .layer-switches{margin-top:10px}.layer-chip,.draw-tools button,.layer-top button{min-height:46px;border:1px solid #bcae9e;border-radius:9px;background:#fff;padding:7px 13px}.layer-chip{flex:1 1 190px}.layer-chip.on,.draw-tools button.on{background:#477d91;color:#fff;border-color:#477d91}.layer-chip.hidden{text-decoration:line-through;opacity:.58}.layer-chip small{display:block;font-size:10px}
-    body.score-page[data-score-layer="notes"] .barline-handle{pointer-events:none}
+    body.score-page[data-score-layer="notes"] .barline-handle,body.score-page[data-score-layer="vocal"] .barline-handle{pointer-events:none}
+    body.score-page[data-score-layer="vocal"] .note{z-index:9;cursor:pointer}
     body.score-page[data-score-layer="staff"] .note,body.score-page[data-score-layer="staff"] .cell{pointer-events:none}
     body.score-page[data-score-layer="technique"] #scoreArea{pointer-events:none}
     body.score-page .editor-panel{display:none}
@@ -374,7 +375,7 @@ function normalizeRowMeasureCounts(){const fallback=clamp(Number(state.measuresP
 function normalizeLyrics(){const source=Array.isArray(state.lyrics)?state.lyrics:[];state.lyrics=Array.from({length:state.rows},(_,row)=>String(source[row]||""));if(typeof state.vocalVisible!=="boolean")state.vocalVisible=Boolean(state.lyricsMode);if(typeof state.lyricsVisible!=="boolean")state.lyricsVisible=Boolean(state.lyricsMode);state.lyricsMode=state.vocalVisible||state.lyricsVisible}
 function normalizeVocalNotes(){
   const total=state.rowMeasureCounts.reduce((sum,count)=>sum+count,0),capacity=measureCapacity();
-  state.vocalNotes=(Array.isArray(state.vocalNotes)?state.vocalNotes:[]).filter(note=>note&&Number.isInteger(Number(note.m))&&Number.isInteger(Number(note.p))&&Number(note.m)>=0&&Number(note.m)<total&&Number(note.p)>=0&&Number(note.p)<capacity).map(note=>{const value=String(note.v??"0"),kind=["pitch","rest","interjection"].includes(note.kind)?note.kind:(value==="・"?"rest":value==="×"?"interjection":"pitch"),pitchType=kind==="pitch"?(value==="0"?"open":"stopped"):"none",color=kind==="pitch"&&/^#[0-9a-f]{6}$/i.test(String(note.color||""))?String(note.color):"#222222",savedAnchor=note.anchor&&Number.isInteger(Number(note.anchor.m))&&Number.isInteger(Number(note.anchor.p))?{m:Number(note.anchor.m),p:Number(note.anchor.p)}:null,legacyAnchor=!Object.prototype.hasOwnProperty.call(note,"anchor")&&state.notes.some(item=>!item.rest&&Number(item.m)===Number(note.m)&&Number(item.p)===Number(note.p))?{m:Number(note.m),p:Number(note.p)}:null,anchor=savedAnchor&&state.notes.some(item=>!item.rest&&item.m===savedAnchor.m&&item.p===savedAnchor.p)?savedAnchor:legacyAnchor,anchorOffset=anchor?Math.max(0,Number.isInteger(Number(note.anchorOffset))?Number(note.anchorOffset):Number(note.p)-anchor.p):0;return{id:String(note.id||uid()),m:Number(note.m),p:Number(note.p),v:value,s:[1,2,3].includes(Number(note.s))?Number(note.s):3,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,x:Number(note.x)||0,kind,pitchType,color,anchor,anchorOffset}});
+  state.vocalNotes=(Array.isArray(state.vocalNotes)?state.vocalNotes:[]).filter(note=>note&&Number.isInteger(Number(note.m))&&Number.isInteger(Number(note.p))&&Number(note.m)>=0&&Number(note.m)<total&&Number(note.p)>=0&&Number(note.p)<capacity).map(note=>{const value=String(note.v??"0"),kind=["pitch","rest","interjection"].includes(note.kind)?note.kind:(value==="・"?"rest":value==="×"?"interjection":"pitch"),pitchType=kind==="pitch"?(value==="0"?"open":"stopped"):"none",color=kind==="pitch"&&/^#[0-9a-f]{6}$/i.test(String(note.color||""))?String(note.color):"#222222",savedAnchor=note.anchor&&Number.isInteger(Number(note.anchor.m))&&Number.isInteger(Number(note.anchor.p))?{m:Number(note.anchor.m),p:Number(note.anchor.p)}:null,legacyAnchor=!Object.prototype.hasOwnProperty.call(note,"anchor")&&state.notes.some(item=>Number(item.m)===Number(note.m)&&Number(item.p)===Number(note.p))?{m:Number(note.m),p:Number(note.p)}:null,anchor=savedAnchor&&state.notes.some(item=>item.m===savedAnchor.m&&item.p===savedAnchor.p)?savedAnchor:legacyAnchor,anchorOffset=anchor?Math.max(0,Number.isInteger(Number(note.anchorOffset))?Number(note.anchorOffset):Number(note.p)-anchor.p):0;return{id:String(note.id||uid()),m:Number(note.m),p:Number(note.p),v:value,s:[1,2,3].includes(Number(note.s))?Number(note.s):3,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,x:Number(note.x)||0,kind,pitchType,color,anchor,anchorOffset}});
   state.vocalString=[1,2,3].includes(Number(state.vocalString))?Number(state.vocalString):3;state.vocalDuration=[1,2,4].includes(Number(state.vocalDuration))?Number(state.vocalDuration):4;
 }
 function measuresInRow(row){return state.rowMeasureCounts?.[row]||state.measuresPerRow}
@@ -564,18 +565,19 @@ function noteRhythmClass(n,m){
   const shortestDuration=Math.min(...column.map(note=>note.d));
   return`d${shortestDuration}`;
 }
-function columnNotes(m,p){return state.notes.filter(note=>note.m===m&&note.p===p&&!note.rest)}
+function columnEntries(m,p){return state.notes.filter(note=>note.m===m&&note.p===p)}
+function columnNotes(m,p){return columnEntries(m,p).filter(note=>!note.rest)}
 function columnX(m,p){
-  const positioned=columnNotes(m,p).find(note=>Number.isFinite(note.x)&&note.x!==0);
+  const positioned=columnEntries(m,p).find(note=>Number.isFinite(note.x)&&note.x!==0);
   return positioned?positioned.x:0;
 }
-function vocalAnchor(note){const anchor=note?.anchor;if(!anchor)return null;return state.notes.some(item=>!item.rest&&item.m===Number(anchor.m)&&item.p===Number(anchor.p))?{m:Number(anchor.m),p:Number(anchor.p)}:null}
+function vocalAnchor(note){const anchor=note?.anchor;if(!anchor)return null;return state.notes.some(item=>item.m===Number(anchor.m)&&item.p===Number(anchor.p))?{m:Number(anchor.m),p:Number(anchor.p)}:null}
 function effectiveVocalPosition(note){const anchor=vocalAnchor(note);return anchor?{m:anchor.m,p:anchor.p+(Number(note.anchorOffset)||0)}:{m:Number(note.m),p:Number(note.p)}}
 function effectiveVocalX(note){const anchor=vocalAnchor(note);return(Number(note.x)||0)+(anchor?columnX(anchor.m,anchor.p):0)}
 function selectedVocalNote(){return selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id)||null:null}
 function activeVocalAnchor(){return vocalAnchor(selectedVocalNote())||vocalAnchorSelection}
 function vocalOffsetLabel(offset){offset=Number(offset)||0;return offset===0?"":offset===1?"・16分後":offset===2?"・8分後":offset===4?"・4分後":`・16分位置+${offset}`}
-function vocalAnchorLabel(anchor){if(!anchor)return"任意位置・連動なし";const values=[...new Set(state.notes.filter(note=>!note.rest&&note.m===anchor.m&&note.p===anchor.p).map(note=>String(note.v||"")))],selected=selectedVocalNote(),offset=selected&&vocalAnchor(selected)?selected.anchorOffset:vocalAnchorOffset;return values.length?`三味線：${values.join("・")}に連動${vocalOffsetLabel(offset)}`:"任意位置・連動なし"}
+function vocalAnchorLabel(anchor){if(!anchor)return"任意位置・連動なし";const entries=columnEntries(anchor.m,anchor.p),values=[...new Set(entries.filter(note=>!note.rest).map(note=>String(note.v||"")))],rests=[...new Set(entries.filter(note=>note.rest).map(note=>`${note.d===4?"4分":note.d===2?"8分":"16分"}休符`))],names=[...values,...rests],selected=selectedVocalNote(),offset=selected&&vocalAnchor(selected)?selected.anchorOffset:vocalAnchorOffset;return names.length?`三味線：${names.join("・")}に連動${vocalOffsetLabel(offset)}`:"任意位置・連動なし"}
 function anchoredVocalScreenOffset(note){
   const anchor=vocalAnchor(note),button=q(`[data-vocal-note="${note.id}"]`);if(!anchor||!button)return null;
   const measure=button.closest(".vocal-measure"),targets=qAll(`[data-note^="${anchor.m},"][data-note$=",${anchor.p}"]`);if(!measure||!targets.length)return null;
@@ -588,8 +590,8 @@ function syncAnchoredVocalPositions(){
   const vr=vocal.getBoundingClientRect(),rects=[...targets].map(target=>(target.querySelector("b")||target).getBoundingClientRect()),pr=paper.getBoundingClientRect(),x1=rects.reduce((sum,rect)=>sum+rect.left+rect.width/2,0)/rects.length-pr.left,y1=Math.max(...rects.map(rect=>rect.bottom))-pr.top,x2=vr.left+vr.width/2-pr.left,y2=vr.top-pr.top,distance=Math.hypot(x2-x1,y2-y1);if(!distance)return;
   const guide=document.createElement("span");guide.className="vocal-link-guide";guide.style.left=`${x1}px`;guide.style.top=`${y1}px`;guide.style.width=`${distance}px`;guide.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;paper.appendChild(guide);
 }
-function shamisenColumnDuration(anchor){const durations=columnNotes(anchor.m,anchor.p).map(note=>Number(note.d)).filter(value=>[1,2,4].includes(value));return durations.length?Math.min(...durations):1}
-function shamisenColumns(){return[...new Map(state.notes.filter(note=>!note.rest).sort((a,b)=>a.m-b.m||a.p-b.p).map(note=>[`${note.m},${note.p}`,{m:note.m,p:note.p}])).values()]}
+function shamisenColumnDuration(anchor){const durations=columnEntries(anchor.m,anchor.p).map(note=>Number(note.d)).filter(value=>[1,2,4].includes(value));return durations.length?Math.min(...durations):1}
+function shamisenColumns(){return[...new Map(state.notes.sort((a,b)=>a.m-b.m||a.p-b.p).map(note=>[`${note.m},${note.p}`,{m:note.m,p:note.p}])).values()]}
 function nextShamisenColumn(m,p){return shamisenColumns().find(item=>item.m>m||(item.m===m&&item.p>p))||null}
 function previousShamisenColumn(m,p){return[...shamisenColumns()].reverse().find(item=>item.m<m||(item.m===m&&item.p<p))||null}
 function noteMoveBounds(m,p,originX=columnX(m,p)){
@@ -674,7 +676,7 @@ function noteHtml(n,m,s){
   const value=n.rest?(rests.find(r=>r.d===n.d)||rests[0]).mark:n.v;
   const color=n.rest?"#222222":(n.color||(n.v==="○"?state.openColor:state.numberColor));
   const x=n.rest?(n.x||0):columnX(m,n.p);
-  const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"",currentAnchor=activeVocalAnchor(),anchorSelected=state.scoreEditLayer==="vocal"&&currentAnchor?.m===m&&currentAnchor?.p===n.p&&!n.rest?" vocal-anchor-selected":"";
+  const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"",currentAnchor=activeVocalAnchor(),anchorSelected=state.scoreEditLayer==="vocal"&&currentAnchor?.m===m&&currentAnchor?.p===n.p?" vocal-anchor-selected":"";
   return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}${!n.rest&&n.v==="○"?" open-note":""}${rangeSelected}${anchorSelected}" style="grid-column:${n.p+1};--note-color:${color};transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b>${n.rest?"":printTechniqueHtml(n)}</button>`;
 }
 function scalePrintNotePositions(){
@@ -980,7 +982,7 @@ function insertSpecified(stringNumber,noteValue,displayValue){
 function insertVocal(value,kind="pitch",duration=state.vocalDuration){
   const allowed=kind==="pitch"?vocalVals.includes(String(value)):kind==="rest"?String(value)==="・":kind==="interjection"?String(value)==="×":false;
   if(!allowed||![1,2,4].includes(Number(duration)))return false;
-  const anchor=vocalAnchorSelection&&state.notes.some(item=>!item.rest&&item.m===vocalAnchorSelection.m&&item.p===vocalAnchorSelection.p)?{...vocalAnchorSelection}:null,anchorOffset=anchor?Math.max(0,Number(vocalAnchorOffset)||0):0,insertion=anchor?{m:anchor.m,p:anchor.p+anchorOffset}:{m:state.m,p:state.p};state.m=insertion.m;state.p=insertion.p;
+  const anchor=vocalAnchorSelection&&state.notes.some(item=>item.m===vocalAnchorSelection.m&&item.p===vocalAnchorSelection.p)?{...vocalAnchorSelection}:null,anchorOffset=anchor?Math.max(0,Number(vocalAnchorOffset)||0):0,insertion=anchor?{m:anchor.m,p:anchor.p+anchorOffset}:{m:state.m,p:state.p};state.m=insertion.m;state.p=insertion.p;
   snap();state.vocalNotes=state.vocalNotes.filter(note=>{const pos=effectiveVocalPosition(note);return!(pos.m===insertion.m&&pos.p===insertion.p)});
   const noteValue=String(value),note={id:uid(),m:insertion.m,p:insertion.p,v:noteValue,s:state.vocalString,d:Number(duration),x:0,kind,pitchType:kind==="pitch"?(noteValue==="0"?"open":"stopped"):"none",color:"#222222",anchor,anchorOffset};state.vocalNotes.push(note);selectedScoreTarget={type:"vocal",id:note.id};cursorVisible=true;
   if(anchor){const nextOffset=anchorOffset+Number(duration),columnDuration=shamisenColumnDuration(anchor);if(nextOffset<columnDuration&&anchor.p+nextOffset<measureCapacity()){vocalAnchorSelection=anchor;vocalAnchorOffset=nextOffset;state.m=anchor.m;state.p=anchor.p+nextOffset}else{const next=nextShamisenColumn(anchor.m,anchor.p);vocalAnchorSelection=next;vocalAnchorOffset=0;if(next){state.m=next.m;state.p=next.p}}}
@@ -1034,7 +1036,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.d)state.d=+b.dataset.d;
   else if(b.dataset.pos){
     [state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);
-    vocalAnchorSelection=state.scoreEditLayer==="vocal"&&b.dataset.note&&state.notes.some(note=>!note.rest&&note.m===state.m&&note.p===state.p)?{m:state.m,p:state.p}:null;vocalAnchorOffset=0;
+    vocalAnchorSelection=state.scoreEditLayer==="vocal"&&b.dataset.note&&state.notes.some(note=>note.m===state.m&&note.p===state.p)?{m:state.m,p:state.p}:null;vocalAnchorOffset=0;
     /* 入力位置を選んだ時点で、直前に移動した数字・小節線・書き込みの
        選択状態を完全に終了する。以後の左右キーは入力位置を動かす。 */
     clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;
@@ -1187,7 +1189,7 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
   if(vocalButton&&state.scoreEditLayer==="vocal"){
     const note=state.vocalNotes.find(item=>item.id===vocalButton.dataset.vocalNote);if(!note)return;const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;vocalAnchorSelection=vocalAnchor(note);vocalAnchorOffset=Number(note.anchorOffset)||0;state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true;event.preventDefault();snap();const originManualX=Number(note.x)||0,bounds=vocalMoveBounds(note,originManualX),originVisualX=parseFloat(getComputedStyle(vocalButton).getPropertyValue("--vocal-x"))||0;scoreDrag={type:"vocal",note,startX:event.clientX,originManualX,originVisualX,bounds};vocalButton.classList.add("selected");vocalButton.setPointerCapture(event.pointerId);
   }else if(noteButton&&state.scoreEditLayer==="vocal"){
-    const [m,,p]=noteButton.dataset.note.split(",").map(Number);if(!state.notes.some(item=>!item.rest&&item.m===m&&item.p===p))return;event.preventDefault();event.stopPropagation();state.m=m;state.p=p;vocalAnchorSelection={m,p};vocalAnchorOffset=0;selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;render();return;
+    const [m,,p]=noteButton.dataset.note.split(",").map(Number);if(!state.notes.some(item=>item.m===m&&item.p===p))return;event.preventDefault();event.stopPropagation();state.m=m;state.p=p;vocalAnchorSelection={m,p};vocalAnchorOffset=0;selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;render();return;
   }else if(partButton&&state.scoreEditLayer==="notes"){
     const part=(state.scoreParts||[]).find(entry=>entry.id===partButton.dataset.scorePartId);if(!part)return;selectedScoreTarget={type:"scorePart",id:part.id};selectedItemId=null;event.preventDefault();snap();const measure=partButton.closest(".measure"),rect=measure.getBoundingClientRect(),base=(part.p+.5)*rect.width/measureCapacity();scoreDrag={type:"scorePart",part,startX:event.clientX,originX:part.x||0,min:-base+17,max:rect.width-base-17};partButton.classList.add("selected");partButton.setPointerCapture(event.pointerId);
   }else if(noteButton&&state.scoreEditLayer==="notes"&&rangeNoteKeys.has(noteButton.dataset.note)&&rangeNoteKeys.size){
