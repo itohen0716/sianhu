@@ -22,6 +22,7 @@
     .meta input{border:0;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}.meta #title{justify-self:center;width:8em;max-width:100%;box-sizing:border-box;border-bottom:1px solid #333;padding:4px 1em}
     .staff{margin-top:28px}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:8px}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/32px serif;text-align:right}.lyrics-input{box-sizing:border-box;width:100%;height:32px;padding:3px 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
     .vocal-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:2px;min-height:34px}.vocal-label{padding:2px 7px 0 0;color:#725f4d;font:11px/30px serif;text-align:right}.vocal-score{display:flex;min-width:0}.vocal-measure{position:relative;display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));flex:var(--measure-grow,384) 1 0;min-width:0;height:34px;border-left:1px solid transparent}.vocal-cell{min-width:0;border:0;background:transparent;padding:0}.vocal-cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}.vocal-note{position:relative;z-index:2;grid-row:1;align-self:start;justify-self:center;display:flex;flex-direction:column;align-items:center;min-width:18px;height:34px;border:0;background:transparent;padding:0;color:var(--vocal-color,var(--ink));font-family:Arial,sans-serif;line-height:1;transform:translateX(var(--vocal-x,0px));touch-action:none;cursor:ew-resize}.vocal-note.selected{outline:2px solid #c9a927;border-radius:4px}.vocal-note-value{position:relative;display:block;min-width:15px;height:18px;font-size:14px;font-weight:600;text-align:center}.vocal-note.d2 .vocal-note-value::after,.vocal-note.d1 .vocal-note-value::after{content:"";position:absolute;left:50%;bottom:0;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.d1 .vocal-note-value::before{content:"";position:absolute;left:50%;bottom:3px;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.kind-rest .vocal-note-value{font-size:19px;font-weight:700}.vocal-note.kind-interjection .vocal-note-value{font-family:"Yu Gothic",sans-serif}.vocal-string-mark{display:block;height:10px;font-size:10px;letter-spacing:1px;line-height:9px}.vocal-controls{display:grid;gap:12px}.vocal-controls .nums{grid-template-columns:repeat(4,minmax(0,1fr))}.vocal-extras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.vocal-extras button{min-height:50px;border:1px solid #cbbfb2;border-radius:9px;background:#fff;font-weight:700}.vocal-extras button:active{background:#fff2ac}.vocal-visibility{display:grid;gap:7px;padding:9px;border-radius:9px;background:var(--pale)}.vocal-visibility label{display:flex;align-items:center;gap:8px;font-size:13px}.vocal-visibility input{width:18px;height:18px}
+    .note.vocal-anchor-selected{outline:2px solid #477d91;border-radius:4px;background:rgba(71,125,145,.10)}
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,18px);font:12px/18px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
     .score{display:flex;width:max-content;min-width:100%}.measure{--row-height:18px;--note-size:14px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}
@@ -244,7 +245,7 @@
   </section>
   <section class="panel editor-panel" data-editor-panel="vocal">
     <h2 class="editor-panel-title">唄</h2>
-    <p class="layer-help">譜面下の「唄」の位置を押して、音程・休符・合いの手を入れます。歌詞も同じレイヤーで入力できます。</p>
+    <p class="layer-help">三味線数字を押すと、その真下へ唄を入れられます。三味線数字はこの画面では移動・変更されません。唄欄を押すと任意位置にも入力できます。</p>
     <div class="vocal-controls">
       <div class="vocal-visibility"><label><input id="vocalVisible" type="checkbox">唄の音程・休符・合いの手を表示</label><label><input id="lyricsVisible" type="checkbox">歌詞を表示</label></div>
       <fieldset><legend>1. 糸を選ぶ</legend><div id="vocalStrings" class="seg"></div></fieldset>
@@ -340,7 +341,7 @@ const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
 const defaults={notes:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#f4df59",markerStyleVersion:2,numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
-let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="";
+let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="",vocalAnchorSelection=null;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").replace(/[＊×]/g,"*").trim()}
@@ -373,7 +374,7 @@ function normalizeRowMeasureCounts(){const fallback=clamp(Number(state.measuresP
 function normalizeLyrics(){const source=Array.isArray(state.lyrics)?state.lyrics:[];state.lyrics=Array.from({length:state.rows},(_,row)=>String(source[row]||""));if(typeof state.vocalVisible!=="boolean")state.vocalVisible=Boolean(state.lyricsMode);if(typeof state.lyricsVisible!=="boolean")state.lyricsVisible=Boolean(state.lyricsMode);state.lyricsMode=state.vocalVisible||state.lyricsVisible}
 function normalizeVocalNotes(){
   const total=state.rowMeasureCounts.reduce((sum,count)=>sum+count,0),capacity=measureCapacity();
-  state.vocalNotes=(Array.isArray(state.vocalNotes)?state.vocalNotes:[]).filter(note=>note&&Number.isInteger(Number(note.m))&&Number.isInteger(Number(note.p))&&Number(note.m)>=0&&Number(note.m)<total&&Number(note.p)>=0&&Number(note.p)<capacity).map(note=>{const value=String(note.v??"0"),kind=["pitch","rest","interjection"].includes(note.kind)?note.kind:(value==="・"?"rest":value==="×"?"interjection":"pitch"),color=kind==="pitch"&&/^#[0-9a-f]{6}$/i.test(String(note.color||""))?String(note.color):"#222222";return{id:String(note.id||uid()),m:Number(note.m),p:Number(note.p),v:value,s:[1,2,3].includes(Number(note.s))?Number(note.s):3,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,x:Number(note.x)||0,kind,color}});
+  state.vocalNotes=(Array.isArray(state.vocalNotes)?state.vocalNotes:[]).filter(note=>note&&Number.isInteger(Number(note.m))&&Number.isInteger(Number(note.p))&&Number(note.m)>=0&&Number(note.m)<total&&Number(note.p)>=0&&Number(note.p)<capacity).map(note=>{const value=String(note.v??"0"),kind=["pitch","rest","interjection"].includes(note.kind)?note.kind:(value==="・"?"rest":value==="×"?"interjection":"pitch"),color=kind==="pitch"&&/^#[0-9a-f]{6}$/i.test(String(note.color||""))?String(note.color):"#222222",savedAnchor=note.anchor&&Number.isInteger(Number(note.anchor.m))&&Number.isInteger(Number(note.anchor.p))?{m:Number(note.anchor.m),p:Number(note.anchor.p)}:null,legacyAnchor=!Object.prototype.hasOwnProperty.call(note,"anchor")&&state.notes.some(item=>!item.rest&&Number(item.m)===Number(note.m)&&Number(item.p)===Number(note.p))?{m:Number(note.m),p:Number(note.p)}:null,anchor=savedAnchor&&state.notes.some(item=>!item.rest&&item.m===savedAnchor.m&&item.p===savedAnchor.p)?savedAnchor:legacyAnchor;return{id:String(note.id||uid()),m:Number(note.m),p:Number(note.p),v:value,s:[1,2,3].includes(Number(note.s))?Number(note.s):3,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,x:Number(note.x)||0,kind,color,anchor}});
   state.vocalString=[1,2,3].includes(Number(state.vocalString))?Number(state.vocalString):3;state.vocalDuration=[1,2,4].includes(Number(state.vocalDuration))?Number(state.vocalDuration):4;
 }
 function measuresInRow(row){return state.rowMeasureCounts?.[row]||state.measuresPerRow}
@@ -568,6 +569,12 @@ function columnX(m,p){
   const positioned=columnNotes(m,p).find(note=>Number.isFinite(note.x)&&note.x!==0);
   return positioned?positioned.x:0;
 }
+function vocalAnchor(note){const anchor=note?.anchor;if(!anchor)return null;return state.notes.some(item=>!item.rest&&item.m===Number(anchor.m)&&item.p===Number(anchor.p))?{m:Number(anchor.m),p:Number(anchor.p)}:null}
+function effectiveVocalPosition(note){return vocalAnchor(note)||{m:Number(note.m),p:Number(note.p)}}
+function effectiveVocalX(note){const anchor=vocalAnchor(note);return(Number(note.x)||0)+(anchor?columnX(anchor.m,anchor.p):0)}
+function shamisenColumns(){return[...new Map(state.notes.filter(note=>!note.rest).sort((a,b)=>a.m-b.m||a.p-b.p).map(note=>[`${note.m},${note.p}`,{m:note.m,p:note.p}])).values()]}
+function nextShamisenColumn(m,p){return shamisenColumns().find(item=>item.m>m||(item.m===m&&item.p>p))||null}
+function previousShamisenColumn(m,p){return[...shamisenColumns()].reverse().find(item=>item.m<m||(item.m===m&&item.p<p))||null}
 function noteMoveBounds(m,p,originX=columnX(m,p)){
   const measure=q(`[data-note^="${m},"][data-note$=",${p}"]`)?.closest(".measure");
   const selected=q(`[data-note^="${m},"][data-note$=",${p}"]`);
@@ -650,8 +657,8 @@ function noteHtml(n,m,s){
   const value=n.rest?(rests.find(r=>r.d===n.d)||rests[0]).mark:n.v;
   const color=n.rest?"#222222":(n.color||(n.v==="○"?state.openColor:state.numberColor));
   const x=n.rest?(n.x||0):columnX(m,n.p);
-  const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"";
-  return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}${!n.rest&&n.v==="○"?" open-note":""}${rangeSelected}" style="grid-column:${n.p+1};--note-color:${color};transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b>${n.rest?"":printTechniqueHtml(n)}</button>`;
+  const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"",anchorSelected=state.scoreEditLayer==="vocal"&&vocalAnchorSelection?.m===m&&vocalAnchorSelection?.p===n.p&&!n.rest?" vocal-anchor-selected":"";
+  return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}${!n.rest&&n.v==="○"?" open-note":""}${rangeSelected}${anchorSelected}" style="grid-column:${n.p+1};--note-color:${color};transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b>${n.rest?"":printTechniqueHtml(n)}</button>`;
 }
 function scalePrintNotePositions(){
   qAll(".staff").forEach((staff,row)=>{
@@ -683,12 +690,13 @@ function barlineSvg(kind,edge="middle"){
   return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(6)}${line(12,4)}</svg>`;
 }
 function scorePartsHtml(m){const capacity=measureCapacity();return(state.scoreParts||[]).filter(part=>part.m===m).map(part=>`<button class="score-part${selectedScoreTarget?.type==="scorePart"&&selectedScoreTarget.id===part.id?" selected":""}" style="left:calc(${(part.p+.5)*100/capacity}% + ${part.x||0}px)" data-score-part-id="${part.id}" aria-label="${part.kind==="same2"?"同じ2":"同じ1"}">${samePartSvg(part.kind)}</button>`).join("")}
-function vocalStringMark(stringNumber){return stringNumber===1?"••":stringNumber===2?"•":""}
+function vocalStringMark(stringNumber){return stringNumber===1?"•":stringNumber===2?"••":""}
 function vocalNoteHtml(note){
   const selected=selectedScoreTarget?.type==="vocal"&&selectedScoreTarget.id===note.id?" selected":"";
   const kind=["pitch","rest","interjection"].includes(note.kind)?note.kind:"pitch",mark=kind==="pitch"?vocalStringMark(note.s):"",label=kind==="rest"?"休符":kind==="interjection"?"合いの手":"唄の音程";
   const color=kind==="pitch"?note.color||"#222222":"#222222";
-  return `<button class="vocal-note d${note.d} kind-${kind}${selected}" style="grid-column:${note.p+1};--vocal-x:${Number(note.x)||0}px;--vocal-color:${esc(color)}" data-vocal-note="${esc(note.id)}" aria-label="${label} ${esc(note.v)}"><span class="vocal-note-value">${esc(note.v)}</span><span class="vocal-string-mark">${mark}</span></button>`;
+  const position=effectiveVocalPosition(note),anchored=vocalAnchor(note)?" anchored":"";
+  return `<button class="vocal-note d${note.d} kind-${kind}${selected}${anchored}" style="grid-column:${position.p+1};--vocal-x:${effectiveVocalX(note)}px;--vocal-color:${esc(color)}" data-vocal-note="${esc(note.id)}" aria-label="${label} ${esc(note.v)}"><span class="vocal-note-value">${esc(note.v)}</span><span class="vocal-string-mark">${mark}</span></button>`;
 }
 function vocalMeasureHtml(m){
   const capacity=measureCapacity(),width=measureWidth(m);
@@ -713,7 +721,7 @@ function render(){
   q("#vocalStrings").innerHTML=[3,2,1].map(s=>`<button class="${s===state.vocalString?"on":""}" data-vocal-string="${s}"><b>${["","一","二","三"][s]}の糸</b><small>${s===3?"印なし":vocalStringMark(s)}</small></button>`).join("");
   q("#vocalDurations").innerHTML=[[4,"4分","下線なし"],[2,"8分","下線1本"],[1,"16分","下線2本"]].map(item=>`<button class="${item[0]===state.vocalDuration?"on":""}" data-vocal-duration="${item[0]}"><b>${item[1]}</b><small>${item[2]}</small></button>`).join("");
   q("#vocalNumbers").innerHTML=vocalVals.map(value=>`<button data-vocal-value="${value}">${value}</button>`).join("");
-  q("#vocalStatus").textContent=`${location.row+1}段・${location.local+1}小節・16分位置${state.p+1}/${capacity}${selectedScoreTarget?.type==="vocal"?"（選択中：ドラッグ／矢印で微調整）":""}`;
+  q("#vocalStatus").textContent=`${location.row+1}段・${location.local+1}小節・16分位置${state.p+1}/${capacity}${vocalAnchorSelection?"（三味線数字へ連動）":"（任意位置）"}${selectedScoreTarget?.type==="vocal"?"（選択中：ドラッグ／矢印で微調整）":""}`;
   const printStarts=pageStartRows();
   q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div>`:""}</section>`).join("");
   q(".paper").classList.toggle("lyrics-mode",state.lyricsMode);q("#vocalVisible").checked=state.vocalVisible;q("#lyricsVisible").checked=state.lyricsVisible;
@@ -723,7 +731,7 @@ function render(){
   const currentNote=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);
   q("#selectedNoteColor").value=currentNote&&!currentNote.rest?(currentNote.color||(currentNote.v==="○"?state.openColor:state.numberColor)):"#222222";
   const selectedVocal=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id):null;q("#vocalRed").disabled=selectedVocal?.kind!=="pitch";q("#vocalBlack").disabled=selectedVocal?.kind!=="pitch";
-  q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
+  applyAnnotationRowAnchors();q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
   renderLayers();requestAnimationFrame(applyPreview);
 }
 function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
@@ -778,6 +786,11 @@ function commentLayout(item,sizeScale=1){
   return{size,lines,lineHeight,width,height,top:item.y-size*1.05-5};
 }
 function commentTextSvg(item,layout){return layout.lines.map((line,index)=>`<tspan x="${item.x}" dy="${index?layout.lineHeight:0}">${line?esc(line):"&#160;"}</tspan>`).join("")}
+function annotationCenterY(item){if(item.type==="pen"){const points=item.points||[];return points.length?points.reduce((sum,p)=>sum+Number(p.y||0),0)/points.length:0}if(item.type==="text"||item.type==="symbol")return Number(item.y)||0;return((Number(item.y1)||0)+(Number(item.y2)||0))/2}
+function shiftAnnotationY(item,dy){if(!Number.isFinite(dy)||Math.abs(dy)<.001)return;if(item.type==="pen")item.points=(item.points||[]).map(p=>({...p,y:Number(p.y||0)+dy}));else if(item.type==="text"||item.type==="symbol")item.y=Number(item.y||0)+dy;else{item.y1=Number(item.y1||0)+dy;item.y2=Number(item.y2||0)+dy}}
+function scoreRowTopsInSvg(){const svg=q("#annotations"),rect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal;if(!rect?.height||!view?.height)return[];return[...qAll("#scoreArea .staff .score-wrap")].map((wrap,row)=>({row,y:(wrap.getBoundingClientRect().top-rect.top)*view.height/rect.height}))}
+function ensureAnnotationRowAnchors(){const rows=scoreRowTopsInSvg();if(!rows.length)return;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor)return;if(Number.isInteger(item.layoutRow)&&Number.isFinite(Number(item.layoutOffsetY)))return;const center=annotationCenterY(item),nearest=rows.reduce((best,current)=>Math.abs(current.y-center)<Math.abs(best.y-center)?current:best,rows[0]);item.layoutRow=nearest.row;item.layoutOffsetY=center-nearest.y}))}
+function applyAnnotationRowAnchors(){const rows=scoreRowTopsInSvg();if(!rows.length)return;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor)return;const row=rows.find(entry=>entry.row===Number(item.layoutRow));if(row&&Number.isFinite(Number(item.layoutOffsetY)))shiftAnnotationY(item,row.y+Number(item.layoutOffsetY)-annotationCenterY(item))}))}
 function markerUnderlayHtml(item){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||"#f4df59")}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeTechniqueIds.has(item.id)?" range-selected":"";
@@ -816,6 +829,7 @@ function renderLayers(skipSave=false){
     state.annotationCoordVersion=2;
   }
   [svg,underlay].forEach(element=>{element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);element.setAttribute("preserveAspectRatio","xMinYMin meet")});
+  ensureAnnotationRowAnchors();
   syncLinkedSymbols();
   const layer=activeLayer();
   /* 写譜ページでも書き込みレイヤーを閲覧できるよう、全表示レイヤーを
@@ -891,6 +905,7 @@ function translateItem(item,dx,dy){
       item.offsetYPx=(Number(item.offsetYPx)||0)+dy*pxPerUnit;
     }
   }else{item.x1+=dx;item.y1+=dy;item.x2+=dx;item.y2+=dy}
+  if(!(item.type==="symbol"&&item.anchor)&&Number.isFinite(Number(item.layoutOffsetY)))item.layoutOffsetY=Number(item.layoutOffsetY)+dy;
 }
 function moveDraw(event){
   if(dragging){event.preventDefault();const p=pointFromEvent(event);translateItem(dragging.item,p.x-dragging.last.x,p.y-dragging.last.y);dragging.last=p;renderLayers();return}
@@ -914,7 +929,7 @@ function changeLayout(rows,measures){
   if(discard&&!confirm("減らした範囲に入力済みの音があります。その音を削除して変更しますか？"))return false;
   snap();const keepPosition=m=>{const pos=oldLocation(m);return pos&&pos.row<rows&&pos.local<newCounts[pos.row]?newIndex(pos.row,pos.local):null},removed=state.notes.filter(n=>keepPosition(n.m)===null).map(n=>anchorKey(n.m,n.s,n.p));removeLinkedSymbols(removed);
   state.notes=state.notes.flatMap(note=>{const m=keepPosition(note.m);return m===null?[]:[{...note,m}]});
-  state.vocalNotes=state.vocalNotes.flatMap(note=>{const m=keepPosition(note.m);return m===null?[]:[{...note,m}]});
+  state.vocalNotes=state.vocalNotes.flatMap(note=>{const m=keepPosition(note.m);if(m===null)return[];const anchor=note.anchor?(()=>{const mapped=keepPosition(Number(note.anchor.m));return mapped===null?null:{m:mapped,p:Number(note.anchor.p)}})():null;return[{...note,m,anchor}]});
   state.scoreParts=(state.scoreParts||[]).flatMap(part=>{const m=keepPosition(part.m);return m===null?[]:[{...part,m}]});
   const offsets=[];(state.measureOffsets||[]).forEach((offset,m)=>{const next=keepPosition(m);if(next!==null)offsets[next]=offset});state.measureOffsets=offsets;
   state.barlineKinds=Object.fromEntries(Object.entries(state.barlineKinds||{}).filter(([key])=>{const [row,boundary]=key.split(":").map(Number);return row<rows&&boundary<=newCounts[row]}));
@@ -948,9 +963,11 @@ function insertSpecified(stringNumber,noteValue,displayValue){
 function insertVocal(value,kind="pitch",duration=state.vocalDuration){
   const allowed=kind==="pitch"?vocalVals.includes(String(value)):kind==="rest"?String(value)==="・":kind==="interjection"?String(value)==="×":false;
   if(!allowed||![1,2,4].includes(Number(duration)))return false;
-  snap();state.vocalNotes=state.vocalNotes.filter(note=>!(note.m===state.m&&note.p===state.p));
-  const note={id:uid(),m:state.m,p:state.p,v:String(value),s:state.vocalString,d:Number(duration),x:0,kind,color:"#222222"};state.vocalNotes.push(note);selectedScoreTarget={type:"vocal",id:note.id};cursorVisible=true;
-  const step=Number(duration);if(state.p+step<measureCapacity())state.p+=step;else if(state.m<totalMeasures()-1){state.m++;state.p=0}
+  const anchor=vocalAnchorSelection&&state.notes.some(item=>!item.rest&&item.m===vocalAnchorSelection.m&&item.p===vocalAnchorSelection.p)?{...vocalAnchorSelection}:null,insertion=anchor||{m:state.m,p:state.p};state.m=insertion.m;state.p=insertion.p;
+  snap();state.vocalNotes=state.vocalNotes.filter(note=>{const pos=effectiveVocalPosition(note);return!(pos.m===insertion.m&&pos.p===insertion.p)});
+  const note={id:uid(),m:insertion.m,p:insertion.p,v:String(value),s:state.vocalString,d:Number(duration),x:0,kind,color:"#222222",anchor};state.vocalNotes.push(note);selectedScoreTarget={type:"vocal",id:note.id};cursorVisible=true;
+  if(anchor){const next=nextShamisenColumn(insertion.m,insertion.p);vocalAnchorSelection=next;if(next){state.m=next.m;state.p=next.p}}
+  else{const step=Number(duration);if(state.p+step<measureCapacity())state.p+=step;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
   return true;
 }
 function vocalMoveBounds(note,origin=Number(note.x)||0){
@@ -959,7 +976,7 @@ function vocalMoveBounds(note,origin=Number(note.x)||0){
 }
 function nudgeSelectedVocal(amount){
   const note=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(item=>item.id===selectedScoreTarget.id):null;if(!note)return false;
-  const origin=Number(note.x)||0,bounds=vocalMoveBounds(note,origin),next=clamp(origin+amount,bounds.min,bounds.max);if(next===origin)return false;note.x=next;state.m=note.m;state.p=note.p;cursorVisible=true;return true;
+  const origin=effectiveVocalX(note),bounds=vocalMoveBounds(note,origin),next=clamp(origin+amount,bounds.min,bounds.max);if(next===origin)return false;note.x=(Number(note.x)||0)+(next-origin);const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;cursorVisible=true;return true;
 }
 function openNew(){
   q("#initialRows").value=state.rows;q("#initialMeasures").value=state.measuresPerRow;
@@ -985,10 +1002,10 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.vocalRest){insertVocal("・","rest",Number(b.dataset.vocalRest))}
   else if(b.dataset.vocalInterjection){insertVocal("×","interjection",state.vocalDuration)}
   else if(b.dataset.vocalCell){
-    [state.m,state.p]=b.dataset.vocalCell.split(",").map(Number);selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;
+    [state.m,state.p]=b.dataset.vocalCell.split(",").map(Number);vocalAnchorSelection=null;selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;
   }
   else if(b.dataset.vocalNote){
-    const note=state.vocalNotes.find(item=>item.id===b.dataset.vocalNote);if(note){state.m=note.m;state.p=note.p;state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true}
+    const note=state.vocalNotes.find(item=>item.id===b.dataset.vocalNote);if(note){const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;vocalAnchorSelection=vocalAnchor(note);state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true}
   }
   else if(b.dataset.s){
     const nextString=+b.dataset.s;
@@ -1000,6 +1017,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.d)state.d=+b.dataset.d;
   else if(b.dataset.pos){
     [state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);
+    vocalAnchorSelection=state.scoreEditLayer==="vocal"&&b.dataset.note&&state.notes.some(note=>!note.rest&&note.m===state.m&&note.p===state.p)?{m:state.m,p:state.p}:null;
     /* 入力位置を選んだ時点で、直前に移動した数字・小節線・書き込みの
        選択状態を完全に終了する。以後の左右キーは入力位置を動かす。 */
     clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;
@@ -1019,10 +1037,12 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   }
   else if(b.id==="vocalPrev"){
     if(selectedScoreTarget?.type==="vocal"){snap();if(!nudgeSelectedVocal(-4))past.pop()}
+    else if(vocalAnchorSelection){const previous=previousShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(previous){vocalAnchorSelection=previous;state.m=previous.m;state.p=previous.p}}
     else{cursorVisible=true;if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacity()-1}}
   }
   else if(b.id==="vocalNext"){
     if(selectedScoreTarget?.type==="vocal"){snap();if(!nudgeSelectedVocal(4))past.pop()}
+    else if(vocalAnchorSelection){const next=nextShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(next){vocalAnchorSelection=next;state.m=next.m;state.p=next.p}}
     else{cursorVisible=true;if(state.p<measureCapacity()-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
   }
   else if(b.id==="vocalRed"||b.id==="vocalBlack"){
@@ -1049,7 +1069,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
       state.notes=[];state.vocalNotes=[];state.scoreParts=[];state.barlineKinds={};
       state.layers=(state.layers||[]).map(layer=>({...layer,items:[]}));
       state.m=0;state.s=1;state.p=0;
-      selectedItemId=null;selectedScoreTarget=null;lastInserted=null;drawing=false;cursorVisible=false;
+      selectedItemId=null;selectedScoreTarget=null;lastInserted=null;vocalAnchorSelection=null;drawing=false;cursorVisible=false;
       q("#printRootV2")?.replaceChildren();
       save(true);
     }
@@ -1068,7 +1088,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="deleteLayer"){alert("「奏法」レイヤーは標準レイヤーのため削除できません。");return}
   else if(b.id==="toggleDrawing"){drawing=!drawing;state.scoreEditLayer=drawing?"technique":"notes";selectedScoreTarget=null;renderLayers();return}
   else if(b.dataset.scoreLayer){
-    state.scoreEditLayer=b.dataset.scoreLayer;if(state.scoreEditLayer==="vocal"&&!state.vocalVisible&&!state.lyricsVisible)state.vocalVisible=true;drawing=state.scoreEditLayer==="technique";selectedScoreTarget=null;selectedItemId=null;cursorVisible=state.scoreEditLayer==="vocal";render();return;
+    state.scoreEditLayer=b.dataset.scoreLayer;if(state.scoreEditLayer==="vocal"&&!state.vocalVisible&&!state.lyricsVisible)state.vocalVisible=true;if(state.scoreEditLayer!=="vocal")vocalAnchorSelection=null;keyboardBuffer="";drawing=state.scoreEditLayer==="technique";selectedScoreTarget=null;selectedItemId=null;cursorVisible=state.scoreEditLayer==="vocal";render();return;
   }
   else if(b.dataset.layer){state.activeLayerId=b.dataset.layer;selectedItemId=null;renderLayers();return}
   else if(b.dataset.tool){state.drawTool=b.dataset.tool;renderLayers();return}
@@ -1124,7 +1144,7 @@ function finishRangeSelection(event){
   const count=rangeNoteKeys.size+rangeTechniqueIds.size;q("#keyboardStatus").textContent=count?`${count}件を選択中：ドラッグで移動、【Delete】で削除できます。`:"範囲内に選択できる音・休符・奏法がありません。";
 }
 q(".paper").addEventListener("pointerdown",event=>{
-  if(IS_ANNOTATION_PAGE||!event.shiftKey||(!q("#scoreArea").contains(event.target)&&!q("#annotations").contains(event.target)))return;
+  if(IS_ANNOTATION_PAGE||state.scoreEditLayer==="vocal"||!event.shiftKey||(!q("#scoreArea").contains(event.target)&&!q("#annotations").contains(event.target)))return;
   event.preventDefault();event.stopPropagation();clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;
   rangeDrag={startX:event.clientX,startY:event.clientY,pointerId:event.pointerId};rangeBox=document.createElement("div");rangeBox.className="range-selection-box";document.body.appendChild(rangeBox);updateRangeBox(event);
 },true);
@@ -1148,7 +1168,9 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
   if(drawing)return;
   const vocalButton=event.target.closest("[data-vocal-note]"),partButton=event.target.closest("[data-score-part-id]"),noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline-key]");
   if(vocalButton&&state.scoreEditLayer==="vocal"){
-    const note=state.vocalNotes.find(item=>item.id===vocalButton.dataset.vocalNote);if(!note)return;state.m=note.m;state.p=note.p;state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true;event.preventDefault();snap();const originX=Number(note.x)||0,bounds=vocalMoveBounds(note,originX);scoreDrag={type:"vocal",note,startX:event.clientX,originX,bounds};vocalButton.classList.add("selected");vocalButton.setPointerCapture(event.pointerId);
+    const note=state.vocalNotes.find(item=>item.id===vocalButton.dataset.vocalNote);if(!note)return;const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;vocalAnchorSelection=vocalAnchor(note);state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true;event.preventDefault();snap();const originX=effectiveVocalX(note),bounds=vocalMoveBounds(note,originX);scoreDrag={type:"vocal",note,startX:event.clientX,originX,originManualX:Number(note.x)||0,bounds};vocalButton.classList.add("selected");vocalButton.setPointerCapture(event.pointerId);
+  }else if(noteButton&&state.scoreEditLayer==="vocal"){
+    const [m,,p]=noteButton.dataset.note.split(",").map(Number);if(!state.notes.some(item=>!item.rest&&item.m===m&&item.p===p))return;event.preventDefault();event.stopPropagation();state.m=m;state.p=p;vocalAnchorSelection={m,p};selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;render();return;
   }else if(partButton&&state.scoreEditLayer==="notes"){
     const part=(state.scoreParts||[]).find(entry=>entry.id===partButton.dataset.scorePartId);if(!part)return;selectedScoreTarget={type:"scorePart",id:part.id};selectedItemId=null;event.preventDefault();snap();const measure=partButton.closest(".measure"),rect=measure.getBoundingClientRect(),base=(part.p+.5)*rect.width/measureCapacity();scoreDrag={type:"scorePart",part,startX:event.clientX,originX:part.x||0,min:-base+17,max:rect.width-base-17};partButton.classList.add("selected");partButton.setPointerCapture(event.pointerId);
   }else if(noteButton&&state.scoreEditLayer==="notes"&&rangeNoteKeys.has(noteButton.dataset.note)&&rangeNoteKeys.size){
@@ -1160,8 +1182,8 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
     const m=+barline.dataset.boundary,key=barline.dataset.barlineKey,isRowStart=measureLocation(m).local===0&&!barline.dataset.end;selectedScoreTarget={type:"barline",m,key};selectedItemId=null;event.preventDefault();barline.classList.add("selected");if(isRowStart||barline.dataset.end)return;snap();scoreDrag={type:"barline",m,startX:event.clientX,left:m-1,right:m,leftOffset:state.measureOffsets?.[m-1]||0,rightOffset:state.measureOffsets?.[m]||0,leftWidth:measureWidth(m-1),rightWidth:measureWidth(m)};barline.setPointerCapture(event.pointerId);
   }
 });
-q("#vocalVisible").addEventListener("change",event=>{snap();state.vocalVisible=event.target.checked;render()});
-q("#lyricsVisible").addEventListener("change",event=>{snap();state.lyricsVisible=event.target.checked;render()});
+q("#vocalVisible").addEventListener("change",event=>{ensureAnnotationRowAnchors();snap();state.vocalVisible=event.target.checked;render()});
+q("#lyricsVisible").addEventListener("change",event=>{ensureAnnotationRowAnchors();snap();state.lyricsVisible=event.target.checked;render()});
 q("#scoreArea").addEventListener("input",event=>{const input=event.target.closest("[data-lyrics-row]");if(!input)return;const row=Number(input.dataset.lyricsRow);if(Number.isInteger(row)&&row>=0&&row<state.rows){state.lyrics[row]=input.value;save()}});
 q("#closePlayer").addEventListener("click",closeScorePlayer);q("#playerModal").addEventListener("click",event=>{if(event.target===q("#playerModal"))closeScorePlayer()});document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!q("#playerModal").hidden)closeScorePlayer()});
 q("#scoreArea").addEventListener("pointermove",event=>{
@@ -1172,7 +1194,7 @@ q("#scoreArea").addEventListener("pointermove",event=>{
     qAll(`[data-note^="${scoreDrag.m},"][data-note$=",${scoreDrag.p}"]`).forEach(element=>element.style.setProperty("transform",`translateX(${x}px)`));
     renderLayers(true);
   }else if(scoreDrag.type==="vocal"){
-    const x=clamp(scoreDrag.originX+dx,scoreDrag.bounds.min,scoreDrag.bounds.max);scoreDrag.note.x=x;const button=q(`[data-vocal-note="${scoreDrag.note.id}"]`);if(button)button.style.setProperty("--vocal-x",`${x}px`);
+    const x=clamp(scoreDrag.originX+dx,scoreDrag.bounds.min,scoreDrag.bounds.max);scoreDrag.note.x=scoreDrag.originManualX+(x-scoreDrag.originX);const button=q(`[data-vocal-note="${scoreDrag.note.id}"]`);if(button)button.style.setProperty("--vocal-x",`${x}px`);
   }else if(scoreDrag.type==="scorePart"){
     const x=clamp(scoreDrag.originX+dx,scoreDrag.min,scoreDrag.max);scoreDrag.part.x=x;const button=q(`[data-score-part-id="${scoreDrag.part.id}"]`);if(button)button.style.left=`calc(${(scoreDrag.part.p+.5)*100/measureCapacity()}% + ${x}px)`;
   }else{
@@ -1224,7 +1246,7 @@ document.addEventListener("keydown",event=>{
     event.preventDefault();q("#deleteItem").click();return;
   }
   const key=toAscii(event.key);
-  if(/^[0-9*]$/.test(key)){event.preventDefault();keyboardBuffer+=key;render();return}
+  if(state.scoreEditLayer!=="vocal"&&/^[0-9*]$/.test(key)){event.preventDefault();keyboardBuffer+=key;render();return}
   if(event.key==="Backspace"&&keyboardBuffer){event.preventDefault();keyboardBuffer=keyboardBuffer.slice(0,-1);render();return}
   if(event.key==="Escape"&&keyboardBuffer){event.preventDefault();keyboardBuffer="";render();return}
   if(event.key==="Enter"&&keyboardBuffer){
@@ -1234,7 +1256,7 @@ document.addEventListener("keydown",event=>{
   }
   if(event.key==="Enter"&&!keyboardBuffer&&lastInserted){event.preventDefault();lastInserted=null;q("#keyboardStatus").textContent="塊を終了しました。次の音を入力できます。";return}
   if((event.key==="ArrowLeft"||event.key==="ArrowRight")&&!keyboardBuffer){
-    event.preventDefault();snap();
+    event.preventDefault();if(state.scoreEditLayer==="vocal"&&vocalAnchorSelection&&selectedScoreTarget?.type!=="vocal"){const next=event.key==="ArrowLeft"?previousShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p):nextShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(next){vocalAnchorSelection=next;state.m=next.m;state.p=next.p}render();return}snap();
     if(selectedScoreTarget?.type==="vocal"){if(!nudgeSelectedVocal(event.key==="ArrowLeft"?-4:4))past.pop();render();return}
     if(!nudgeCurrentSelection(event.key==="ArrowLeft"?-4:4)){past.pop();q(event.key==="ArrowLeft"?"#prev":"#next").click();return}render()
   }
