@@ -22,7 +22,7 @@
     .meta input{border:0;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}.meta #title{justify-self:center;width:8em;max-width:100%;box-sizing:border-box;border-bottom:1px solid #333;padding:4px 1em}
     .staff{margin-top:28px}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:8px}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/32px serif;text-align:right}.lyrics-input{box-sizing:border-box;width:100%;height:32px;padding:3px 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
     .vocal-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:2px;min-height:34px}.vocal-label{padding:2px 7px 0 0;color:#725f4d;font:11px/30px serif;text-align:right}.vocal-score{display:flex;min-width:0}.vocal-measure{position:relative;display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));flex:var(--measure-grow,384) 1 0;min-width:0;height:34px;border-left:1px solid transparent}.vocal-cell{min-width:0;border:0;background:transparent;padding:0}.vocal-cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}.vocal-note{position:relative;z-index:2;grid-row:1;align-self:start;justify-self:center;display:flex;flex-direction:column;align-items:center;min-width:18px;height:34px;border:0;background:transparent;padding:0;color:var(--vocal-color,var(--ink));font-family:Arial,sans-serif;line-height:1;transform:translateX(var(--vocal-x,0px));touch-action:none;cursor:ew-resize}.vocal-note.selected{outline:2px solid #c9a927;border-radius:4px}.vocal-note-value{position:relative;display:block;min-width:15px;height:18px;font-size:14px;font-weight:600;text-align:center}.vocal-note.d2 .vocal-note-value::after,.vocal-note.d1 .vocal-note-value::after{content:"";position:absolute;left:50%;bottom:0;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.d1 .vocal-note-value::before{content:"";position:absolute;left:50%;bottom:3px;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.kind-rest .vocal-note-value{font-size:19px;font-weight:700}.vocal-note.kind-interjection .vocal-note-value{font-family:"Yu Gothic",sans-serif}.vocal-string-mark{display:block;height:10px;font-size:10px;letter-spacing:1px;line-height:9px}.vocal-controls{display:grid;gap:12px}.vocal-controls .nums{grid-template-columns:repeat(4,minmax(0,1fr))}.vocal-extras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.vocal-extras button{min-height:50px;border:1px solid #cbbfb2;border-radius:9px;background:#fff;font-weight:700}.vocal-extras button:active{background:#fff2ac}.vocal-visibility{display:grid;gap:7px;padding:9px;border-radius:9px;background:var(--pale)}.vocal-visibility label{display:flex;align-items:center;gap:8px;font-size:13px}.vocal-visibility input{width:18px;height:18px}
-    .note.vocal-anchor-selected{outline:2px solid #477d91;border-radius:4px;background:rgba(71,125,145,.10)}
+    .note.vocal-anchor-selected{outline:2px solid #477d91;border-radius:4px;background:rgba(71,125,145,.10)}.vocal-link-guide{position:absolute;z-index:7;height:2px;pointer-events:none;transform-origin:left center;background:repeating-linear-gradient(to right,#477d91 0 4px,transparent 4px 7px);opacity:.55}
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.labels{display:grid;grid-template-rows:repeat(3,18px);font:12px/18px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
     .score{display:flex;width:max-content;min-width:100%}.measure{--row-height:18px;--note-size:14px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}
@@ -341,7 +341,7 @@ const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
 const defaults={notes:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#f4df59",markerStyleVersion:2,numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
 let state={...defaults},past=[],future=[],hasSaved=false;
-let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="",vocalAnchorSelection=null;
+let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="",vocalAnchorSelection=null,vocalAnchorOffset=0;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").replace(/[＊×]/g,"*").trim()}
@@ -374,7 +374,7 @@ function normalizeRowMeasureCounts(){const fallback=clamp(Number(state.measuresP
 function normalizeLyrics(){const source=Array.isArray(state.lyrics)?state.lyrics:[];state.lyrics=Array.from({length:state.rows},(_,row)=>String(source[row]||""));if(typeof state.vocalVisible!=="boolean")state.vocalVisible=Boolean(state.lyricsMode);if(typeof state.lyricsVisible!=="boolean")state.lyricsVisible=Boolean(state.lyricsMode);state.lyricsMode=state.vocalVisible||state.lyricsVisible}
 function normalizeVocalNotes(){
   const total=state.rowMeasureCounts.reduce((sum,count)=>sum+count,0),capacity=measureCapacity();
-  state.vocalNotes=(Array.isArray(state.vocalNotes)?state.vocalNotes:[]).filter(note=>note&&Number.isInteger(Number(note.m))&&Number.isInteger(Number(note.p))&&Number(note.m)>=0&&Number(note.m)<total&&Number(note.p)>=0&&Number(note.p)<capacity).map(note=>{const value=String(note.v??"0"),kind=["pitch","rest","interjection"].includes(note.kind)?note.kind:(value==="・"?"rest":value==="×"?"interjection":"pitch"),color=kind==="pitch"&&/^#[0-9a-f]{6}$/i.test(String(note.color||""))?String(note.color):"#222222",savedAnchor=note.anchor&&Number.isInteger(Number(note.anchor.m))&&Number.isInteger(Number(note.anchor.p))?{m:Number(note.anchor.m),p:Number(note.anchor.p)}:null,legacyAnchor=!Object.prototype.hasOwnProperty.call(note,"anchor")&&state.notes.some(item=>!item.rest&&Number(item.m)===Number(note.m)&&Number(item.p)===Number(note.p))?{m:Number(note.m),p:Number(note.p)}:null,anchor=savedAnchor&&state.notes.some(item=>!item.rest&&item.m===savedAnchor.m&&item.p===savedAnchor.p)?savedAnchor:legacyAnchor;return{id:String(note.id||uid()),m:Number(note.m),p:Number(note.p),v:value,s:[1,2,3].includes(Number(note.s))?Number(note.s):3,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,x:Number(note.x)||0,kind,color,anchor}});
+  state.vocalNotes=(Array.isArray(state.vocalNotes)?state.vocalNotes:[]).filter(note=>note&&Number.isInteger(Number(note.m))&&Number.isInteger(Number(note.p))&&Number(note.m)>=0&&Number(note.m)<total&&Number(note.p)>=0&&Number(note.p)<capacity).map(note=>{const value=String(note.v??"0"),kind=["pitch","rest","interjection"].includes(note.kind)?note.kind:(value==="・"?"rest":value==="×"?"interjection":"pitch"),color=kind==="pitch"&&/^#[0-9a-f]{6}$/i.test(String(note.color||""))?String(note.color):"#222222",savedAnchor=note.anchor&&Number.isInteger(Number(note.anchor.m))&&Number.isInteger(Number(note.anchor.p))?{m:Number(note.anchor.m),p:Number(note.anchor.p)}:null,legacyAnchor=!Object.prototype.hasOwnProperty.call(note,"anchor")&&state.notes.some(item=>!item.rest&&Number(item.m)===Number(note.m)&&Number(item.p)===Number(note.p))?{m:Number(note.m),p:Number(note.p)}:null,anchor=savedAnchor&&state.notes.some(item=>!item.rest&&item.m===savedAnchor.m&&item.p===savedAnchor.p)?savedAnchor:legacyAnchor,anchorOffset=anchor?Math.max(0,Number.isInteger(Number(note.anchorOffset))?Number(note.anchorOffset):Number(note.p)-anchor.p):0;return{id:String(note.id||uid()),m:Number(note.m),p:Number(note.p),v:value,s:[1,2,3].includes(Number(note.s))?Number(note.s):3,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,x:Number(note.x)||0,kind,color,anchor,anchorOffset}});
   state.vocalString=[1,2,3].includes(Number(state.vocalString))?Number(state.vocalString):3;state.vocalDuration=[1,2,4].includes(Number(state.vocalDuration))?Number(state.vocalDuration):4;
 }
 function measuresInRow(row){return state.rowMeasureCounts?.[row]||state.measuresPerRow}
@@ -570,8 +570,25 @@ function columnX(m,p){
   return positioned?positioned.x:0;
 }
 function vocalAnchor(note){const anchor=note?.anchor;if(!anchor)return null;return state.notes.some(item=>!item.rest&&item.m===Number(anchor.m)&&item.p===Number(anchor.p))?{m:Number(anchor.m),p:Number(anchor.p)}:null}
-function effectiveVocalPosition(note){return vocalAnchor(note)||{m:Number(note.m),p:Number(note.p)}}
+function effectiveVocalPosition(note){const anchor=vocalAnchor(note);return anchor?{m:anchor.m,p:anchor.p+(Number(note.anchorOffset)||0)}:{m:Number(note.m),p:Number(note.p)}}
 function effectiveVocalX(note){const anchor=vocalAnchor(note);return(Number(note.x)||0)+(anchor?columnX(anchor.m,anchor.p):0)}
+function selectedVocalNote(){return selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id)||null:null}
+function activeVocalAnchor(){return vocalAnchor(selectedVocalNote())||vocalAnchorSelection}
+function vocalOffsetLabel(offset){offset=Number(offset)||0;return offset===0?"":offset===1?"・16分後":offset===2?"・8分後":offset===4?"・4分後":`・16分位置+${offset}`}
+function vocalAnchorLabel(anchor){if(!anchor)return"任意位置・連動なし";const values=[...new Set(state.notes.filter(note=>!note.rest&&note.m===anchor.m&&note.p===anchor.p).map(note=>String(note.v||"")))],selected=selectedVocalNote(),offset=selected&&vocalAnchor(selected)?selected.anchorOffset:vocalAnchorOffset;return values.length?`三味線：${values.join("・")}に連動${vocalOffsetLabel(offset)}`:"任意位置・連動なし"}
+function anchoredVocalScreenOffset(note){
+  const anchor=vocalAnchor(note),button=q(`[data-vocal-note="${note.id}"]`);if(!anchor||!button)return null;
+  const measure=button.closest(".vocal-measure"),targets=qAll(`[data-note^="${anchor.m},"][data-note$=",${anchor.p}"]`);if(!measure||!targets.length)return null;
+  const targetRects=[...targets].map(element=>(element.querySelector("b")||element).getBoundingClientRect()),measureRect=measure.getBoundingClientRect(),targetX=targetRects.reduce((sum,rect)=>sum+rect.left+rect.width/2,0)/targetRects.length+(Number(note.anchorOffset)||0)*measureRect.width/measureCapacity(),position=effectiveVocalPosition(note),baseX=measureRect.left+(position.p+.5)*measureRect.width/measureCapacity();return targetX-baseX+(Number(note.x)||0);
+}
+function syncAnchoredVocalPositions(){
+  state.vocalNotes.forEach(note=>{const offset=anchoredVocalScreenOffset(note),button=q(`[data-vocal-note="${note.id}"]`);if(button&&Number.isFinite(offset))button.style.setProperty("--vocal-x",`${offset}px`)});
+  q(".vocal-link-guide")?.remove();const note=selectedVocalNote(),anchor=vocalAnchor(note);if(!note||!anchor)return;
+  const vocal=q(`[data-vocal-note="${note.id}"]`),targets=qAll(`[data-note^="${anchor.m},"][data-note$=",${anchor.p}"]`),paper=q(".paper");if(!vocal||!targets.length||!paper)return;
+  const vr=vocal.getBoundingClientRect(),rects=[...targets].map(target=>(target.querySelector("b")||target).getBoundingClientRect()),pr=paper.getBoundingClientRect(),measure=vocal.closest(".vocal-measure")?.getBoundingClientRect(),x1=rects.reduce((sum,rect)=>sum+rect.left+rect.width/2,0)/rects.length+(Number(note.anchorOffset)||0)*(measure?.width||0)/measureCapacity()-pr.left,y1=Math.max(...rects.map(rect=>rect.bottom))-pr.top,x2=vr.left+vr.width/2-pr.left,y2=vr.top-pr.top,distance=Math.hypot(x2-x1,y2-y1);if(!distance)return;
+  const guide=document.createElement("span");guide.className="vocal-link-guide";guide.style.left=`${x1}px`;guide.style.top=`${y1}px`;guide.style.width=`${distance}px`;guide.style.transform=`rotate(${Math.atan2(y2-y1,x2-x1)}rad)`;paper.appendChild(guide);
+}
+function shamisenColumnDuration(anchor){const durations=columnNotes(anchor.m,anchor.p).map(note=>Number(note.d)).filter(value=>[1,2,4].includes(value));return durations.length?Math.min(...durations):1}
 function shamisenColumns(){return[...new Map(state.notes.filter(note=>!note.rest).sort((a,b)=>a.m-b.m||a.p-b.p).map(note=>[`${note.m},${note.p}`,{m:note.m,p:note.p}])).values()]}
 function nextShamisenColumn(m,p){return shamisenColumns().find(item=>item.m>m||(item.m===m&&item.p>p))||null}
 function previousShamisenColumn(m,p){return[...shamisenColumns()].reverse().find(item=>item.m<m||(item.m===m&&item.p<p))||null}
@@ -657,7 +674,7 @@ function noteHtml(n,m,s){
   const value=n.rest?(rests.find(r=>r.d===n.d)||rests[0]).mark:n.v;
   const color=n.rest?"#222222":(n.color||(n.v==="○"?state.openColor:state.numberColor));
   const x=n.rest?(n.x||0):columnX(m,n.p);
-  const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"",anchorSelected=state.scoreEditLayer==="vocal"&&vocalAnchorSelection?.m===m&&vocalAnchorSelection?.p===n.p&&!n.rest?" vocal-anchor-selected":"";
+  const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"",currentAnchor=activeVocalAnchor(),anchorSelected=state.scoreEditLayer==="vocal"&&currentAnchor?.m===m&&currentAnchor?.p===n.p&&!n.rest?" vocal-anchor-selected":"";
   return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}${!n.rest&&n.v==="○"?" open-note":""}${rangeSelected}${anchorSelected}" style="grid-column:${n.p+1};--note-color:${color};transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b>${n.rest?"":printTechniqueHtml(n)}</button>`;
 }
 function scalePrintNotePositions(){
@@ -721,7 +738,7 @@ function render(){
   q("#vocalStrings").innerHTML=[3,2,1].map(s=>`<button class="${s===state.vocalString?"on":""}" data-vocal-string="${s}"><b>${["","一","二","三"][s]}の糸</b><small>${s===3?"印なし":vocalStringMark(s)}</small></button>`).join("");
   q("#vocalDurations").innerHTML=[[4,"4分","下線なし"],[2,"8分","下線1本"],[1,"16分","下線2本"]].map(item=>`<button class="${item[0]===state.vocalDuration?"on":""}" data-vocal-duration="${item[0]}"><b>${item[1]}</b><small>${item[2]}</small></button>`).join("");
   q("#vocalNumbers").innerHTML=vocalVals.map(value=>`<button data-vocal-value="${value}">${value}</button>`).join("");
-  q("#vocalStatus").textContent=`${location.row+1}段・${location.local+1}小節・16分位置${state.p+1}/${capacity}${vocalAnchorSelection?"（三味線数字へ連動）":"（任意位置）"}${selectedScoreTarget?.type==="vocal"?"（選択中：ドラッグ／矢印で微調整）":""}`;
+  q("#vocalStatus").textContent=`${location.row+1}段・${location.local+1}小節・16分位置${state.p+1}/${capacity}（${vocalAnchorLabel(activeVocalAnchor())}）${selectedScoreTarget?.type==="vocal"?"（選択中：ドラッグ／矢印で微調整）":""}`;
   const printStarts=pageStartRows();
   q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div>`:""}</section>`).join("");
   q(".paper").classList.toggle("lyrics-mode",state.lyricsMode);q("#vocalVisible").checked=state.vocalVisible;q("#lyricsVisible").checked=state.lyricsVisible;
@@ -732,7 +749,7 @@ function render(){
   q("#selectedNoteColor").value=currentNote&&!currentNote.rest?(currentNote.color||(currentNote.v==="○"?state.openColor:state.numberColor)):"#222222";
   const selectedVocal=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id):null;q("#vocalRed").disabled=selectedVocal?.kind!=="pitch";q("#vocalBlack").disabled=selectedVocal?.kind!=="pitch";
   applyAnnotationRowAnchors();q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
-  renderLayers();requestAnimationFrame(applyPreview);
+  renderLayers();requestAnimationFrame(()=>{applyPreview();syncAnchoredVocalPositions()});
 }
 function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
 function selectedItem(){return activeLayer()?.items.find(item=>item.id===selectedItemId)||null}
@@ -963,10 +980,10 @@ function insertSpecified(stringNumber,noteValue,displayValue){
 function insertVocal(value,kind="pitch",duration=state.vocalDuration){
   const allowed=kind==="pitch"?vocalVals.includes(String(value)):kind==="rest"?String(value)==="・":kind==="interjection"?String(value)==="×":false;
   if(!allowed||![1,2,4].includes(Number(duration)))return false;
-  const anchor=vocalAnchorSelection&&state.notes.some(item=>!item.rest&&item.m===vocalAnchorSelection.m&&item.p===vocalAnchorSelection.p)?{...vocalAnchorSelection}:null,insertion=anchor||{m:state.m,p:state.p};state.m=insertion.m;state.p=insertion.p;
+  const anchor=vocalAnchorSelection&&state.notes.some(item=>!item.rest&&item.m===vocalAnchorSelection.m&&item.p===vocalAnchorSelection.p)?{...vocalAnchorSelection}:null,anchorOffset=anchor?Math.max(0,Number(vocalAnchorOffset)||0):0,insertion=anchor?{m:anchor.m,p:anchor.p+anchorOffset}:{m:state.m,p:state.p};state.m=insertion.m;state.p=insertion.p;
   snap();state.vocalNotes=state.vocalNotes.filter(note=>{const pos=effectiveVocalPosition(note);return!(pos.m===insertion.m&&pos.p===insertion.p)});
-  const note={id:uid(),m:insertion.m,p:insertion.p,v:String(value),s:state.vocalString,d:Number(duration),x:0,kind,color:"#222222",anchor};state.vocalNotes.push(note);selectedScoreTarget={type:"vocal",id:note.id};cursorVisible=true;
-  if(anchor){const next=nextShamisenColumn(insertion.m,insertion.p);vocalAnchorSelection=next;if(next){state.m=next.m;state.p=next.p}}
+  const note={id:uid(),m:insertion.m,p:insertion.p,v:String(value),s:state.vocalString,d:Number(duration),x:0,kind,color:"#222222",anchor,anchorOffset};state.vocalNotes.push(note);selectedScoreTarget={type:"vocal",id:note.id};cursorVisible=true;
+  if(anchor){const nextOffset=anchorOffset+Number(duration),columnDuration=shamisenColumnDuration(anchor);if(nextOffset<columnDuration&&anchor.p+nextOffset<measureCapacity()){vocalAnchorSelection=anchor;vocalAnchorOffset=nextOffset;state.m=anchor.m;state.p=anchor.p+nextOffset}else{const next=nextShamisenColumn(anchor.m,anchor.p);vocalAnchorSelection=next;vocalAnchorOffset=0;if(next){state.m=next.m;state.p=next.p}}}
   else{const step=Number(duration);if(state.p+step<measureCapacity())state.p+=step;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
   return true;
 }
@@ -976,7 +993,7 @@ function vocalMoveBounds(note,origin=Number(note.x)||0){
 }
 function nudgeSelectedVocal(amount){
   const note=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(item=>item.id===selectedScoreTarget.id):null;if(!note)return false;
-  const origin=effectiveVocalX(note),bounds=vocalMoveBounds(note,origin),next=clamp(origin+amount,bounds.min,bounds.max);if(next===origin)return false;note.x=(Number(note.x)||0)+(next-origin);const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;cursorVisible=true;return true;
+  const origin=Number(note.x)||0,bounds=vocalMoveBounds(note,origin),next=clamp(origin+amount,bounds.min,bounds.max);if(next===origin)return false;note.x=next;const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;cursorVisible=true;return true;
 }
 function openNew(){
   q("#initialRows").value=state.rows;q("#initialMeasures").value=state.measuresPerRow;
@@ -1002,10 +1019,10 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.vocalRest){insertVocal("・","rest",Number(b.dataset.vocalRest))}
   else if(b.dataset.vocalInterjection){insertVocal("×","interjection",state.vocalDuration)}
   else if(b.dataset.vocalCell){
-    [state.m,state.p]=b.dataset.vocalCell.split(",").map(Number);vocalAnchorSelection=null;selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;
+    [state.m,state.p]=b.dataset.vocalCell.split(",").map(Number);vocalAnchorSelection=null;vocalAnchorOffset=0;selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;
   }
   else if(b.dataset.vocalNote){
-    const note=state.vocalNotes.find(item=>item.id===b.dataset.vocalNote);if(note){const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;vocalAnchorSelection=vocalAnchor(note);state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true}
+    const note=state.vocalNotes.find(item=>item.id===b.dataset.vocalNote);if(note){const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;vocalAnchorSelection=vocalAnchor(note);vocalAnchorOffset=Number(note.anchorOffset)||0;state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true}
   }
   else if(b.dataset.s){
     const nextString=+b.dataset.s;
@@ -1017,7 +1034,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.d)state.d=+b.dataset.d;
   else if(b.dataset.pos){
     [state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);
-    vocalAnchorSelection=state.scoreEditLayer==="vocal"&&b.dataset.note&&state.notes.some(note=>!note.rest&&note.m===state.m&&note.p===state.p)?{m:state.m,p:state.p}:null;
+    vocalAnchorSelection=state.scoreEditLayer==="vocal"&&b.dataset.note&&state.notes.some(note=>!note.rest&&note.m===state.m&&note.p===state.p)?{m:state.m,p:state.p}:null;vocalAnchorOffset=0;
     /* 入力位置を選んだ時点で、直前に移動した数字・小節線・書き込みの
        選択状態を完全に終了する。以後の左右キーは入力位置を動かす。 */
     clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;
@@ -1037,12 +1054,12 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   }
   else if(b.id==="vocalPrev"){
     if(selectedScoreTarget?.type==="vocal"){snap();if(!nudgeSelectedVocal(-4))past.pop()}
-    else if(vocalAnchorSelection){const previous=previousShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(previous){vocalAnchorSelection=previous;state.m=previous.m;state.p=previous.p}}
+    else if(vocalAnchorSelection){const previous=previousShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(previous){vocalAnchorSelection=previous;vocalAnchorOffset=0;state.m=previous.m;state.p=previous.p}}
     else{cursorVisible=true;if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacity()-1}}
   }
   else if(b.id==="vocalNext"){
     if(selectedScoreTarget?.type==="vocal"){snap();if(!nudgeSelectedVocal(4))past.pop()}
-    else if(vocalAnchorSelection){const next=nextShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(next){vocalAnchorSelection=next;state.m=next.m;state.p=next.p}}
+    else if(vocalAnchorSelection){const next=nextShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(next){vocalAnchorSelection=next;vocalAnchorOffset=0;state.m=next.m;state.p=next.p}}
     else{cursorVisible=true;if(state.p<measureCapacity()-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
   }
   else if(b.id==="vocalRed"||b.id==="vocalBlack"){
@@ -1168,9 +1185,9 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
   if(drawing)return;
   const vocalButton=event.target.closest("[data-vocal-note]"),partButton=event.target.closest("[data-score-part-id]"),noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline-key]");
   if(vocalButton&&state.scoreEditLayer==="vocal"){
-    const note=state.vocalNotes.find(item=>item.id===vocalButton.dataset.vocalNote);if(!note)return;const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;vocalAnchorSelection=vocalAnchor(note);state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true;event.preventDefault();snap();const originX=effectiveVocalX(note),bounds=vocalMoveBounds(note,originX);scoreDrag={type:"vocal",note,startX:event.clientX,originX,originManualX:Number(note.x)||0,bounds};vocalButton.classList.add("selected");vocalButton.setPointerCapture(event.pointerId);
+    const note=state.vocalNotes.find(item=>item.id===vocalButton.dataset.vocalNote);if(!note)return;const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;vocalAnchorSelection=vocalAnchor(note);vocalAnchorOffset=Number(note.anchorOffset)||0;state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true;event.preventDefault();snap();const originManualX=Number(note.x)||0,bounds=vocalMoveBounds(note,originManualX),originVisualX=parseFloat(getComputedStyle(vocalButton).getPropertyValue("--vocal-x"))||0;scoreDrag={type:"vocal",note,startX:event.clientX,originManualX,originVisualX,bounds};vocalButton.classList.add("selected");vocalButton.setPointerCapture(event.pointerId);
   }else if(noteButton&&state.scoreEditLayer==="vocal"){
-    const [m,,p]=noteButton.dataset.note.split(",").map(Number);if(!state.notes.some(item=>!item.rest&&item.m===m&&item.p===p))return;event.preventDefault();event.stopPropagation();state.m=m;state.p=p;vocalAnchorSelection={m,p};selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;render();return;
+    const [m,,p]=noteButton.dataset.note.split(",").map(Number);if(!state.notes.some(item=>!item.rest&&item.m===m&&item.p===p))return;event.preventDefault();event.stopPropagation();state.m=m;state.p=p;vocalAnchorSelection={m,p};vocalAnchorOffset=0;selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;render();return;
   }else if(partButton&&state.scoreEditLayer==="notes"){
     const part=(state.scoreParts||[]).find(entry=>entry.id===partButton.dataset.scorePartId);if(!part)return;selectedScoreTarget={type:"scorePart",id:part.id};selectedItemId=null;event.preventDefault();snap();const measure=partButton.closest(".measure"),rect=measure.getBoundingClientRect(),base=(part.p+.5)*rect.width/measureCapacity();scoreDrag={type:"scorePart",part,startX:event.clientX,originX:part.x||0,min:-base+17,max:rect.width-base-17};partButton.classList.add("selected");partButton.setPointerCapture(event.pointerId);
   }else if(noteButton&&state.scoreEditLayer==="notes"&&rangeNoteKeys.has(noteButton.dataset.note)&&rangeNoteKeys.size){
@@ -1194,7 +1211,7 @@ q("#scoreArea").addEventListener("pointermove",event=>{
     qAll(`[data-note^="${scoreDrag.m},"][data-note$=",${scoreDrag.p}"]`).forEach(element=>element.style.setProperty("transform",`translateX(${x}px)`));
     renderLayers(true);
   }else if(scoreDrag.type==="vocal"){
-    const x=clamp(scoreDrag.originX+dx,scoreDrag.bounds.min,scoreDrag.bounds.max);scoreDrag.note.x=scoreDrag.originManualX+(x-scoreDrag.originX);const button=q(`[data-vocal-note="${scoreDrag.note.id}"]`);if(button)button.style.setProperty("--vocal-x",`${x}px`);
+    const manualX=clamp(scoreDrag.originManualX+dx,scoreDrag.bounds.min,scoreDrag.bounds.max);scoreDrag.note.x=manualX;const button=q(`[data-vocal-note="${scoreDrag.note.id}"]`);if(button)button.style.setProperty("--vocal-x",`${scoreDrag.originVisualX+(manualX-scoreDrag.originManualX)}px`);
   }else if(scoreDrag.type==="scorePart"){
     const x=clamp(scoreDrag.originX+dx,scoreDrag.min,scoreDrag.max);scoreDrag.part.x=x;const button=q(`[data-score-part-id="${scoreDrag.part.id}"]`);if(button)button.style.left=`calc(${(scoreDrag.part.p+.5)*100/measureCapacity()}% + ${x}px)`;
   }else{
@@ -1292,7 +1309,7 @@ function ensurePrintLayout(){
 }
 window.addEventListener("beforeprint",ensurePrintLayout);
 window.addEventListener("afterprint",()=>{q("#printRootV2").replaceChildren()});
-window.addEventListener("resize",()=>{applyPreview()},{passive:true});
+window.addEventListener("resize",()=>{applyPreview();requestAnimationFrame(syncAnchoredVocalPositions)},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
 document.querySelector('.page-link[href="./annotations.html"]')?.addEventListener("click",save);
 window.addEventListener("pagehide",save);
