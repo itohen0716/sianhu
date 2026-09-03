@@ -749,7 +749,7 @@ function measureHtml(m){
 }
 function render(){
   normalizeLyrics();normalizeVocalNotes();normalizeVocalSlurs();
-  ensureAnnotationRowAnchors(true);
+  const annotationSnapshot=captureAnnotationRowSnapshot();
   const total=totalMeasures(),capacity=measureCapacity();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,capacity-1);
   state.preview=true;
   q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=IS_ANNOTATION_PAGE;if(document.activeElement!==q("#meter"))q("#meter").value=meterLabel();q("#meter").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
@@ -776,7 +776,7 @@ function render(){
   const selectedVocal=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id):null;q("#vocalRed").disabled=selectedVocal?.kind!=="pitch";q("#vocalBlack").disabled=selectedVocal?.kind!=="pitch";
   q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
   /* 表示切替後の新しい用紙高でSVG座標を確定してから、各部品を保存済みの段位置へ戻す。 */
-  renderLayers();requestAnimationFrame(()=>{applyAnnotationRowAnchors();applyPreview();syncAnchoredVocalPositions();syncVocalSlurs()});
+  applyPreview();restoreAnnotationRowSnapshot(annotationSnapshot);renderLayers();syncAnchoredVocalPositions();syncVocalSlurs();
 }
 function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
 function selectedItem(){return activeLayer()?.items.find(item=>item.id===selectedItemId)||null}
@@ -835,6 +835,8 @@ function shiftAnnotationY(item,dy){if(!Number.isFinite(dy)||Math.abs(dy)<.001)re
 function scoreRowTopsInSvg(){const svg=q("#annotations"),rect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal;if(!rect?.height||!view?.height)return[];return[...qAll("#scoreArea .staff .score-wrap")].map((wrap,row)=>({row,y:(wrap.getBoundingClientRect().top-rect.top)*view.height/rect.height}))}
 function ensureAnnotationRowAnchors(force=false){const rows=scoreRowTopsInSvg();if(!rows.length)return;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor)return;if(!force&&Number.isInteger(item.layoutRow)&&Number.isFinite(Number(item.layoutOffsetY)))return;const center=annotationCenterY(item),nearest=rows.reduce((best,current)=>Math.abs(current.y-center)<Math.abs(best.y-center)?current:best,rows[0]);item.layoutRow=nearest.row;item.layoutOffsetY=center-nearest.y}))}
 function applyAnnotationRowAnchors(){const rows=scoreRowTopsInSvg();if(!rows.length)return;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor)return;const row=rows.find(entry=>entry.row===Number(item.layoutRow));if(row&&Number.isFinite(Number(item.layoutOffsetY)))shiftAnnotationY(item,row.y+Number(item.layoutOffsetY)-annotationCenterY(item))}))}
+function captureAnnotationRowSnapshot(){const rows=scoreRowTopsInSvg();if(!rows.length)return[];return state.layers.flatMap(layer=>(layer.items||[]).flatMap(item=>{if(item.type==="symbol"&&item.anchor)return[];const center=annotationCenterY(item),nearest=rows.reduce((best,current)=>Math.abs(current.y-center)<Math.abs(best.y-center)?current:best,rows[0]);return[{item,row:nearest.row,oldTop:nearest.y}]}))}
+function restoreAnnotationRowSnapshot(snapshot){if(!snapshot.length)return;const rows=scoreRowTopsInSvg();snapshot.forEach(entry=>{const row=rows.find(candidate=>candidate.row===entry.row);if(!row)return;shiftAnnotationY(entry.item,row.y-entry.oldTop);entry.item.layoutRow=entry.row;entry.item.layoutOffsetY=annotationCenterY(entry.item)-row.y})}
 function markerUnderlayHtml(item){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||"#f4df59")}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeTechniqueIds.has(item.id)?" range-selected":"";
