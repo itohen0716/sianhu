@@ -603,7 +603,7 @@ function syncAnchoredVocalPositions(){
 }
 function syncVocalSlurs(){
   qAll(".vocal-slur-layer").forEach(layer=>layer.remove());normalizeVocalSlurs();
-  const scores=qAll(".vocal-score"),scoreIndex=new Map(scores.map((score,index)=>[score,index])),pathsByScore=scores.map(()=>[]);
+  const scores=[...qAll(".vocal-score")],scoreIndex=new Map(scores.map((score,index)=>[score,index])),pathsByScore=scores.map(()=>[]);
   state.vocalSlurs.forEach(slur=>{
     let start=q(`[data-vocal-note="${slur.startId}"]`),end=q(`[data-vocal-note="${slur.endId}"]`);if(!start||!end)return;
     let startScore=start.closest(".vocal-score"),endScore=end.closest(".vocal-score"),startRow=scoreIndex.get(startScore),endRow=scoreIndex.get(endScore);if(!Number.isInteger(startRow)||!Number.isInteger(endRow))return;
@@ -773,8 +773,9 @@ function render(){
   const currentNote=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);
   q("#selectedNoteColor").value=currentNote&&!currentNote.rest?(currentNote.color||(currentNote.v==="○"?state.openColor:state.numberColor)):"#222222";
   const selectedVocal=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id):null;q("#vocalRed").disabled=selectedVocal?.kind!=="pitch";q("#vocalBlack").disabled=selectedVocal?.kind!=="pitch";
-  applyAnnotationRowAnchors();q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
-  renderLayers();requestAnimationFrame(()=>{applyPreview();syncAnchoredVocalPositions();syncVocalSlurs()});
+  q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
+  /* 表示切替後の新しい用紙高でSVG座標を確定してから、各部品を保存済みの段位置へ戻す。 */
+  renderLayers();requestAnimationFrame(()=>{applyAnnotationRowAnchors();applyPreview();syncAnchoredVocalPositions();syncVocalSlurs()});
 }
 function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
 function selectedItem(){return activeLayer()?.items.find(item=>item.id===selectedItemId)||null}
