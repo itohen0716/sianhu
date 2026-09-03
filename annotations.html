@@ -478,6 +478,7 @@ function measureHtml(m){
 }
 function render(){
   normalizeLyrics();normalizeVocalNotes();normalizeVocalSlurs();
+  ensureAnnotationRowAnchors(true);
   const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,measureCapacity()-1);
   state.preview=true;
   q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=true;q("#meter").value=meterLabel();q("#meter").readOnly=true;q("#summary").textContent="";
@@ -534,6 +535,11 @@ function commentLayout(item,sizeScale=1){
   return{size,lines,lineHeight,width,height,top:item.y-size*1.05-5};
 }
 function commentTextSvg(item,layout){return layout.lines.map((line,index)=>`<tspan x="${item.x}" dy="${index?layout.lineHeight:0}">${line?esc(line):"&#160;"}</tspan>`).join("")}
+function annotationCenterY(item){if(item.type==="pen"){const points=item.points||[];return points.length?points.reduce((sum,p)=>sum+Number(p.y||0),0)/points.length:0}if(item.type==="text"||item.type==="symbol")return Number(item.y)||0;return((Number(item.y1)||0)+(Number(item.y2)||0))/2}
+function shiftAnnotationY(item,dy){if(!Number.isFinite(dy)||Math.abs(dy)<.001)return;if(item.type==="pen")item.points=(item.points||[]).map(p=>({...p,y:Number(p.y||0)+dy}));else if(item.type==="text"||item.type==="symbol")item.y=Number(item.y||0)+dy;else{item.y1=Number(item.y1||0)+dy;item.y2=Number(item.y2||0)+dy}}
+function scoreRowTopsInSvg(){const svg=q("#annotations"),rect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal;if(!rect?.height||!view?.height)return[];return[...qAll("#scoreArea .staff .score-wrap")].map((wrap,row)=>({row,y:(wrap.getBoundingClientRect().top-rect.top)*view.height/rect.height}))}
+function ensureAnnotationRowAnchors(force=false){const rows=scoreRowTopsInSvg();if(!rows.length)return;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor)return;if(!force&&Number.isInteger(item.layoutRow)&&Number.isFinite(Number(item.layoutOffsetY)))return;const center=annotationCenterY(item),nearest=rows.reduce((best,current)=>Math.abs(current.y-center)<Math.abs(best.y-center)?current:best,rows[0]);item.layoutRow=nearest.row;item.layoutOffsetY=center-nearest.y}))}
+function applyAnnotationRowAnchors(){const rows=scoreRowTopsInSvg();if(!rows.length)return;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor)return;const row=rows.find(entry=>entry.row===Number(item.layoutRow));if(row&&Number.isFinite(Number(item.layoutOffsetY)))shiftAnnotationY(item,row.y+Number(item.layoutOffsetY)-annotationCenterY(item))}))}
 function markerUnderlayHtml(item){
   const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);
   return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||markerColors[0].value)}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`;
@@ -583,6 +589,7 @@ function renderLayers(){
     state.annotationCoordVersion=2;
   }
   [svg,underlay].forEach(element=>{element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);element.setAttribute("preserveAspectRatio","xMinYMin meet")});
+  ensureAnnotationRowAnchors();
   syncLinkedSymbols();
   const visibleLayers=state.layers.filter(layer=>printing?layer.printEnabled!==false:layer.visible!==false);
   underlay.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type==="marker").map(markerUnderlayHtml).join("")}</g>`).join("");
@@ -799,7 +806,7 @@ q("#commentForm").addEventListener("submit",event=>{event.preventDefault();const
 q("#cancelComment").addEventListener("click",()=>finishCommentDialog(null));
 q("#commentDialog").addEventListener("cancel",event=>{event.preventDefault();finishCommentDialog(null)});
 q("#itemColor").addEventListener("change",event=>{const item=selectedItem();if(item){snap();item.color=event.target.value}else state.drawColor=event.target.value;render()});
-q("#lineStyle").addEventListener("change",event=>{const value=event.target.value==="dashed"?"dashed":"solid",item=selectedItem();state.lineStyle=value;if(item&&["pen","arrow","rect"].includes(item.type)){snap();item.lineStyle=value}render()});
+q("#lineStyle").addEventListener("change",event=>{const value=event.target.value==="dashed"?"dashed":"solid",item=selectedItem();state.lineStyle=value;if(item&&["pen","line","arrow","rect"].includes(item.type)){snap();item.lineStyle=value}render()});
 function resizeSelectedRect(axis,value){const item=selectedItem();if(!["rect","marker"].includes(item?.type))return;const next=clamp(Number(value)||10,10,axis==="x"?900:1200);snap();if(axis==="x"){const direction=item.x2>=item.x1?1:-1;item.x2=item.x1+direction*next}else{const direction=item.y2>=item.y1?1:-1;item.y2=item.y1+direction*next}render()}
 q("#rectWidth").addEventListener("change",event=>resizeSelectedRect("x",event.target.value));
 q("#rectHeight").addEventListener("change",event=>resizeSelectedRect("y",event.target.value));
