@@ -113,6 +113,7 @@
     .note{align-self:stretch;position:relative;height:var(--row-height);line-height:0;appearance:none;-webkit-appearance:none}
     .note b,.note.open-note b{position:absolute;z-index:2;left:50%;top:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:12px;height:var(--note-height);min-height:0;line-height:var(--note-height);transform:translate(-50%,-50%)}
     .note.open-note b{font-size:28px;line-height:1}
+    @media screen and (hover:none) and (pointer:coarse){.note.open-note b{font-size:22px}}
     .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{z-index:3;top:calc(50% + 8px);bottom:auto;width:14px;height:0}
     .note.d1:not(.rest)::after{height:3px}
     /* 一の糸は最下段なので、音価線を2px上げて譜線領域内へ収める。 */
@@ -177,7 +178,7 @@
     }
     @media print{.measure.on .note b{background:transparent!important}}
   </style>
-  <link rel="stylesheet" href="./print-v2.css">
+  <link rel="stylesheet" href="./print-v2.css?v=127">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
@@ -602,7 +603,14 @@ function syncAnchoredVocalPositions(){
 }
 function syncVocalSlurs(){
   qAll(".vocal-slur-layer").forEach(layer=>layer.remove());normalizeVocalSlurs();
-  qAll(".vocal-score").forEach(score=>{const sr=score.getBoundingClientRect();if(!sr.width)return;const paths=[];state.vocalSlurs.forEach(slur=>{const start=q(`[data-vocal-note="${slur.startId}"]`),end=q(`[data-vocal-note="${slur.endId}"]`);if(!start||!end||start.closest(".vocal-score")!==score||end.closest(".vocal-score")!==score)return;let x1=start.getBoundingClientRect().left+start.getBoundingClientRect().width/2-sr.left,x2=end.getBoundingClientRect().left+end.getBoundingClientRect().width/2-sr.left;if(x2<x1)[x1,x2]=[x2,x1];if(x2-x1<8)return;paths.push(`<path d="M ${x1.toFixed(2)} 13 Q ${((x1+x2)/2).toFixed(2)} 1 ${x2.toFixed(2)} 13"/>`)});if(paths.length){const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("class","vocal-slur-layer");svg.setAttribute("viewBox",`0 0 ${sr.width} 16`);svg.setAttribute("preserveAspectRatio","none");svg.innerHTML=paths.join("");score.appendChild(svg)}});
+  const scores=qAll(".vocal-score"),scoreIndex=new Map(scores.map((score,index)=>[score,index])),pathsByScore=scores.map(()=>[]);
+  state.vocalSlurs.forEach(slur=>{
+    let start=q(`[data-vocal-note="${slur.startId}"]`),end=q(`[data-vocal-note="${slur.endId}"]`);if(!start||!end)return;
+    let startScore=start.closest(".vocal-score"),endScore=end.closest(".vocal-score"),startRow=scoreIndex.get(startScore),endRow=scoreIndex.get(endScore);if(!Number.isInteger(startRow)||!Number.isInteger(endRow))return;
+    if(startRow>endRow||(startRow===endRow&&start.getBoundingClientRect().left>end.getBoundingClientRect().left)){[start,end]=[end,start];[startScore,endScore]=[endScore,startScore];[startRow,endRow]=[endRow,startRow]}
+    for(let row=startRow;row<=endRow;row++){const score=scores[row],sr=score.getBoundingClientRect();if(!sr.width)continue;const x1=row===startRow?start.getBoundingClientRect().left+start.getBoundingClientRect().width/2-sr.left:2,x2=row===endRow?end.getBoundingClientRect().left+end.getBoundingClientRect().width/2-sr.left:sr.width-2;if(x2-x1<8)continue;pathsByScore[row].push(`<path d="M ${x1.toFixed(2)} 13 Q ${((x1+x2)/2).toFixed(2)} 1 ${x2.toFixed(2)} 13"/>`)}
+  });
+  scores.forEach((score,row)=>{const sr=score.getBoundingClientRect(),paths=pathsByScore[row];if(!sr.width||!paths.length)return;const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("class","vocal-slur-layer");svg.setAttribute("viewBox",`0 0 ${sr.width} 16`);svg.setAttribute("preserveAspectRatio","none");svg.innerHTML=paths.join("");score.appendChild(svg)});
 }
 function shamisenColumnDuration(anchor){const durations=columnEntries(anchor.m,anchor.p).map(note=>Number(note.d)).filter(value=>[1,2,4].includes(value));return durations.length?Math.min(...durations):1}
 function shamisenColumns(){return[...new Map(state.notes.sort((a,b)=>a.m-b.m||a.p-b.p).map(note=>[`${note.m},${note.p}`,{m:note.m,p:note.p}])).values()]}
@@ -828,9 +836,11 @@ function applyAnnotationRowAnchors(){const rows=scoreRowTopsInSvg();if(!rows.len
 function markerUnderlayHtml(item){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||"#f4df59")}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeTechniqueIds.has(item.id)?" range-selected":"";
-  const common=`class="annotation-item${selected}" data-item="${item.id}" stroke="${item.color}" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
+  const dash=(item.lineStyle||"solid")==="dashed"?' stroke-dasharray="8 7"':"";
+  const common=`class="annotation-item${selected}" data-item="${item.id}" stroke="${item.color}" stroke-width="1.5"${dash} fill="none" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"`;
   if(item.type==="marker")return"";
   if(item.type==="pen")return `<polyline ${common} points="${pointsAttr(item.points)}"/>`;
+  if(item.type==="line")return `<line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/>`;
   if(item.type==="rect")return `<rect ${common} x="${Math.min(item.x1,item.x2)}" y="${Math.min(item.y1,item.y2)}" width="${Math.abs(item.x2-item.x1)}" height="${Math.abs(item.y2-item.y1)}" rx="5"/>`;
   if(item.type==="arrow"){
     const dx=item.x2-item.x1,dy=item.y2-item.y1,a=Math.atan2(dy,dx),size=16;
@@ -949,6 +959,7 @@ function endDraw(event){
   if(dragging){dragging=null;save();renderLayers();return}
   if(!draft)return;const layer=activeLayer(),end=draft.end||pointFromEvent(event);snap();
   if(draft.type==="pen"&&draft.points.length>1){const item={id:uid(),type:"pen",points:draft.points,color:state.drawColor};layer.items.push(item);selectedItemId=item.id}
+  else if(draft.type==="line"&&Math.hypot(end.x-draft.start.x,end.y-draft.start.y)>5){const item={id:uid(),type:"line",x1:draft.start.x,y1:draft.start.y,x2:end.x,y2:end.y,color:state.drawColor};layer.items.push(item);selectedItemId=item.id}
   else if(draft.type==="rect"&&Math.hypot(end.x-draft.start.x,end.y-draft.start.y)>5){const item={id:uid(),type:"rect",x1:draft.start.x,y1:draft.start.y,x2:end.x,y2:end.y,color:state.drawColor};layer.items.push(item);selectedItemId=item.id}
   else if(draft.type==="arrow"&&Math.hypot(end.x-draft.start.x,end.y-draft.start.y)>5){const item={id:uid(),type:"arrow",x1:draft.start.x,y1:draft.start.y,x2:end.x,y2:end.y,color:state.drawColor};layer.items.push(item);selectedItemId=item.id}
   else past.pop();
@@ -1040,7 +1051,12 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
     [state.m,state.p]=b.dataset.vocalCell.split(",").map(Number);vocalAnchorSelection=null;vocalAnchorOffset=0;selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;
   }
   else if(b.dataset.vocalNote){
-    const note=state.vocalNotes.find(item=>item.id===b.dataset.vocalNote);if(note&&vocalTool==="slur"){if(!vocalSlurStartId){vocalSlurStartId=note.id;selectedScoreTarget={type:"vocal",id:note.id}}else{const start=state.vocalNotes.find(item=>item.id===vocalSlurStartId);if(!start||start.id===note.id){alert("終点には別の唄記号を選んでください。")}else if(measureLocation(start.m).row!==measureLocation(note.m).row){alert("スラーは同じ段の唄記号どうしで指定してください。")}else{snap();state.vocalSlurs.push({id:uid(),startId:start.id,endId:note.id});vocalTool="note";vocalSlurStartId=null;selectedScoreTarget={type:"vocal",id:note.id}}}cursorVisible=false}
+    const note=state.vocalNotes.find(item=>item.id===b.dataset.vocalNote);
+    if(note&&vocalTool==="slur"){
+      if(!vocalSlurStartId){vocalSlurStartId=note.id;selectedScoreTarget={type:"vocal",id:note.id}}
+      else{const start=state.vocalNotes.find(item=>item.id===vocalSlurStartId);if(!start||start.id===note.id){alert("終点には別の唄記号を選んでください。")}else{snap();state.vocalSlurs.push({id:uid(),startId:start.id,endId:note.id});vocalTool="note";vocalSlurStartId=null;selectedScoreTarget={type:"vocal",id:note.id}}}
+      cursorVisible=false;
+    }
     else if(note){const pos=effectiveVocalPosition(note);state.m=pos.m;state.p=pos.p;vocalAnchorSelection=vocalAnchor(note);vocalAnchorOffset=Number(note.anchorOffset)||0;state.vocalString=note.s;state.vocalDuration=note.d;selectedScoreTarget={type:"vocal",id:note.id};selectedItemId=null;cursorVisible=true}
   }
   else if(b.dataset.s){
@@ -1337,6 +1353,6 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-<script src="./print-v2.js"></script>
+<script src="./print-v2.js?v=127"></script>
 </body>
 </html>
