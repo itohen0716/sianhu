@@ -25,7 +25,7 @@
     const sourcePoints=item=>item.type==="pen"?(item.points||[]):item.type==="text"||item.type==="symbol"?[{x:item.x,y:item.y}]:[{x:item.x1,y:item.y1},{x:item.x2,y:item.y2}];
     (state.layers||[]).filter(layer=>layer.id!=="technique-layer"&&layer.printEnabled!==false).forEach(layer=>(layer.items||[]).forEach(item=>{
       const raw=sourcePoints(item).filter(point=>Number.isFinite(point?.x)&&Number.isFinite(point?.y));if(!raw.length)return;
-      items.push({...item,clientPoints:raw.map(toClient)});
+      items.push({...item,clientPoints:raw.map(toClient),layoutAnchors:Array.isArray(item.layoutAnchors)?item.layoutAnchors.map(anchor=>({row:Number(anchor.row),offsetCssY:Number(anchor.offsetCssY)})):null});
     }));
     return{items,wraps};
   }
@@ -74,10 +74,13 @@
        Chromiumの印刷時に負座標部分が切り落とされるのを防ぐ。 */
     const overlayTopOffset=12*96/25.4+(showSong?20:24);
     const mappedAnnotations=annotationCapture.items.map(item=>{
-      const centerY=item.clientPoints.reduce((sum,point)=>sum+point.y,0)/Math.max(1,item.clientPoints.length),wraps=annotationCapture.wraps,target=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-centerY)<Math.abs(best.rect.top+best.rect.height/2-centerY)?current:best,wraps[0]),sourceWidth=Math.max(1,target.rect.width),horizontalScale=printScoreWidth/sourceWidth,verticalScale=horizontalScale*1.2;
-      /* 横位置は入力画面と同じ譜面左端を基準にする。縦方向だけ印刷縮尺を補正する。 */
-      const pointsNormalized=item.clientPoints.map(point=>({x:(point.x-target.rect.left)*1000/sourceWidth,y:overlayTopOffset+target.row*sharedStaffHeight+(point.y-target.rect.top)*verticalScale+6}));
-      return{...item,pointsNormalized,annotationRow:target.row,printDetailScale:1.15};
+      const centerY=item.clientPoints.reduce((sum,point)=>sum+point.y,0)/Math.max(1,item.clientPoints.length),wraps=annotationCapture.wraps,fallback=wraps.reduce((best,current)=>Math.abs(current.rect.top+current.rect.height/2-centerY)<Math.abs(best.rect.top+best.rect.height/2-centerY)?current:best,wraps[0]);
+      const anchors=Array.isArray(item.layoutAnchors)&&item.layoutAnchors.length===item.clientPoints.length?item.layoutAnchors:null,primaryRow=anchors?.[0]?.row,target=wraps[Number.isInteger(primaryRow)&&primaryRow>=0&&primaryRow<wraps.length?primaryRow:fallback.row]||fallback,sourceWidth=Math.max(1,target.rect.width),horizontalScale=printScoreWidth/sourceWidth,verticalScale=horizontalScale*1.2;
+      /* 各点を所属段＋段上端からの距離で配置する。唄・歌詞が最初から非表示でも、
+         印刷の段数や改ページが変わっても同じ段へ追随する。 */
+      const pointsNormalized=item.clientPoints.map((point,index)=>{const anchor=anchors?.[index],pointRow=Number.isInteger(anchor?.row)&&wraps[anchor.row]?anchor.row:target.row,sourceRect=wraps[pointRow]?.rect||target.rect,offsetY=Number.isFinite(anchor?.offsetCssY)?anchor.offsetCssY:point.y-sourceRect.top;return{x:(point.x-target.rect.left)*1000/sourceWidth,y:overlayTopOffset+pointRow*sharedStaffHeight+offsetY*verticalScale+6}});
+      const annotationRows=anchors?.map(anchor=>anchor.row).filter(Number.isInteger)||[target.row];
+      return{...item,pointsNormalized,annotationRow:Math.min(...annotationRows),annotationEndRow:Math.max(...annotationRows),printDetailScale:1.15};
     });
     const techniqueHtml=(item,index)=>{const side=item.side==="below"?"below":"above",x=Number(item.offsetXPx)||0,y=(Number(item.offsetYPx)||0)+index*16,style=`--tech-color:${esc(item.color||"#222")};margin-left:${x}px;${side==="above"?`margin-bottom:${-y}px`:`margin-top:${y}px`}`;if(["Ⅰ","Ⅱ","Ⅲ"].includes(item.text))return`<span class="pv2-tech finger ${side}" style="${style}">${esc(item.text)}</span>`;if(item.text==="スリ")return`<span class="pv2-tech slur ${side}" style="${style};--slur-width:${clamp(Number(item.slurWidth)||34,22,90)}px">スリ</span>`;return`<span class="pv2-tech symbol ${side}" style="${style}">${esc(item.text)}</span>`};
     const noteHtml=note=>`<span class="pv2-note d${[1,2,4].includes(note.d)?note.d:4}${note.rest?" rest":""}${!note.rest&&note.v==="○"?" open":""}" style="--left:${(note.left*100).toFixed(5)}%;--note-color:${esc(note.rest?"#222":(note.color||(note.v==="○"?state.openColor:state.numberColor)))}"><span class="pv2-glyph">${esc(note.value)}</span>${note.techniques.length?`<span class="pv2-techniques">${note.techniques.map(techniqueHtml).join("")}</span>`:""}</span>`;
@@ -96,7 +99,7 @@
       const firstRow=page.rows[0]?.row||0,lastRow=firstRow+page.rows.length,items=mappedAnnotations.filter(item=>item.annotationRow>=firstRow&&item.annotationRow<lastRow).map(item=>({...item,pointsNormalized:item.pointsNormalized.map(point=>({...point,y:point.y-firstRow*sharedStaffHeight}))})),pageMarkers=items.filter(item=>item.type==="marker"),pageAnnotations=items.filter(item=>item.type!=="marker"),overlayHeight=overlayTopOffset+page.rows.length*sharedStaffHeight;
       return`<section class="pv2-page">${page.index===0?`<div class="pv2-meta"><div class="pv2-meta-left" aria-label="調子と拍子"><span>〈${esc(state.tuning||"")}〉</span><span>${esc(meterLabel())}</span></div><div class="pv2-title">${esc(state.title||"曲名入力")}</div></div>`:""}<div class="pv2-staffs${showSong?" lyrics-mode":""}">${pageMarkers.length?`<svg class="pv2-page-underlay" style="height:${overlayHeight.toFixed(2)}px" viewBox="0 0 1000 ${overlayHeight.toFixed(2)}" preserveAspectRatio="none">${pageMarkers.map(markerHtml).join("")}</svg>`:""}${page.rows.map(row=>`<section class="pv2-staff${row.row===0?" first-score-row":""}" style="height:${sharedStaffHeight.toFixed(2)}px"><div class="pv2-wrap"><div class="pv2-labels">${row.row===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="pv2-score">${row.measures.map(measureHtml).join("")}</div></div>${showLyrics?`<div class="pv2-lyrics"><span class="pv2-lyrics-track" style="width:${row.lyricsSourceWidth.toFixed(2)}px;transform:scaleX(${row.lyricsScale.toFixed(6)})">${esc(row.lyrics)}</span></div>`:""}${showVocal?`<div class="pv2-vocal"><span class="pv2-vocal-label" aria-hidden="true"></span><span class="pv2-vocal-score">${row.vocalSlurs.length?`<svg class="pv2-vocal-slurs" viewBox="0 0 1000 16" preserveAspectRatio="none">${row.vocalSlurs.map(slur=>`<path d="M ${slur.start.toFixed(2)} 13 Q ${((slur.start+slur.end)/2).toFixed(2)} 1 ${slur.end.toFixed(2)} 13"/>`).join("")}</svg>`:""}${row.measures.map(vocalMeasureHtml).join("")}</span></div>`:""}</section>`).join("")}${pageAnnotations.length?`<svg class="pv2-page-overlay" style="height:${overlayHeight.toFixed(2)}px" viewBox="0 0 1000 ${overlayHeight.toFixed(2)}" preserveAspectRatio="none">${pageAnnotations.map(annotationHtml).join("")}</svg>`:""}</div></section>`
     }).join("");
-    root.dataset.modelVersion="5";root.dataset.noteCount=String((state.notes||[]).length);root.dataset.annotationCount=String(mappedAnnotations.length);
+    root.dataset.modelVersion="6";root.dataset.noteCount=String((state.notes||[]).length);root.dataset.annotationCount=String(mappedAnnotations.length);
   }
   global.ShianPrintV2={render};
 })(window);
