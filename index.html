@@ -554,7 +554,9 @@ function save(forceReplace=false){
     const current=serializable();
     const merged=forceReplace?current:IS_ANNOTATION_PAGE
       ?{...latest,...current,notes:latest.notes||current.notes,title:latest.title||current.title,rows:latest.rows||current.rows,measuresPerRow:latest.measuresPerRow||current.measuresPerRow,rowMeasureCounts:latest.rowMeasureCounts||current.rowMeasureCounts,numberColor:latest.numberColor||current.numberColor,openColor:latest.openColor||current.openColor}
-      :{...current,layers:[current.layers.find(layer=>layer.id===TECHNIQUE_LAYER_ID),...(latest.layers||current.layers).filter(layer=>layer.id!==TECHNIQUE_LAYER_ID)].filter(Boolean),activeLayerId:TECHNIQUE_LAYER_ID};
+      /* 表示切替後に再配置した個人レイヤーも current に入っている。
+         latest の古い個人レイヤーを戻すと、補正座標が直後に失われる。 */
+      :{...current,layers:current.layers,activeLayerId:TECHNIQUE_LAYER_ID};
     localStorage.setItem(KEY,JSON.stringify(merged));Object.assign(state,merged);hasSaved=true;
   }catch(error){console.warn("自動保存できませんでした。",error)}
 }
@@ -1360,6 +1362,6 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-<script src="./print-v2.js?v=134"></script>
+<script src="./print-v2.js?v=135"></script>
 </body>
 </html>
