@@ -554,8 +554,6 @@ function save(forceReplace=false){
     const current=serializable();
     const merged=forceReplace?current:IS_ANNOTATION_PAGE
       ?{...latest,...current,notes:latest.notes||current.notes,title:latest.title||current.title,rows:latest.rows||current.rows,measuresPerRow:latest.measuresPerRow||current.measuresPerRow,rowMeasureCounts:latest.rowMeasureCounts||current.rowMeasureCounts,numberColor:latest.numberColor||current.numberColor,openColor:latest.openColor||current.openColor}
-      /* 表示切替後に再配置した個人レイヤーも current に入っている。
-         latest の古い個人レイヤーを戻すと、補正座標が直後に失われる。 */
       :{...current,layers:current.layers,activeLayerId:TECHNIQUE_LAYER_ID};
     localStorage.setItem(KEY,JSON.stringify(merged));Object.assign(state,merged);hasSaved=true;
   }catch(error){console.warn("自動保存できませんでした。",error)}
@@ -751,7 +749,6 @@ function measureHtml(m){
 }
 function render(){
   normalizeLyrics();normalizeVocalNotes();normalizeVocalSlurs();
-  const annotationSnapshot=captureAnnotationRowSnapshot();
   const total=totalMeasures(),capacity=measureCapacity();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,capacity-1);
   state.preview=true;
   q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=IS_ANNOTATION_PAGE;if(document.activeElement!==q("#meter"))q("#meter").value=meterLabel();q("#meter").readOnly=IS_ANNOTATION_PAGE;q("#summary").textContent="";
@@ -778,7 +775,7 @@ function render(){
   const selectedVocal=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id):null;q("#vocalRed").disabled=selectedVocal?.kind!=="pitch";q("#vocalBlack").disabled=selectedVocal?.kind!=="pitch";
   q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
   /* 表示切替後の新しい用紙高でSVG座標を確定してから、各部品を保存済みの段位置へ戻す。 */
-  applyPreview();scheduleAnnotationRowRestore(annotationSnapshot,()=>{syncAnchoredVocalPositions();syncVocalSlurs()});
+  applyPreview();syncAnchoredVocalPositions();syncVocalSlurs();
 }
 function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
 function selectedItem(){return activeLayer()?.items.find(item=>item.id===selectedItemId)||null}
@@ -834,14 +831,12 @@ function commentLayout(item,sizeScale=1){
 function commentTextSvg(item,layout){return layout.lines.map((line,index)=>`<tspan x="${item.x}" dy="${index?layout.lineHeight:0}">${line?esc(line):"&#160;"}</tspan>`).join("")}
 function annotationCenterY(item){if(item.type==="pen"){const points=item.points||[];return points.length?points.reduce((sum,p)=>sum+Number(p.y||0),0)/points.length:0}if(item.type==="text"||item.type==="symbol")return Number(item.y)||0;return((Number(item.y1)||0)+(Number(item.y2)||0))/2}
 function shiftAnnotationY(item,dy){if(!Number.isFinite(dy)||Math.abs(dy)<.001)return;if(item.type==="pen")item.points=(item.points||[]).map(p=>({...p,y:Number(p.y||0)+dy}));else if(item.type==="text"||item.type==="symbol")item.y=Number(item.y||0)+dy;else{item.y1=Number(item.y1||0)+dy;item.y2=Number(item.y2||0)+dy}}
-function annotationPoints(item){if(item.type==="pen")return item.points||[];if(item.type==="text"||item.type==="symbol")return[{x:item.x,y:item.y}];return[{x:item.x1,y:item.y1},{x:item.x2,y:item.y2}]}
-function setAnnotationPointY(item,index,y){if(item.type==="pen"){if(item.points?.[index])item.points[index].y=y}else if(item.type==="text"||item.type==="symbol")item.y=y;else if(index===0)item.y1=y;else item.y2=y}
-function annotationLayoutGeometry(){const svg=q("#annotations"),svgRect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal,rows=[...qAll("#scoreArea .staff .score-wrap")].map((wrap,row)=>({row,rect:wrap.getBoundingClientRect()}));return svg&&svgRect?.width&&svgRect?.height&&view?.width&&view?.height&&rows.length?{svg,svgRect,view,rows}:null}
-function rowForClientY(rows,clientY){return rows.reduce((owner,row)=>row.rect.top<=clientY?row:owner,rows[0])}
-function captureAnnotationRowSnapshot(){const geometry=annotationLayoutGeometry();if(!geometry)return[];const {svgRect,view,rows}=geometry,toClientY=y=>svgRect.top+Number(y||0)*svgRect.height/view.height;return state.layers.flatMap(layer=>(layer.items||[]).flatMap(item=>{if(item.type==="symbol"&&item.anchor)return[];const anchors=annotationPoints(item).map(point=>{const clientY=toClientY(point.y),owner=rowForClientY(rows,clientY);return{row:owner.row,offsetCssY:clientY-owner.rect.top}});item.layoutAnchors=anchors.map(anchor=>({...anchor}));item.layoutRow=anchors[0]?.row??0;item.layoutOffsetCssY=anchors[0]?.offsetCssY??0;return[{item,anchors}]}))}
-function ensureAnnotationRowAnchors(){const geometry=annotationLayoutGeometry();if(!geometry)return;const {svgRect,view,rows}=geometry,toClientY=y=>svgRect.top+Number(y||0)*svgRect.height/view.height;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor)return;if(Array.isArray(item.layoutAnchors)&&item.layoutAnchors.length===annotationPoints(item).length)return;const anchors=annotationPoints(item).map(point=>{const clientY=toClientY(point.y),owner=rowForClientY(rows,clientY);return{row:owner.row,offsetCssY:clientY-owner.rect.top}});item.layoutAnchors=anchors;item.layoutRow=anchors[0]?.row??0;item.layoutOffsetCssY=anchors[0]?.offsetCssY??0}))}
-function restoreAnnotationRowSnapshot(snapshot){const geometry=annotationLayoutGeometry();if(!geometry||!snapshot.length)return;const {svgRect,view,rows}=geometry;snapshot.forEach(({item,anchors})=>anchors.forEach((anchor,index)=>{const row=rows[anchor.row];if(!row)return;const targetClientY=row.rect.top+Number(anchor.offsetCssY||0),targetSvgY=(targetClientY-svgRect.top)*view.height/svgRect.height;setAnnotationPointY(item,index,targetSvgY)}))}
-function scheduleAnnotationRowRestore(snapshot,afterRestore){const revision=(scheduleAnnotationRowRestore.revision||0)+1;scheduleAnnotationRowRestore.revision=revision;const apply=()=>{if(scheduleAnnotationRowRestore.revision!==revision)return;restoreAnnotationRowSnapshot(snapshot);renderLayers();afterRestore()};apply();requestAnimationFrame(apply)}
+function annotationGeometry(){const svg=q("#annotations"),svgRect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal;if(!svgRect?.width||!view?.width)return null;const toY=rect=>(rect.top-svgRect.top)*view.width/svgRect.width,rows=[...qAll("#scoreArea .staff")].map((staff,row)=>({row,staff,rect:staff.getBoundingClientRect(),staffY:toY(staff.querySelector(".score-wrap").getBoundingClientRect()),lyrics:staff.querySelector(".lyrics-row"),vocal:staff.querySelector(".vocal-row")}));return{svgRect,view,toY,rows}}
+function itemClientCenterY(item,geometry){return geometry.svgRect.top+annotationCenterY(item)*geometry.svgRect.width/geometry.view.width}
+function nearestAnnotationRow(rows,clientY){return rows.reduce((best,row)=>Math.abs((row.rect.top+row.rect.bottom)/2-clientY)<Math.abs((best.rect.top+best.rect.bottom)/2-clientY)?row:best,rows[0])}
+function targetElement(row,target){return target==="lyrics"?row.lyrics:target==="vocal"?row.vocal:row.staff.querySelector(".score-wrap")}
+function ensureAnnotationRowAnchors(){const geometry=annotationGeometry();if(!geometry)return;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor||item.layoutAnchorVersion===1)return;const clientY=itemClientCenterY(item,geometry),row=nearestAnnotationRow(geometry.rows,clientY),lyricsRect=row.lyrics?.getBoundingClientRect(),vocalRect=row.vocal?.getBoundingClientRect();let target=lyricsRect&&clientY>=lyricsRect.top&&clientY<=lyricsRect.bottom?"lyrics":vocalRect&&clientY>=vocalRect.top&&clientY<=vocalRect.bottom?"vocal":"staff";const element=targetElement(row,target);item.layoutRow=row.row;item.layoutTarget=target;item.layoutAnchorY=geometry.toY(element.getBoundingClientRect());item.layoutAnchorVersion=1}))}
+function visualAnnotationItem(item){if(item.type==="symbol"&&item.anchor)return item;const target=item.layoutTarget||"staff";if(target==="lyrics"&&!state.lyricsVisible||target==="vocal"&&!state.vocalVisible)return null;if(target==="page")return item;const geometry=annotationGeometry(),row=geometry?.rows?.[Number(item.layoutRow)];if(!geometry||!row)return item;const element=targetElement(row,target);if(!element)return null;const dy=geometry.toY(element.getBoundingClientRect())-Number(item.layoutAnchorY||0),copy=structuredClone(item);shiftAnnotationY(copy,dy);return copy}
 function markerUnderlayHtml(item){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||"#f4df59")}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeTechniqueIds.has(item.id)?" range-selected":"";
@@ -888,9 +883,9 @@ function renderLayers(skipSave=false){
   /* 写譜ページでも書き込みレイヤーを閲覧できるよう、全表示レイヤーを
      同じSVGへ描画する。編集対象は従来どおり奏法レイヤーだけに限定する。 */
   const visibleLayers=state.layers.filter(item=>item.visible!==false);
-  underlay.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type==="marker").map(markerUnderlayHtml).join("")}</g>`).join("");
+  underlay.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type==="marker").map(visualAnnotationItem).filter(Boolean).map(markerUnderlayHtml).join("")}</g>`).join("");
   svg.innerHTML=visibleLayers
-    .map(item=>`<g data-layer="${item.id}">${item.items.map(itemHtml).join("")}</g>`)
+    .map(item=>`<g data-layer="${item.id}">${item.items.map(visualAnnotationItem).filter(Boolean).map(itemHtml).join("")}</g>`)
     .join("");
   let scoreLayer=["notes","staff","technique","vocal"].includes(state.scoreEditLayer)?state.scoreEditLayer:"notes";
   state.scoreEditLayer=scoreLayer;document.body.dataset.scoreLayer=scoreLayer;
@@ -958,7 +953,7 @@ function translateItem(item,dx,dy){
       item.offsetYPx=(Number(item.offsetYPx)||0)+dy*pxPerUnit;
     }
   }else{item.x1+=dx;item.y1+=dy;item.x2+=dx;item.y2+=dy}
-  if(!(item.type==="symbol"&&item.anchor)){delete item.layoutAnchors;delete item.layoutOffsetCssY}
+  if(!(item.type==="symbol"&&item.anchor)&&Number.isFinite(Number(item.layoutOffsetY)))item.layoutOffsetY=Number(item.layoutOffsetY)+dy;
 }
 function moveDraw(event){
   if(dragging){event.preventDefault();const p=pointFromEvent(event);translateItem(dragging.item,p.x-dragging.last.x,p.y-dragging.last.y);dragging.last=p;renderLayers();return}
@@ -1362,6 +1357,6 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-<script src="./print-v2.js?v=135"></script>
+<script src="./print-v2.js?v=136"></script>
 </body>
 </html>

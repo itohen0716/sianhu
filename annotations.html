@@ -159,6 +159,7 @@
       <label>枠・マーカーの縦 <input id="rectHeight" type="number" inputmode="numeric" min="10" max="1200" step="5" value="100" aria-label="枠またはマーカーの縦幅"></label>
       <label>コメント文字サイズ <select id="textSize"><option value="12">極小</option><option value="16">小</option><option value="20" selected>中</option><option value="26">大</option><option value="34">特大</option></select></label>
       <label>コメント背景 <select id="textBackground"><option value="white">白</option><option value="translucent">半透明</option><option value="none">なし</option></select></label>
+      <label>関連先 <select id="itemAnchorTarget"><option value="staff">三味線譜</option><option value="lyrics">歌詞</option><option value="vocal">唄の音程</option><option value="page">用紙（固定）</option></select></label>
     </div>
     <p id="layerHelp" class="layer-help">「描画を開始」を押すと、選択中の個人レイヤーへ書き込めます。</p>
   </section>
@@ -478,7 +479,6 @@ function measureHtml(m){
 }
 function render(){
   normalizeLyrics();normalizeVocalNotes();normalizeVocalSlurs();
-  const annotationSnapshot=captureAnnotationRowSnapshot();
   const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,measureCapacity()-1);
   state.preview=true;
   q("#title").value=state.title;updateTitleWidth();q("#title").readOnly=IS_ANNOTATION_PAGE;q("#tuning").value=state.tuning;q("#tuning").disabled=true;q("#meter").value=meterLabel();q("#meter").readOnly=true;q("#summary").textContent="";
@@ -498,7 +498,7 @@ function render(){
   q("#selectedNoteColor").value=currentNote&&!currentNote.rest?(currentNote.color||(currentNote.v==="○"?state.openColor:state.numberColor)):"#222222";
   q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
   /* 表示切替後の新しい用紙高でSVG座標を確定してから、各部品を保存済みの段位置へ戻す。 */
-  applyPreview();scheduleAnnotationRowRestore(annotationSnapshot,()=>{syncAnnotationVocalPositions();syncAnnotationVocalSlurs()});
+  applyPreview();syncAnnotationVocalPositions();syncAnnotationVocalSlurs();
 }
 function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLayerId)||null}
 function selectedItem(){return activeLayer()?.items.find(item=>item.id===selectedItemId)||null}
@@ -537,14 +537,12 @@ function commentLayout(item,sizeScale=1){
 function commentTextSvg(item,layout){return layout.lines.map((line,index)=>`<tspan x="${item.x}" dy="${index?layout.lineHeight:0}">${line?esc(line):"&#160;"}</tspan>`).join("")}
 function annotationCenterY(item){if(item.type==="pen"){const points=item.points||[];return points.length?points.reduce((sum,p)=>sum+Number(p.y||0),0)/points.length:0}if(item.type==="text"||item.type==="symbol")return Number(item.y)||0;return((Number(item.y1)||0)+(Number(item.y2)||0))/2}
 function shiftAnnotationY(item,dy){if(!Number.isFinite(dy)||Math.abs(dy)<.001)return;if(item.type==="pen")item.points=(item.points||[]).map(p=>({...p,y:Number(p.y||0)+dy}));else if(item.type==="text"||item.type==="symbol")item.y=Number(item.y||0)+dy;else{item.y1=Number(item.y1||0)+dy;item.y2=Number(item.y2||0)+dy}}
-function annotationPoints(item){if(item.type==="pen")return item.points||[];if(item.type==="text"||item.type==="symbol")return[{x:item.x,y:item.y}];return[{x:item.x1,y:item.y1},{x:item.x2,y:item.y2}]}
-function setAnnotationPointY(item,index,y){if(item.type==="pen"){if(item.points?.[index])item.points[index].y=y}else if(item.type==="text"||item.type==="symbol")item.y=y;else if(index===0)item.y1=y;else item.y2=y}
-function annotationLayoutGeometry(){const svg=q("#annotations"),svgRect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal,rows=[...qAll("#scoreArea .staff .score-wrap")].map((wrap,row)=>({row,rect:wrap.getBoundingClientRect()}));return svg&&svgRect?.width&&svgRect?.height&&view?.width&&view?.height&&rows.length?{svg,svgRect,view,rows}:null}
-function rowForClientY(rows,clientY){return rows.reduce((owner,row)=>row.rect.top<=clientY?row:owner,rows[0])}
-function captureAnnotationRowSnapshot(){const geometry=annotationLayoutGeometry();if(!geometry)return[];const {svgRect,view,rows}=geometry,toClientY=y=>svgRect.top+Number(y||0)*svgRect.height/view.height;return state.layers.flatMap(layer=>(layer.items||[]).flatMap(item=>{if(item.type==="symbol"&&item.anchor)return[];const anchors=annotationPoints(item).map(point=>{const clientY=toClientY(point.y),owner=rowForClientY(rows,clientY);return{row:owner.row,offsetCssY:clientY-owner.rect.top}});item.layoutAnchors=anchors.map(anchor=>({...anchor}));item.layoutRow=anchors[0]?.row??0;item.layoutOffsetCssY=anchors[0]?.offsetCssY??0;return[{item,anchors}]}))}
-function ensureAnnotationRowAnchors(){const geometry=annotationLayoutGeometry();if(!geometry)return;const {svgRect,view,rows}=geometry,toClientY=y=>svgRect.top+Number(y||0)*svgRect.height/view.height;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor)return;if(Array.isArray(item.layoutAnchors)&&item.layoutAnchors.length===annotationPoints(item).length)return;const anchors=annotationPoints(item).map(point=>{const clientY=toClientY(point.y),owner=rowForClientY(rows,clientY);return{row:owner.row,offsetCssY:clientY-owner.rect.top}});item.layoutAnchors=anchors;item.layoutRow=anchors[0]?.row??0;item.layoutOffsetCssY=anchors[0]?.offsetCssY??0}))}
-function restoreAnnotationRowSnapshot(snapshot){const geometry=annotationLayoutGeometry();if(!geometry||!snapshot.length)return;const {svgRect,view,rows}=geometry;snapshot.forEach(({item,anchors})=>anchors.forEach((anchor,index)=>{const row=rows[anchor.row];if(!row)return;const targetClientY=row.rect.top+Number(anchor.offsetCssY||0),targetSvgY=(targetClientY-svgRect.top)*view.height/svgRect.height;setAnnotationPointY(item,index,targetSvgY)}))}
-function scheduleAnnotationRowRestore(snapshot,afterRestore){const revision=(scheduleAnnotationRowRestore.revision||0)+1;scheduleAnnotationRowRestore.revision=revision;const apply=()=>{if(scheduleAnnotationRowRestore.revision!==revision)return;restoreAnnotationRowSnapshot(snapshot);renderLayers();afterRestore()};apply();requestAnimationFrame(apply)}
+function annotationGeometry(){const svg=q("#annotations"),svgRect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal;if(!svgRect?.width||!view?.width)return null;const toY=rect=>(rect.top-svgRect.top)*view.width/svgRect.width,rows=[...qAll("#scoreArea .staff")].map((staff,row)=>({row,staff,rect:staff.getBoundingClientRect(),staffY:toY(staff.querySelector(".score-wrap").getBoundingClientRect()),lyrics:staff.querySelector(".lyrics-row"),vocal:staff.querySelector(".vocal-row")}));return{svgRect,view,toY,rows}}
+function itemClientCenterY(item,geometry){return geometry.svgRect.top+annotationCenterY(item)*geometry.svgRect.width/geometry.view.width}
+function nearestAnnotationRow(rows,clientY){return rows.reduce((best,row)=>Math.abs((row.rect.top+row.rect.bottom)/2-clientY)<Math.abs((best.rect.top+best.rect.bottom)/2-clientY)?row:best,rows[0])}
+function targetElement(row,target){return target==="lyrics"?row.lyrics:target==="vocal"?row.vocal:row.staff.querySelector(".score-wrap")}
+function ensureAnnotationRowAnchors(){const geometry=annotationGeometry();if(!geometry)return;state.layers.forEach(layer=>(layer.items||[]).forEach(item=>{if(item.type==="symbol"&&item.anchor||item.layoutAnchorVersion===1)return;const clientY=itemClientCenterY(item,geometry),row=nearestAnnotationRow(geometry.rows,clientY),lyricsRect=row.lyrics?.getBoundingClientRect(),vocalRect=row.vocal?.getBoundingClientRect();let target=lyricsRect&&clientY>=lyricsRect.top&&clientY<=lyricsRect.bottom?"lyrics":vocalRect&&clientY>=vocalRect.top&&clientY<=vocalRect.bottom?"vocal":"staff";const element=targetElement(row,target);item.layoutRow=row.row;item.layoutTarget=target;item.layoutAnchorY=geometry.toY(element.getBoundingClientRect());item.layoutAnchorVersion=1}))}
+function visualAnnotationItem(item){if(item.type==="symbol"&&item.anchor)return item;const target=item.layoutTarget||"staff";if(target==="lyrics"&&!state.lyricsVisible||target==="vocal"&&!state.vocalVisible)return null;if(target==="page")return item;const geometry=annotationGeometry(),row=geometry?.rows?.[Number(item.layoutRow)];if(!geometry||!row)return item;const element=targetElement(row,target);if(!element)return null;const dy=geometry.toY(element.getBoundingClientRect())-Number(item.layoutAnchorY||0),copy=structuredClone(item);shiftAnnotationY(copy,dy);return copy}
 function markerUnderlayHtml(item){
   const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);
   return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||markerColors[0].value)}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`;
@@ -597,8 +595,8 @@ function renderLayers(){
   ensureAnnotationRowAnchors();
   syncLinkedSymbols();
   const visibleLayers=state.layers.filter(layer=>printing?layer.printEnabled!==false:layer.visible!==false);
-  underlay.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type==="marker").map(markerUnderlayHtml).join("")}</g>`).join("");
-  svg.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}-marker-hit">${layer.items.filter(item=>item.type==="marker").map(itemHtml).join("")}</g>`).join("")+visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type!=="marker").map(itemHtml).join("")}</g>`).join("");
+  underlay.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type==="marker").map(visualAnnotationItem).filter(Boolean).map(markerUnderlayHtml).join("")}</g>`).join("");
+  svg.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}-marker-hit">${layer.items.filter(item=>item.type==="marker").map(visualAnnotationItem).filter(Boolean).map(itemHtml).join("")}</g>`).join("")+visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type!=="marker").map(visualAnnotationItem).filter(Boolean).map(itemHtml).join("")}</g>`).join("");
   const personalLayers=state.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID);
   q("#layerSwitches").innerHTML=personalLayers.length?personalLayers.map(layer=>`<div class="layer-card"><button class="layer-chip ${layer.id===state.activeLayerId?"on":""} ${layer.visible===false?"hidden":""}" data-layer="${layer.id}">${esc(layer.name)}<small>${layer.items.length}件</small></button><div class="layer-options"><label><input type="checkbox" data-layer-visible="${layer.id}" ${layer.visible!==false?"checked":""}>表示</label><label><input type="checkbox" data-layer-print="${layer.id}" ${layer.printEnabled!==false?"checked":""}>印刷</label></div></div>`).join(""):"<span>個人レイヤーはまだありません</span>";
   q("#drawTools").querySelectorAll("[data-tool]").forEach(button=>button.classList.toggle("on",button.dataset.tool===state.drawTool));
@@ -606,6 +604,7 @@ function renderLayers(){
   const item=selectedItem();
   q("#markerColors").innerHTML=markerColors.map(color=>`<button class="marker-color ${color.value===(item?.type==="marker"?item.color:state.markerColor)?"on":""}" style="--c:${color.value}" data-marker-color="${color.value}" aria-label="${color.label}" title="${color.label}"></button>`).join("");
   q("#itemColor").value=item?.color||state.drawColor;q("#itemColor").disabled=item?.type==="marker";q("#textSize").value=String(item?.size||state.textSize);q("#textBackground").value=item?.background||state.textBackground;
+  q("#itemAnchorTarget").value=item?.layoutTarget||"staff";q("#itemAnchorTarget").disabled=!item;
   const lineItem=item&&["pen","arrow","rect"].includes(item.type),rectItem=item&&["rect","marker"].includes(item.type);
   q("#lineStyle").value=lineItem?(item.lineStyle||"solid"):(state.lineStyle||"solid");q("#lineStyle").disabled=Boolean(item&&!lineItem);
   q("#rectWidth").disabled=!rectItem;q("#rectHeight").disabled=!rectItem;
@@ -660,7 +659,7 @@ async function startDraw(event){
   if(state.drawTool==="eraser"){const target=event.target.closest("[data-item]");if(target){snap();layer.items=layer.items.filter(item=>item.id!==target.dataset.item);render()}return}
   event.preventDefault();q("#annotations").setPointerCapture(event.pointerId);draft={type:state.drawTool,start:p,points:[p]};
 }
-function translateItem(item,dx,dy){if(item.type==="pen")item.points=item.points.map(p=>({x:p.x+dx,y:p.y+dy}));else if(item.type==="text"||item.type==="symbol"){item.x+=dx;item.y+=dy}else{item.x1+=dx;item.y1+=dy;item.x2+=dx;item.y2+=dy}if(!(item.type==="symbol"&&item.anchor)){delete item.layoutAnchors;delete item.layoutOffsetCssY}}
+function translateItem(item,dx,dy){if(item.type==="pen")item.points=item.points.map(p=>({x:p.x+dx,y:p.y+dy}));else if(item.type==="text"||item.type==="symbol"){item.x+=dx;item.y+=dy}else{item.x1+=dx;item.y1+=dy;item.x2+=dx;item.y2+=dy}if(!(item.type==="symbol"&&item.anchor)&&Number.isFinite(Number(item.layoutOffsetY)))item.layoutOffsetY=Number(item.layoutOffsetY)+dy}
 function moveDraw(event){
   if(dragging){event.preventDefault();const p=pointFromEvent(event);translateItem(dragging.item,p.x-dragging.last.x,p.y-dragging.last.y);dragging.last=p;renderLayers();return}
   if(!draft)return;event.preventDefault();const p=pointFromEvent(event);if(draft.type==="pen")draft.points.push(p);else draft.end=p
@@ -817,6 +816,7 @@ q("#rectWidth").addEventListener("change",event=>resizeSelectedRect("x",event.ta
 q("#rectHeight").addEventListener("change",event=>resizeSelectedRect("y",event.target.value));
 q("#textSize").addEventListener("change",event=>{const item=selectedItem(),value=+event.target.value;state.textSize=value;if(item?.type==="text"){snap();item.size=value}render()});
 q("#textBackground").addEventListener("change",event=>{const item=selectedItem();state.textBackground=event.target.value;if(item?.type==="text"){snap();item.background=event.target.value}render()});
+q("#itemAnchorTarget").addEventListener("change",event=>{const item=selectedItem(),geometry=annotationGeometry(),row=geometry?.rows?.[Number(item?.layoutRow)];if(!item||!geometry||!row)return;const target=event.target.value,element=targetElement(row,target);if(target!=="page"&&!element){alert("現在は非表示の行へ関連付けできません。");renderLayers();return}const displayed=visualAnnotationItem(item),visualDy=displayed?annotationCenterY(displayed)-annotationCenterY(item):0;snap();item.layoutTarget=target;if(target==="page"){shiftAnnotationY(item,visualDy);item.layoutAnchorY=0}else item.layoutAnchorY=geometry.toY(element.getBoundingClientRect())-visualDy;item.layoutAnchorVersion=1;renderLayers()});
 q("#numberColor").addEventListener("change",event=>{snap();state.numberColor=event.target.value;state.notes.filter(n=>!n.rest&&n.v!=="○"&&!n.individualColor).forEach(n=>n.color=state.numberColor);render()});
 q("#openColor").addEventListener("change",event=>{snap();state.openColor=event.target.value;state.notes.filter(n=>!n.rest&&n.v==="○"&&!n.individualColor).forEach(n=>n.color=state.openColor);render()});
 q("#title").addEventListener("input",updateTitleWidth);
@@ -871,6 +871,6 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-<script src="./print-v2.js?v=135"></script>
+<script src="./print-v2.js?v=136"></script>
 </body>
 </html>
