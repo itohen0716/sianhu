@@ -3,6 +3,14 @@
 `index.html` は写譜ページ、`annotations.html` は書き込みページです。
 入力中の譜面は「▶ 演奏」から `player/` の独立プレーヤーで再生できます。
 
+## v140
+
+- 巨大化していた `embedded-assets.js` を廃止
+- 三味線音源を `player/audio/teacher-1to12-octave.wav` として分離
+- 音源を24bitステレオから16bitモノラルへ変換し、約22.7MBから約7.6MBへ縮小
+- 24音の開始・終了時刻と音程割り当ては維持
+- 調弦データを `player/tuning-master.json` から読み込む構成へ変更
+
 ## v139
 
 - 文化譜プレーヤーの機械音を、提供された24音の三味線実音源へ変更

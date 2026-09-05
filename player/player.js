@@ -1,64 +1,34 @@
 (()=>{"use strict";
 const STORAGE_KEY="shian-live-player-score";
-const BASE_FREQUENCIES={
-  1:{"本調子":[220,293.7,440],"二上り":[220,329.6,440],"三下り":[220,293.7,392]},
-  2:{"本調子":[233.1,311.1,466.2],"二上り":[233.1,349.2,466.2],"三下り":[233.1,311.1,415.3]},
-  3:{"本調子":[246.9,329.6,493.9],"二上り":[246.9,370,493.9],"三下り":[246.9,329.6,440]},
-  4:{"本調子":[261.6,349.2,523.3],"二上り":[261.6,392,523.3],"三下り":[261.6,349.2,466.2]},
-  5:{"本調子":[277.2,370,554.4],"二上り":[277.2,415.3,554.4],"三下り":[277.2,370,493.9]},
-  6:{"本調子":[293.7,392,587.3],"二上り":[293.7,440,587.3],"三下り":[293.7,392,523.3]},
-  7:{"本調子":[311.1,415.3,622.3],"二上り":[311.1,466.2,622.3],"三下り":[311.1,415.3,554.4]},
-  8:{"本調子":[329.6,440,659.3],"二上り":[329.6,493.9,659.3],"三下り":[329.6,440,587.3]}
-};
 const POSITION_SEMITONES=[0,1,2,3,5,6,7,8,9,10,12,13,14,15,17,18,19,20,21,22,24];
 const $=selector=>document.querySelector(selector),clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
-let score=null,count=6,tempo=96,muted=false,playing=false,pausedUnit=0,startContextTime=0,audioContext=null,masterGain=null,scheduled=[],finishTimer=0;
-
+let score=null,count=6,tempo=96,balance=50,muted=false,playing=false,pausedUnit=0,startContextTime=0,audioContext=null,masterGain=null,shamisenGain=null,vocalGain=null,scheduled=[],finishTimer=0;
 function setStatus(message,error=false){const element=$("#status");element.textContent=message;element.classList.toggle("error",error)}
 function parseMeter(value){const match=String(value||"2/4").match(/(\d+)\s*\/\s*(\d+)/);if(!match)return{capacity:8};const numerator=Number(match[1]),denominator=Number(match[2]);const capacity=16*numerator/denominator;return{capacity:Number.isFinite(capacity)&&capacity>0?capacity:8}}
-function validatePayload(payload){
-  if(!payload||payload.format!=="shian-live-score"||!payload.score||!Array.isArray(payload.score.notes))throw new Error("演奏データの形式が正しくありません。");
-  const notes=payload.score.notes.flatMap(note=>{const m=Number(note.m),s=Number(note.s),p=Number(note.p),d=Number(note.d);if(!Number.isInteger(m)||m<0||![1,2,3].includes(s)||!Number.isInteger(p)||p<0||![1,2,4].includes(d))return[];return[{m,s,p,d,v:String(note.v||""),rest:Boolean(note.rest)}]});
-  return{title:String(payload.score.title||""),tuning:["本調子","二上り","三下り"].includes(payload.score.tuning)?payload.score.tuning:"二上り",meter:String(payload.score.meter||"2/4"),notes};
-}
-function receivePayload(payload){try{stop(true);score=validatePayload(payload);pausedUnit=0;setStatus(score.notes.length?`${score.tuning}・入力済み ${score.notes.length}音` :"演奏できる音がありません。",!score.notes.length)}catch(error){score=null;setStatus(error instanceof Error?error.message:"演奏データを読み込めませんでした。",true)}}
+function normalizeNote(note,isVocal=false){const m=Number(note?.m),s=Number(note?.s),p=Number(note?.p),d=Number(note?.d),v=String(note?.v||"");if(!Number.isInteger(m)||m<0||![1,2,3].includes(s)||!Number.isInteger(p)||p<0||![1,2,4].includes(d))return null;const kind=isVocal?String(note?.kind||"pitch"):"pitch";return{m,s,p,d,v,rest:isVocal?kind!=="pitch":Boolean(note?.rest),voice:isVocal?"vocal":"shamisen"}}
+function validatePayload(payload){if(!payload||payload.format!=="shian-live-score"||!payload.score||!Array.isArray(payload.score.notes))throw new Error("演奏データの形式が正しくありません。");const notes=payload.score.notes.map(note=>normalizeNote(note)).filter(Boolean),vocalNotes=(Array.isArray(payload.score.vocalNotes)?payload.score.vocalNotes:[]).map(note=>normalizeNote(note,true)).filter(Boolean);return{title:String(payload.score.title||""),tuning:["本調子","二上り","三下り"].includes(payload.score.tuning)?payload.score.tuning:"二上り",meter:String(payload.score.meter||"2/4"),notes,vocalNotes}}
+function receivePayload(payload){try{stop(true);score=validatePayload(payload);pausedUnit=0;const shamisenCount=score.notes.filter(note=>!note.rest).length,vocalCount=score.vocalNotes.filter(note=>!note.rest).length;setStatus(shamisenCount||vocalCount?`${score.tuning}・三味線 ${shamisenCount}音・唄 ${vocalCount}音`:"演奏できる音がありません。",!(shamisenCount||vocalCount))}catch(error){score=null;setStatus(error instanceof Error?error.message:"演奏データを読み込めませんでした。",true)}}
 function loadInitial(){try{const raw=sessionStorage.getItem(STORAGE_KEY);if(raw)receivePayload(JSON.parse(raw))}catch(error){setStatus("演奏データを読み込めませんでした。",true);console.error(error)}}
 function noteSemitone(value){if(value==="○"||value==="0")return 0;const number=Number(value);return Number.isInteger(number)&&number>=1&&number<=20?POSITION_SEMITONES[number]:null}
-function frequencyFor(note){const semitone=noteSemitone(note.v),base=BASE_FREQUENCIES[count]?.[score?.tuning]?.[note.s-1];return semitone===null||!base?null:base*Math.pow(2,semitone/12)}
-function buildEvents(){
-  if(!score)return[];const capacity=parseMeter(score.meter).capacity,groups=new Map();
-  score.notes.forEach(note=>{const unit=note.m*capacity+note.p,key=String(unit);if(!groups.has(key))groups.set(key,{unit,duration:note.d,notes:[]});const event=groups.get(key);event.duration=Math.max(event.duration,note.d);event.notes.push(note)});
-  return[...groups.values()].sort((a,b)=>a.unit-b.unit);
-}
-async function ensureAudio(){const AudioContextClass=window.AudioContext||window.webkitAudioContext;if(!AudioContextClass)throw new Error("このブラウザは音声再生に対応していません。");if(!audioContext){audioContext=new AudioContextClass();masterGain=audioContext.createGain();masterGain.gain.value=muted?0:.78;masterGain.connect(audioContext.destination)}if(audioContext.state==="suspended")await audioContext.resume()}
-function pluck(frequency,when,durationSeconds,stringNumber){
-  if(!audioContext||!masterGain||!Number.isFinite(frequency))return;const oscillator=audioContext.createOscillator(),gain=audioContext.createGain(),filter=audioContext.createBiquadFilter();
-  oscillator.type=stringNumber===1?"sawtooth":"triangle";oscillator.frequency.setValueAtTime(frequency,when);filter.type="lowpass";filter.frequency.setValueAtTime(Math.min(5200,frequency*7),when);filter.Q.value=.8;
-  const peak=stringNumber===1?.18:.13,end=when+Math.max(.09,durationSeconds*.92);gain.gain.setValueAtTime(.0001,when);gain.gain.exponentialRampToValueAtTime(peak,when+.008);gain.gain.exponentialRampToValueAtTime(.0001,end);
-  oscillator.connect(filter);filter.connect(gain);gain.connect(masterGain);oscillator.start(when);oscillator.stop(end+.02);scheduled.push(oscillator);
-}
-async function play(){
-  if(!score||!score.notes.length){setStatus("演奏できる音がありません。",true);return}
-  try{await ensureAudio()}catch(error){setStatus(error instanceof Error?error.message:"音声を開始できません。",true);return}
-  stopScheduled();const events=buildEvents().filter(event=>event.unit>=pausedUnit);if(!events.length){pausedUnit=0;return play()}
-  const secondsPerUnit=60/tempo/4,lead=.06;startContextTime=audioContext.currentTime+lead-pausedUnit*secondsPerUnit;playing=true;updateTransport();
-  events.forEach(event=>{const when=startContextTime+event.unit*secondsPerUnit,duration=event.duration*secondsPerUnit;event.notes.filter(note=>!note.rest).forEach(note=>{const frequency=frequencyFor(note);if(frequency)pluck(frequency,when,duration,note.s)})});
-  const last=events[events.length-1],endUnit=last.unit+last.duration;finishTimer=window.setTimeout(()=>{playing=false;pausedUnit=0;stopScheduled();updateTransport();setStatus("演奏が終わりました。")},Math.max(0,(startContextTime+endUnit*secondsPerUnit-audioContext.currentTime)*1000+80));setStatus(`${score.tuning}・${count}本・${tempo} BPM`);
-}
-function stopScheduled(){scheduled.forEach(node=>{try{node.stop()}catch{}});scheduled=[];if(finishTimer)window.clearTimeout(finishTimer);finishTimer=0}
+function tuningMode(value){return{"本調子":"hon","二上り":"niage","三下り":"sansage"}[value]||"niage"}
+function frequencyFor(note){const semitone=noteSemitone(note.v),entry=window.ShianTuningMaster?.get(count,tuningMode(score?.tuning)),base=entry?.frequencies?.[note.s-1];return semitone===null||!Number.isFinite(base)?null:base*Math.pow(2,semitone/12)}
+function buildEvents(){if(!score)return[];const capacity=parseMeter(score.meter).capacity,groups=new Map();[...score.notes,...score.vocalNotes].forEach(note=>{const unit=note.m*capacity+note.p,key=`${note.voice}:${unit}`;if(!groups.has(key))groups.set(key,{unit,duration:note.d,voice:note.voice,notes:[]});const event=groups.get(key);event.duration=Math.max(event.duration,note.d);event.notes.push(note)});return[...groups.values()].sort((a,b)=>a.unit-b.unit)}
+async function ensureAudio(){if(!window.ShianAudioEngine||!window.ShianTuningMasterReady)throw new Error("三味線音源を読み込めませんでした。");await window.ShianTuningMasterReady;audioContext=await window.ShianAudioEngine.resume();await window.ShianAudioEngine.load();if(!masterGain){masterGain=audioContext.createGain();shamisenGain=audioContext.createGain();vocalGain=audioContext.createGain();shamisenGain.connect(masterGain);vocalGain.connect(masterGain);masterGain.connect(audioContext.destination)}updateMix(true)}
+function updateMix(immediate=false){if(!audioContext||!masterGain||!shamisenGain||!vocalGain)return;const now=audioContext.currentTime,constant=immediate?.001:.02;masterGain.gain.setTargetAtTime(muted?0:.92,now,constant);shamisenGain.gain.setTargetAtTime((100-balance)/100,now,constant);vocalGain.gain.setTargetAtTime(balance/100,now,constant)}
+function scheduleShamisen(frequency,when,noteCount){if(!audioContext||!shamisenGain||!Number.isFinite(frequency))return;const delay=Math.max(0,when-audioContext.currentTime),volume=noteCount>1?.62:.88;window.ShianAudioEngine.playFrequency(frequency,{exclusive:false,delay,volume,destination:shamisenGain}).catch(error=>{console.error(error);setStatus("三味線音源を再生できませんでした。",true)})}
+function scheduleFlute(frequency,when,durationSeconds){if(!audioContext||!vocalGain||!Number.isFinite(frequency))return;const end=when+Math.max(.1,durationSeconds*.94),attack=Math.min(.055,durationSeconds*.2),release=Math.min(.1,durationSeconds*.28),gain=audioContext.createGain(),filter=audioContext.createBiquadFilter();filter.type="lowpass";filter.frequency.setValueAtTime(Math.min(4400,Math.max(1700,frequency*8)),when);filter.Q.value=.7;gain.gain.setValueAtTime(.0001,when);gain.gain.linearRampToValueAtTime(.3,when+attack);gain.gain.setValueAtTime(.3,Math.max(when+attack,end-release));gain.gain.linearRampToValueAtTime(.0001,end);[{type:"sine",ratio:1,level:1},{type:"sine",ratio:2,level:.16},{type:"triangle",ratio:3,level:.045}].forEach(partial=>{const oscillator=audioContext.createOscillator(),partialGain=audioContext.createGain();oscillator.type=partial.type;oscillator.frequency.setValueAtTime(frequency*partial.ratio,when);oscillator.detune.setValueAtTime(partial.ratio===1?-2:2,when);partialGain.gain.value=partial.level;oscillator.connect(partialGain).connect(filter);oscillator.start(when);oscillator.stop(end+.03);scheduled.push(oscillator)});filter.connect(gain).connect(vocalGain);scheduled.push({stop(){try{gain.disconnect();filter.disconnect()}catch(_){}}})}
+async function play(){const playable=score&&[...score.notes,...score.vocalNotes].some(note=>!note.rest);if(!playable){setStatus("演奏できる音がありません。",true);return}try{await ensureAudio()}catch(error){setStatus(error instanceof Error?error.message:"音声を開始できません。",true);return}stopScheduled();const events=buildEvents().filter(event=>event.unit>=pausedUnit);if(!events.length){pausedUnit=0;return play()}const secondsPerUnit=60/tempo/4,lead=.08;startContextTime=audioContext.currentTime+lead-pausedUnit*secondsPerUnit;playing=true;updateTransport();events.forEach(event=>{const when=startContextTime+event.unit*secondsPerUnit,duration=event.duration*secondsPerUnit,notes=event.notes.filter(note=>!note.rest);notes.forEach(note=>{const frequency=frequencyFor(note);if(!frequency)return;if(event.voice==="vocal")scheduleFlute(frequency,when,duration);else scheduleShamisen(frequency,when,notes.length)})});const last=events[events.length-1],endUnit=last.unit+last.duration;finishTimer=window.setTimeout(()=>{playing=false;pausedUnit=0;stopScheduled();updateTransport();setStatus("演奏が終わりました。")},Math.max(0,(startContextTime+endUnit*secondsPerUnit-audioContext.currentTime)*1000+100));setStatus(`${score.tuning}・${count}本・${tempo} BPM`)}
+function stopScheduled(){window.ShianAudioEngine?.stopAll(.012);scheduled.forEach(node=>{try{node.stop()}catch(_){}});scheduled=[];if(finishTimer)window.clearTimeout(finishTimer);finishTimer=0}
 function pause(){if(!playing||!audioContext)return;const secondsPerUnit=60/tempo/4;pausedUnit=Math.max(0,(audioContext.currentTime-startContextTime)/secondsPerUnit);playing=false;stopScheduled();updateTransport();setStatus("一時停止中")}
 function stop(reset=false){if(playing&&audioContext&&!reset){const secondsPerUnit=60/tempo/4;pausedUnit=Math.max(0,(audioContext.currentTime-startContextTime)/secondsPerUnit)}playing=false;stopScheduled();if(reset)pausedUnit=0;updateTransport()}
 function updateTransport(){$("#playPause").textContent=playing?"Ⅱ":"▶";$("#playPause").setAttribute("aria-label",playing?"一時停止":"再生");$("#mute").classList.toggle("muted",muted);$("#mute").textContent=muted?"♩":"♪"}
 function setTempo(next){const resume=playing;if(resume)pause();tempo=clamp(Math.round(next),40,180);$("#tempo").value=String(tempo);$("#tempoValue").textContent=`${tempo} BPM`;if(resume)play()}
+function setBalance(next){balance=clamp(Math.round(next),0,100);$("#balance").value=String(balance);$("#balanceValue").textContent=`三味線 ${100-balance}％・唄 ${balance}％`;updateMix()}
 function renderCounts(){const labels=["一","二","三","四","五","六","七","八"];$(".counts").innerHTML=labels.map((label,index)=>`<button type="button" data-count="${index+1}" class="${index+1===count?"on":""}" aria-pressed="${index+1===count}">${label}</button>`).join("")}
-
 window.addEventListener("message",event=>{if(event.origin!==location.origin)return;const validSource=event.source===window.opener||event.source===window.parent;if(!validSource)return;if(event.data?.type==="SHIAN_SCORE_UPDATE")receivePayload(event.data.payload);else if(event.data?.type==="SHIAN_PLAYER_STOP")stop(true)});
 $(".counts").addEventListener("click",event=>{const button=event.target.closest("[data-count]");if(!button)return;count=Number(button.dataset.count);stop(true);renderCounts();if(score)setStatus(`${score.tuning}・${count}本`)});
-$("#tempo").addEventListener("input",event=>setTempo(Number(event.target.value)));
-$("#tempoDown").addEventListener("click",()=>setTempo(tempo-5));$("#tempoUp").addEventListener("click",()=>setTempo(tempo+5));
-$("#rewind").addEventListener("click",()=>{stop(true);setStatus(score?"先頭へ戻りました。":"演奏データを待っています。");});
-$("#playPause").addEventListener("click",()=>playing?pause():play());
-$("#mute").addEventListener("click",()=>{muted=!muted;if(masterGain&&audioContext)masterGain.gain.setTargetAtTime(muted?0:.78,audioContext.currentTime,.015);updateTransport()});
+$("#tempo").addEventListener("input",event=>setTempo(Number(event.target.value)));$("#tempoDown").addEventListener("click",()=>setTempo(tempo-5));$("#tempoUp").addEventListener("click",()=>setTempo(tempo+5));$("#balance").addEventListener("input",event=>setBalance(Number(event.target.value)));
+$("#rewind").addEventListener("click",()=>{stop(true);setStatus(score?"先頭へ戻りました。":"演奏データを待っています。")});$("#playPause").addEventListener("click",()=>playing?pause():play());$("#mute").addEventListener("click",()=>{muted=!muted;updateMix();updateTransport()});
 window.addEventListener("pagehide",()=>stop(true));document.addEventListener("visibilitychange",()=>{if(document.hidden&&playing)pause()});
-renderCounts();setTempo(tempo);updateTransport();loadInitial();
+renderCounts();setTempo(tempo);setBalance(balance);updateTransport();loadInitial();
 })();
