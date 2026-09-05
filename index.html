@@ -863,6 +863,21 @@ function itemHtml(item){
   const background=item.background||"white",bg=background==="none"?"none":background==="translucent"?"rgba(255,255,255,.72)":"#fff",layout=commentLayout(item);
   return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${layout.top}" width="${layout.width+14}" height="${layout.height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${layout.size}" font-weight="600">${commentTextSvg(item,layout)}</text></g>`;
 }
+function annotationItemBottom(item){
+  if(item.type==="pen")return Math.max(0,...(item.points||[]).map(point=>Number(point.y)||0))+4;
+  if(item.type==="text"){const layout=commentLayout(item);return layout.top+layout.height+4}
+  if(item.type==="symbol")return Number(item.y||0)+12;
+  return Math.max(Number(item.y1)||0,Number(item.y2)||0)+(item.type==="arrow"?20:4);
+}
+function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
+  if(!paper)return;
+  const paperRect=paper.getBoundingClientRect(),scoreRect=q("#scoreArea")?.getBoundingClientRect(),style=getComputedStyle(paper);
+  if(!paperRect.width||!scoreRect)return;
+  const naturalHeight=scoreRect.bottom-paperRect.top+(parseFloat(style.paddingBottom)||0)+(parseFloat(style.borderBottomWidth)||0);
+  const annotationHeight=Math.max(0,...items.map(annotationItemBottom))*paperRect.width/logicalWidth+18;
+  const cssScale=paperRect.width/Math.max(1,paper.offsetWidth);
+  paper.style.minHeight=`${Math.ceil(Math.max(naturalHeight,annotationHeight)/Math.max(.01,cssScale))}px`;
+}
 function renderLayers(skipSave=false){
   ensureTechniqueLayer();
   const svg=q("#annotations"),underlay=q("#annotationUnderlay"),paper=q(".paper");
@@ -887,6 +902,7 @@ function renderLayers(skipSave=false){
   svg.innerHTML=visibleLayers
     .map(item=>`<g data-layer="${item.id}">${item.items.map(visualAnnotationItem).filter(Boolean).map(itemHtml).join("")}</g>`)
     .join("");
+  fitPaperToVisibleAnnotations(paper,visibleLayers.flatMap(item=>item.items).map(visualAnnotationItem).filter(Boolean),logicalWidth);
   let scoreLayer=["notes","staff","technique","vocal"].includes(state.scoreEditLayer)?state.scoreEditLayer:"notes";
   state.scoreEditLayer=scoreLayer;document.body.dataset.scoreLayer=scoreLayer;
   q("#layerSwitches").innerHTML=`<button class="layer-chip fixed ${scoreLayer==="notes"?"on":""}" data-score-layer="notes">数字・開放弦<small>選択・横移動・削除</small></button><button class="layer-chip fixed ${scoreLayer==="staff"?"on":""}" data-score-layer="staff">譜線・小節線<small>小節線の選択・横移動</small></button><button class="layer-chip fixed ${scoreLayer==="technique"?"on":""} ${layer.visible===false?"hidden":""}" data-score-layer="technique">奏法<small>${layer.visible===false?"非表示":"表示中"}・${layer.items.length}件・削除不可</small></button><button class="layer-chip fixed ${scoreLayer==="vocal"?"on":""}" data-score-layer="vocal">唄<small>音程・休符・合いの手・歌詞</small></button>`;
@@ -1357,6 +1373,6 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=137"></script>
+  <script src="./print-v2.js?v=138"></script>
 </body>
 </html>

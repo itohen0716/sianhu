@@ -593,6 +593,21 @@ function itemHtml(item){
   const background=item.background||"white",bg=background==="none"?"none":background==="translucent"?"rgba(255,255,255,.72)":"#fff",layout=commentLayout(item);
   return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${layout.top}" width="${layout.width+14}" height="${layout.height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${layout.size}" font-weight="600">${commentTextSvg(item,layout)}</text></g>`;
 }
+function annotationItemBottom(item){
+  if(item.type==="pen")return Math.max(0,...(item.points||[]).map(point=>Number(point.y)||0))+4;
+  if(item.type==="text"){const layout=commentLayout(item);return layout.top+layout.height+4}
+  if(item.type==="symbol")return Number(item.y||0)+12;
+  return Math.max(Number(item.y1)||0,Number(item.y2)||0)+(item.type==="arrow"?20:4);
+}
+function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
+  if(printing||!paper)return;
+  const paperRect=paper.getBoundingClientRect(),scoreRect=q("#scoreArea")?.getBoundingClientRect(),style=getComputedStyle(paper);
+  if(!paperRect.width||!scoreRect)return;
+  const naturalHeight=scoreRect.bottom-paperRect.top+(parseFloat(style.paddingBottom)||0)+(parseFloat(style.borderBottomWidth)||0);
+  const annotationHeight=Math.max(0,...items.map(annotationItemBottom))*paperRect.width/logicalWidth+18;
+  const cssScale=paperRect.width/Math.max(1,paper.offsetWidth);
+  paper.style.minHeight=`${Math.ceil(Math.max(naturalHeight,annotationHeight)/Math.max(.01,cssScale))}px`;
+}
 function renderLayers(){
   ensureTechniqueLayer();
   const svg=q("#annotations"),underlay=q("#annotationUnderlay"),paper=q(".paper");
@@ -612,6 +627,7 @@ function renderLayers(){
   const visibleLayers=state.layers.filter(layer=>printing?layer.printEnabled!==false:layer.visible!==false);
   underlay.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type==="marker").map(visualAnnotationItem).filter(Boolean).map(markerUnderlayHtml).join("")}</g>`).join("");
   svg.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}-marker-hit">${layer.items.filter(item=>item.type==="marker").map(visualAnnotationItem).filter(Boolean).map(itemHtml).join("")}</g>`).join("")+visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type!=="marker").map(visualAnnotationItem).filter(Boolean).map(itemHtml).join("")}</g>`).join("");
+  fitPaperToVisibleAnnotations(paper,visibleLayers.flatMap(layer=>layer.items).map(visualAnnotationItem).filter(Boolean),logicalWidth);
   const personalLayers=state.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID);
   q("#layerSwitches").innerHTML=personalLayers.length?personalLayers.map(layer=>`<div class="layer-card"><button class="layer-chip ${layer.id===state.activeLayerId?"on":""} ${layer.visible===false?"hidden":""}" data-layer="${layer.id}">${esc(layer.name)}<small>${layer.items.length}件</small></button><div class="layer-options"><label><input type="checkbox" data-layer-visible="${layer.id}" ${layer.visible!==false?"checked":""}>表示</label><label><input type="checkbox" data-layer-print="${layer.id}" ${layer.printEnabled!==false?"checked":""}>印刷</label></div></div>`).join(""):"<span>個人レイヤーはまだありません</span>";
   q("#drawTools").querySelectorAll("[data-tool]").forEach(button=>button.classList.toggle("on",button.dataset.tool===state.drawTool));
@@ -895,6 +911,6 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=137"></script>
+  <script src="./print-v2.js?v=138"></script>
 </body>
 </html>
