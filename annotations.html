@@ -325,7 +325,7 @@ function serializable(){normalizeVocalSlurs();return{notes:state.notes,vocalNote
 function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
-  const payload={format:"shian-live-score",version:1,sentAt:Date.now(),score:{title:String(state.title||""),tuning:String(state.tuning||"二上り"),meter:String(state.meter||"2/4"),notes:state.notes.map(note=>({m:Number(note.m)||0,s:Number(note.s)||1,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),rest:Boolean(note.rest)}))}};
+  const payload={format:"shian-live-score",version:2,sentAt:Date.now(),score:{title:String(state.title||""),tuning:String(state.tuning||"二上り"),meter:String(state.meter||"2/4"),notes:state.notes.map(note=>({m:Number(note.m)||0,s:Number(note.s)||1,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),rest:Boolean(note.rest)})),vocalNotes:state.vocalNotes.map(note=>({m:Number(note.m)||0,s:Number(note.s)||3,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),kind:String(note.kind||"pitch")}))}};
   try{sessionStorage.setItem("shian-live-player-score",JSON.stringify(payload))}catch(error){console.warn("演奏データを一時保存できませんでした。",error)}
   const modal=q("#playerModal"),frame=q("#scorePlayerFrame");modal.hidden=false;document.body.classList.add("player-modal-open");
   const send=()=>{try{frame.contentWindow?.postMessage({type:"SHIAN_SCORE_UPDATE",payload},location.origin)}catch(error){console.warn("プレーヤーへ譜面を送れませんでした。",error)}};
