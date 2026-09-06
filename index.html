@@ -178,7 +178,7 @@
       .print-score-part{position:absolute;z-index:3;top:9px;width:24px;height:36px;transform:translateX(-50%)}.print-score-part svg{width:100%;height:100%;overflow:visible}
     }
     @media print{.measure.on .note b{background:transparent!important}}
-    .vocal-note.dotted .vocal-note-value{margin-right:7px}.vocal-dot{position:absolute;left:calc(100% + 1px);top:-3px;font-size:12px;font-weight:700}.note.open-note.d2:not(.rest)::after,.note.open-note.d1:not(.rest)::after{top:16px}.note.open-note.d1:not(.rest)::after{height:4px}.score{padding-bottom:6px;margin-bottom:-6px}
+    .vocal-note.dotted .vocal-note-value{margin-right:4px}.vocal-note-value>.vocal-dot{position:absolute;left:calc(100% - 1px);top:-2px;font-size:12px;font-weight:700}.note.open-note b{top:calc(50% - 3px)}.note.open-note.d2:not(.rest)::after,.note.open-note.d1:not(.rest)::after{top:calc(50% + 7px)}.note.open-note.d1:not(.rest)::after{height:4px}.score{padding-bottom:8px;margin-bottom:0}body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea{pointer-events:auto}
   </style>
   <link rel="stylesheet" href="./print-v2.css?v=127">
 </head>
@@ -763,7 +763,7 @@ function vocalNoteHtml(note){
   const kind=["pitch","rest","interjection"].includes(note.kind)?note.kind:"pitch",mark=kind==="pitch"?vocalStringMark(note.s):"",label=kind==="rest"?"休符":kind==="interjection"?"合いの手":"唄の音程";
   const color=kind==="pitch"?note.color||"#222222":"#222222";
   const position=effectiveVocalPosition(note),anchored=vocalAnchor(note)?" anchored":"";
-  return `<button class="vocal-note d${note.d} kind-${kind}${selected}${anchored}${slurStart}${dotted}" style="grid-column:${position.p+1};--vocal-x:${effectiveVocalX(note)}px;--vocal-color:${esc(color)}" data-vocal-note="${esc(note.id)}" aria-label="${label} ${esc(note.v)}"><span class="vocal-note-value">${esc(note.v)}</span>${note.dotted?'<span class="vocal-dot" aria-hidden="true">・</span>':""}<span class="vocal-string-mark">${mark}</span></button>`;
+  return `<button class="vocal-note d${note.d} kind-${kind}${selected}${anchored}${slurStart}${dotted}" style="grid-column:${position.p+1};--vocal-x:${effectiveVocalX(note)}px;--vocal-color:${esc(color)}" data-vocal-note="${esc(note.id)}" aria-label="${label} ${esc(note.v)}"><span class="vocal-note-value">${esc(note.v)}${note.dotted?'<span class="vocal-dot" aria-hidden="true">・</span>':""}</span><span class="vocal-string-mark">${mark}</span></button>`;
 }
 function vocalMeasureHtml(m){
   const capacity=measureCapacity(),width=measureWidth(m);
@@ -789,7 +789,7 @@ function render(){
   q("#vocalDurations").innerHTML=[[4,"4分","下線なし"],[2,"8分","下線1本"],[1,"16分","下線2本"]].map(item=>`<button class="${item[0]===state.vocalDuration?"on":""}" data-vocal-duration="${item[0]}"><b>${item[1]}</b><small>${item[2]}</small></button>`).join("");
   q("#vocalNumbers").innerHTML=vocalVals.map(value=>`<button data-vocal-value="${value}">${value}</button>`).join("");
   q("#vocalSlur").classList.toggle("on",vocalTool==="slur");q("#vocalSlur").setAttribute("aria-pressed",String(vocalTool==="slur"));
-  q("#tripletTool").classList.toggle("on",tripletMode);q("#tripletTool").setAttribute("aria-pressed",String(tripletMode));
+  q("#tripletTool").classList.toggle("on",tripletMode);q("#tripletTool").setAttribute("aria-pressed",String(tripletMode));document.body.classList.toggle("triplet-selecting",tripletMode);
   q("#vocalStatus").textContent=vocalTool==="slur"?(vocalSlurStartId?"スラーの終点を押してください":"スラーの始点を押してください"):`${location.row+1}段・${location.local+1}小節・16分位置${state.p+1}/${capacity}（${vocalAnchorLabel(activeVocalAnchor())}）${selectedScoreTarget?.type==="vocal"?"（選択中：ドラッグ／矢印で微調整）":""}`;
   const printStarts=pageStartRows();
   q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div>`:""}</section>`).join("");
@@ -1089,7 +1089,7 @@ function openPrintSettings(){
 }
 load();state.scoreEditLayer="notes";drawing=false;
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
-  if(b.id==="tripletTool"){tripletMode=!tripletMode;tripletStartAnchor=null;selectedScoreTarget=null;selectedItemId=null;drawing=false;state.scoreEditLayer="notes";cursorVisible=false}
+  if(b.id==="tripletTool"){tripletMode=!tripletMode;tripletStartAnchor=null;selectedScoreTarget=null;selectedItemId=null;state.selectedSymbol=null;state.drawTool="select";drawing=false;state.scoreEditLayer="technique";cursorVisible=false}
   else if(tripletMode&&b.dataset.note){const [m,,p]=b.dataset.note.split(",").map(Number),anchor={m,p};if(!tripletStartAnchor){tripletStartAnchor=anchor;selectedScoreTarget=null}else if(createTriplet(tripletStartAnchor,anchor)){tripletMode=false;tripletStartAnchor=null}}
   else if(b.id==="vocalSlur"){vocalTool=vocalTool==="slur"?"note":"slur";vocalSlurStartId=null;selectedScoreTarget=null;cursorVisible=false}
   else if(b.id==="vocalDot"){const note=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(item=>item.id===selectedScoreTarget.id):null;if(note&&note.kind==="pitch"){snap();note.dotted=!note.dotted;state.vocalDotted=note.dotted}}
@@ -1196,7 +1196,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   }
   else if(b.dataset.layer){state.activeLayerId=b.dataset.layer;selectedItemId=null;renderLayers();return}
   else if(b.dataset.tool){state.drawTool=b.dataset.tool;renderLayers();return}
-  else if(b.dataset.symbol){state.drawTool="symbol";state.selectedSymbol=b.dataset.symbol;selectedItemId=null;drawing=true;renderLayers();return}
+  else if(b.dataset.symbol){const turningOff=state.drawTool==="symbol"&&state.selectedSymbol===b.dataset.symbol;state.drawTool=turningOff?"select":"symbol";state.selectedSymbol=turningOff?null:b.dataset.symbol;selectedItemId=null;drawing=!turningOff;renderLayers();return}
   else if(b.dataset.symbolSide){
     const side=b.dataset.symbolSide,item=selectedItem();snap();state.symbolSide=side;
     if(item?.type==="symbol"){item.side=side;ensureTechniquePixelOffset(item);item.offsetYPx=0;item.offsetY=0}

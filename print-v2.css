@@ -27,5 +27,5 @@
   .pv2-part{position:absolute;z-index:3;top:9px;width:24px;height:36px;transform:translateX(-50%)}.pv2-part svg{width:100%;height:100%;overflow:visible}
   .pv2-overlay{position:absolute;z-index:20;left:0;top:0;width:100%;height:120px;overflow:visible;pointer-events:none}.pv2-overlay text{font-family:"Yu Gothic","Noto Sans JP",sans-serif}.pv2-overlay .roman{font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}
   .pv2-page-underlay,.pv2-page-overlay{position:absolute;left:55px;top:0;width:calc(100% - 55px);overflow:visible;pointer-events:none}.pv2-page-underlay{z-index:0}.pv2-page-overlay{z-index:20}.pv2-page-overlay text{font-family:"Yu Gothic","Noto Sans JP",sans-serif}
-  .pv2-vocal-dot{position:absolute;left:calc(100% + 1px);top:-2px;font-size:11px;font-weight:700}.pv2-note.open.d2::after,.pv2-note.open.d1::after{top:18px}.pv2-note.open.d1::after{height:4px}
+  .pv2-vocal-dot{position:absolute;left:calc(100% - 1px);top:-2px;font-size:11px;font-weight:700}.pv2-note.open .pv2-glyph{position:relative;top:-3px}.pv2-note.open.d2::after,.pv2-note.open.d1::after{top:16px}.pv2-note.open.d1::after{height:4px}
 }
