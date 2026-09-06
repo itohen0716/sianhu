@@ -131,7 +131,7 @@
 <div id="playerModal" class="player-modal" hidden role="dialog" aria-modal="true" aria-label="文化譜プレーヤー"><div class="player-dialog"><button id="closePlayer" class="player-close" type="button" aria-label="プレーヤーを閉じる">×</button><iframe id="scorePlayerFrame" title="文化譜プレーヤー" loading="eager"></iframe></div></div>
 <main class="app">
   <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>書き込み</h1><p class="base-layer-note">写譜は最下層の表示専用レイヤーです。</p></div></header>
-  <input id="scoreFileInput" type="file" accept=".shian-score.json,.json,application/json" hidden>
+  <input id="scoreFileInput" type="file" hidden>
   <div class="workspace-shell">
   <div class="score-viewport" aria-label="文化譜表示領域">
   <div class="actions score-toolbar"><a class="page-link" href="./index.html">♪ 写譜ページ</a><button id="playScore" aria-label="入力中の文化譜を演奏">▶ 演奏</button><button id="saveScoreFile">保存</button><button id="loadScoreFile">読込</button><button id="printPreview">印刷プレビュー</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div>
@@ -375,8 +375,11 @@ function validatedImportedScore(value){
 async function importScoreFile(file){
   if(!file)return;
   try{
+    if(!file.name.toLowerCase().endsWith(".json"))throw new Error("文化譜のJSONファイルを選択してください。");
     if(file.size>10*1024*1024)throw new Error("保存ファイルが大きすぎます（上限10MB）。");
-    const imported=validatedImportedScore(JSON.parse(await file.text()));
+    let parsed;
+    try{parsed=JSON.parse(await file.text())}catch{throw new Error("JSONを解析できません。ファイルが壊れていないか確認してください。")}
+    const imported=validatedImportedScore(parsed);
     if((state.notes.length||state.layers.some(layer=>layer.items?.length))&&!confirm("現在の文化譜を、読み込んだ内容に置き換えますか？"))return;
     state=imported;migrateState();ensureTechniqueLayer();past=[];future=[];selectedItemId=null;drawing=false;save();render();
     alert(`「${state.title||"文化譜"}」を読み込みました。`);
