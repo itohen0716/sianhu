@@ -28,7 +28,7 @@
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.staff.has-hanma .score-wrap{padding-bottom:20px}.labels{display:grid;grid-template-rows:repeat(3,18px);font:12px/18px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow-x:auto;overflow-y:hidden}
     .score{position:relative;display:flex;width:max-content;min-width:100%}.measure{--row-height:18px;--note-size:14px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:0 0 var(--measure-width,384px);width:var(--measure-width,384px);min-width:240px;border-left:0;position:relative}.measure.hanma{min-width:120px}.measure-selector{position:absolute;z-index:1;inset:0;border:0;background:transparent;padding:0}.hanma-label{position:absolute;z-index:6;left:0;right:0;top:calc(var(--row-height)*3 + 2px);color:var(--ink);font:12px/17px serif;text-align:center;white-space:nowrap;pointer-events:none}
-    .tuplet-layer{position:absolute;z-index:10;left:0;top:-28px;width:100%;height:28px;overflow:visible;pointer-events:none}.tuplet-item{pointer-events:all;cursor:pointer}.tuplet-item path{fill:none;stroke:#222;stroke-width:1.5;stroke-linecap:round}.tuplet-item text{fill:#222;font:700 13px/1 Arial;text-anchor:middle;paint-order:stroke fill;stroke:var(--paper);stroke-width:4px}.tuplet-item.selected path{stroke:var(--blue);stroke-width:2.5}.tuplet-item.selected text{fill:var(--blue)}.note.tuplet-start b{outline:2px solid #477d91;outline-offset:3px}
+    .tuplet-layer{position:absolute;z-index:10;left:0;top:-28px;width:100%;height:82px;overflow:visible;pointer-events:none}.tuplet-item{pointer-events:all;cursor:pointer}.tuplet-item path{fill:none;stroke:#222;stroke-width:1.5;stroke-linecap:round}.tuplet-item text{fill:#222;font:700 13px/1 Arial;text-anchor:middle;paint-order:stroke fill;stroke:var(--paper);stroke-width:4px}.tuplet-item.selected path{stroke:var(--blue);stroke-width:2.5}.tuplet-item.selected text{fill:var(--blue)}.note.tuplet-start b{outline:2px solid #477d91;outline-offset:3px}
     .measure:last-child{border-right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));position:relative}
     .barline-handle{position:absolute;z-index:7;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);left:-18px;width:36px;border:0;background:transparent;touch-action:none;cursor:ew-resize}.barline-handle::after{content:"";position:absolute;left:17px;top:0;bottom:0;border-left:1.5px solid var(--ink)}.barline-handle:hover::after,.barline-handle:focus-visible::after,.barline-handle.selected::after{border-left:4px solid #c9a927}.measure:first-child>.barline-handle,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure:first-child>.barline-handle{cursor:pointer}.measure:last-child::after{right:0}
     /* 段末記号はSVG外枠ではなく、実際に見える外側線を譜線終端へ合わせる。 */
@@ -179,7 +179,7 @@
     @media print{.measure.on .note b{background:transparent!important}}
     .vocal-note.dotted .vocal-note-value{margin-right:4px}.vocal-note-value>.vocal-dot{position:absolute;left:calc(100% - 1px);top:-2px;font-size:12px;font-weight:700}.score-scroll{padding-top:28px;margin-top:-28px}.score{padding-bottom:8px;margin-bottom:0}body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea{pointer-events:auto}body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea .note{pointer-events:auto;cursor:pointer}
   </style>
-  <link rel="stylesheet" href="./print-v2.css?v=150">
+  <link rel="stylesheet" href="./print-v2.css?v=151">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
@@ -210,7 +210,7 @@
       <div id="colors" class="colors"></div>
       <div id="symbolTools" class="symbol-tools">
         <button data-symbol="ス" title="スクイ">スクイ<br>ス</button><button data-symbol="ハ" title="ハジキ">ハジキ<br>ハ</button><button data-symbol="スリ" title="スリ（下側に山形スラー）">スリ<br>⌒</button><button data-symbol="ウ" title="ウチ">ウチ<br>ウ</button><button data-symbol="「" title="押し撥">押し撥<br>「</button><button data-symbol="ケ" title="消し">消し<br>ケ</button>
-        <button class="roman" data-symbol="Ⅰ">Ⅰ</button><button class="roman" data-symbol="Ⅱ">Ⅱ</button><button class="roman" data-symbol="Ⅲ">Ⅲ</button><button id="tripletTool" title="開始音と終了音を選んで三連符を設定">3連</button>
+        <button class="roman" data-symbol="Ⅰ">Ⅰ</button><button class="roman" data-symbol="Ⅱ">Ⅱ</button><button class="roman" data-symbol="Ⅲ">Ⅲ</button><button id="tripletTool" title="開始音と終了音を選んで三連符を設定">三連符<br><small>⌒ 3</small></button>
       </div>
     </div>
     <div class="edit-tools"><button id="nudgeLeft">← 左へ</button><button id="nudgeRight">右へ →</button><button id="editComment" hidden>再編集</button><button id="deleteItem">選択した奏法記号を削除</button><button id="bringFront">最前面へ</button></div>
@@ -394,8 +394,14 @@ function normalizeVocalSlurs(){
   const ids=new Set(state.vocalNotes.map(note=>note.id));
   state.vocalSlurs=(Array.isArray(state.vocalSlurs)?state.vocalSlurs:[]).filter(slur=>slur&&ids.has(String(slur.startId))&&ids.has(String(slur.endId))&&String(slur.startId)!==String(slur.endId)).map(slur=>({id:String(slur.id||uid()),startId:String(slur.startId),endId:String(slur.endId)}));
 }
-function tupletAnchor(value){const m=Number(value?.m),p=Number(value?.p);return Number.isInteger(m)&&Number.isInteger(p)?{m,p}:null}
-function tupletColumnExists(anchor){return Boolean(anchor&&state.notes.some(note=>!note.rest&&note.m===anchor.m&&note.p===anchor.p))}
+function tupletAnchor(value){
+  const m=Number(value?.m),p=Number(value?.p),savedString=Number(value?.s);
+  if(!Number.isInteger(m)||!Number.isInteger(p))return null;
+  if(value&&Object.prototype.hasOwnProperty.call(value,"s"))return[1,2,3].includes(savedString)&&state.notes.some(note=>!note.rest&&note.m===m&&note.s===savedString&&note.p===p)?{m,s:savedString,p}:null;
+  const legacyNote=state.notes.filter(note=>!note.rest&&note.m===m&&note.p===p).sort((a,b)=>Number(b.s)-Number(a.s))[0];
+  return legacyNote?{m,s:Number(legacyNote.s),p}:null;
+}
+function tupletColumnExists(anchor){return Boolean(anchor&&state.notes.some(note=>!note.rest&&note.m===anchor.m&&note.s===anchor.s&&note.p===anchor.p))}
 function compareAnchors(a,b){return a.m-b.m||a.p-b.p}
 function normalizeTuplets(){
   state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).flatMap(entry=>{const start=tupletAnchor(entry?.start),end=tupletAnchor(entry?.end),targetBeats=Number(entry?.targetBeats);if(entry?.type!=="triplet"||!tupletColumnExists(start)||!tupletColumnExists(end)||compareAnchors(start,end)>=0||measureLocation(start.m).row!==measureLocation(end.m).row||!Number.isFinite(targetBeats)||targetBeats<=0||targetBeats>16)return[];return[{id:String(entry.id||uid()),type:"triplet",start,end,targetBeats}]});
@@ -418,7 +424,7 @@ function migrateState(){
     const remap=(m,p)=>{const absolute=m*16+p;return{m:Math.floor(absolute/parsed.capacity),p:absolute%parsed.capacity}};
     state.notes=state.notes.map(note=>({...note,...remap(note.m,note.p)}));
     state.scoreParts=(state.scoreParts||[]).map(part=>({...part,...remap(part.m,part.p)}));
-    state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).map(tuplet=>({...tuplet,start:remap(tuplet.start?.m,tuplet.start?.p),end:remap(tuplet.end?.m,tuplet.end?.p)}));
+    state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).map(tuplet=>({...tuplet,start:{...tuplet.start,...remap(tuplet.start?.m,tuplet.start?.p)},end:{...tuplet.end,...remap(tuplet.end?.m,tuplet.end?.p)}}));
     state.layers=(state.layers||[]).map(layer=>({...layer,items:(layer.items||[]).map(item=>item.anchor?{...item,anchor:{...item.anchor,...remap(item.anchor.m,item.anchor.p)}}:item)}));
     const needed=Math.max(1,...state.notes.map(note=>note.m+1),...state.scoreParts.map(part=>part.m+1));state.rows=clamp(Math.ceil(needed/state.measuresPerRow),state.rows,20);state.measureOffsets=[];
     const cursor=remap(state.m,state.p);state.m=cursor.m;state.p=cursor.p;
@@ -511,7 +517,7 @@ function serializable(){normalizeVocalSlurs();normalizeTuplets();normalizeMeasur
 function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
-  const payload={format:"shian-live-score",version:4,sentAt:Date.now(),score:{title:String(state.title||""),tuning:String(state.tuning||"二上り"),meter:String(state.meter||"2/4"),measureSpecials:state.measureSpecials,notes:state.notes.map(note=>({m:Number(note.m)||0,s:Number(note.s)||1,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),rest:Boolean(note.rest)})),tuplets:(state.tuplets||[]).map(tuplet=>({id:String(tuplet.id||""),type:"triplet",start:{m:Number(tuplet.start?.m),p:Number(tuplet.start?.p)},end:{m:Number(tuplet.end?.m),p:Number(tuplet.end?.p)},targetBeats:Number(tuplet.targetBeats)||1})),vocalNotes:state.vocalNotes.map(note=>({id:String(note.id||""),m:Number(note.m)||0,s:Number(note.s)||3,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),kind:String(note.kind||"pitch")})),vocalSlurs:(state.vocalSlurs||[]).map(slur=>({startId:String(slur.startId||""),endId:String(slur.endId||"")}))}};
+  const payload={format:"shian-live-score",version:4,sentAt:Date.now(),score:{title:String(state.title||""),tuning:String(state.tuning||"二上り"),meter:String(state.meter||"2/4"),measureSpecials:state.measureSpecials,notes:state.notes.map(note=>({m:Number(note.m)||0,s:Number(note.s)||1,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),rest:Boolean(note.rest)})),tuplets:(state.tuplets||[]).map(tuplet=>({id:String(tuplet.id||""),type:"triplet",start:{m:Number(tuplet.start?.m),s:Number(tuplet.start?.s),p:Number(tuplet.start?.p)},end:{m:Number(tuplet.end?.m),s:Number(tuplet.end?.s),p:Number(tuplet.end?.p)},targetBeats:Number(tuplet.targetBeats)||1})),vocalNotes:state.vocalNotes.map(note=>({id:String(note.id||""),m:Number(note.m)||0,s:Number(note.s)||3,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),kind:String(note.kind||"pitch")})),vocalSlurs:(state.vocalSlurs||[]).map(slur=>({startId:String(slur.startId||""),endId:String(slur.endId||"")}))}};
   payload.score.vocalNotes.forEach((note,index)=>{note.dotted=Boolean(state.vocalNotes[index]?.dotted)});
   try{sessionStorage.setItem("shian-live-player-score",JSON.stringify(payload))}catch(error){console.warn("演奏データを一時保存できませんでした。",error)}
   const modal=q("#playerModal"),frame=q("#scorePlayerFrame");modal.hidden=false;document.body.classList.add("player-modal-open");
@@ -557,7 +563,7 @@ function validatedImportedScore(value){
   const meter=parseMeter(score.meter||defaults.meter);if(!meter)throw new Error("拍子データを認識できません。");
   const importedCapacity=String(score.meter||"").includes("拍子")?Math.max(16,meter.capacity):meter.capacity;
   const total=rowMeasureCounts.reduce((sum,count)=>sum+count,0);if(score.notes.some(note=>!note||!Number.isInteger(note.m)||!Number.isInteger(note.s)||!Number.isInteger(note.p)||note.m<0||note.m>=total||note.s<1||note.s>3||note.p<0||note.p>=importedCapacity))throw new Error("音符データに不正な位置があります。");
-  const tuplets=Array.isArray(score.tuplets)?score.tuplets:[];if(tuplets.some(tuplet=>tuplet?.type!=="triplet"||!Number.isInteger(Number(tuplet.start?.m))||!Number.isInteger(Number(tuplet.start?.p))||!Number.isInteger(Number(tuplet.end?.m))||!Number.isInteger(Number(tuplet.end?.p))||Number(tuplet.start.m)<0||Number(tuplet.end.m)>=total||Number(tuplet.start.p)<0||Number(tuplet.end.p)<0||Number(tuplet.start.p)>=importedCapacity||Number(tuplet.end.p)>=importedCapacity||!Number.isFinite(Number(tuplet.targetBeats))||Number(tuplet.targetBeats)<=0))throw new Error("三連符データに不正な値があります。");
+  const tuplets=Array.isArray(score.tuplets)?score.tuplets:[];if(tuplets.some(tuplet=>tuplet?.type!=="triplet"||!Number.isInteger(Number(tuplet.start?.m))||!Number.isInteger(Number(tuplet.start?.p))||!Number.isInteger(Number(tuplet.end?.m))||!Number.isInteger(Number(tuplet.end?.p))||(tuplet.start?.s!==undefined&&![1,2,3].includes(Number(tuplet.start.s)))||(tuplet.end?.s!==undefined&&![1,2,3].includes(Number(tuplet.end.s)))||Number(tuplet.start.m)<0||Number(tuplet.end.m)>=total||Number(tuplet.start.p)<0||Number(tuplet.end.p)<0||Number(tuplet.start.p)>=importedCapacity||Number(tuplet.end.p)>=importedCapacity||!Number.isFinite(Number(tuplet.targetBeats))||Number(tuplet.targetBeats)<=0))throw new Error("三連符データに不正な値があります。");
   const vocalNotes=Array.isArray(score.vocalNotes)?score.vocalNotes:[];if(vocalNotes.some(note=>!note||!Number.isInteger(Number(note.m))||!Number.isInteger(Number(note.p))||Number(note.m)<0||Number(note.m)>=total||Number(note.p)<0||Number(note.p)>=importedCapacity||![1,2,3].includes(Number(note.s))||![1,2,4].includes(Number(note.d))||!/^(?:0|[1-9]|1\d|20|・|×)$/.test(String(note.v))||(note.kind!==undefined&&!['pitch','rest','interjection'].includes(note.kind))||(note.color!==undefined&&!/^#[0-9a-f]{6}$/i.test(String(note.color)))))throw new Error("唄の音程データに不正な値があります。");
   const measureSpecials=score.measureSpecials??{};if(!measureSpecials||typeof measureSpecials!=="object"||Array.isArray(measureSpecials)||Object.entries(measureSpecials).some(([key,value])=>!Number.isInteger(Number(key))||Number(key)<0||Number(key)>=total||value?.type!=="hanma"||Number(value.lengthRatio)!==0.5))throw new Error("半間データに不正な値があります。");
   return{...defaults,...score,rows,measuresPerRow:measures,rowMeasureCounts,vocalVisible:typeof score.vocalVisible==="boolean"?score.vocalVisible:Boolean(score.lyricsMode),lyricsVisible:typeof score.lyricsVisible==="boolean"?score.lyricsVisible:Boolean(score.lyricsMode),markerStyleVersion:score.markerStyleVersion||1,notes:score.notes,tuplets,vocalNotes,scoreParts:Array.isArray(score.scoreParts)?score.scoreParts:[],barlineKinds:score.barlineKinds&&typeof score.barlineKinds==="object"?score.barlineKinds:{},measureSpecials,layers:score.layers};
@@ -642,7 +648,18 @@ function syncVocalSlurs(){
 }
 function syncTuplets(){
   qAll(".tuplet-layer").forEach(layer=>layer.remove());normalizeTuplets();
-  state.tuplets.forEach(tuplet=>{const start=q(`[data-note^="${tuplet.start.m},"][data-note$=",${tuplet.start.p}"]`),end=q(`[data-note^="${tuplet.end.m},"][data-note$=",${tuplet.end.p}"]`),score=start?.closest(".score");if(!start||!end||!score||end.closest(".score")!==score)return;const sr=score.getBoundingClientRect(),a=(start.querySelector("b")||start).getBoundingClientRect(),b=(end.querySelector("b")||end).getBoundingClientRect(),x1=a.left+a.width/2-sr.left,x2=b.left+b.width/2-sr.left;if(x2-x1<8)return;let svg=score.querySelector(".tuplet-layer");if(!svg){svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("class","tuplet-layer");svg.setAttribute("viewBox",`0 0 ${sr.width} 28`);score.appendChild(svg)}const selected=selectedScoreTarget?.type==="tuplet"&&selectedScoreTarget.id===tuplet.id?" selected":"";svg.insertAdjacentHTML("beforeend",`<g class="tuplet-item${selected}" data-tuplet-id="${esc(tuplet.id)}" aria-label="三連符"><path d="M ${x1.toFixed(2)} 24 Q ${((x1+x2)/2).toFixed(2)} 7 ${x2.toFixed(2)} 24"/><text x="${((x1+x2)/2).toFixed(2)}" y="9">3</text></g>`)});
+  state.tuplets.forEach(tuplet=>{
+    const start=q(`[data-note="${tuplet.start.m},${tuplet.start.s},${tuplet.start.p}"]`),end=q(`[data-note="${tuplet.end.m},${tuplet.end.s},${tuplet.end.p}"]`),score=start?.closest(".score");
+    if(!start||!end||!score||end.closest(".score")!==score)return;
+    const sr=score.getBoundingClientRect(),a=(start.querySelector("b")||start).getBoundingClientRect(),b=(end.querySelector("b")||end).getBoundingClientRect(),x1=a.left+a.width/2-sr.left,x2=b.left+b.width/2-sr.left;
+    if(x2-x1<8)return;
+    const topOffset=28,y1=clamp(a.top-sr.top+topOffset-3,8,sr.height+topOffset-4),y2=clamp(b.top-sr.top+topOffset-3,8,sr.height+topOffset-4),controlX=(x1+x2)/2,controlY=Math.max(5,Math.min(y1,y2)-17),curveMidY=(y1+2*controlY+y2)/4,labelY=Math.max(8,curveMidY-4),overlayHeight=Math.ceil(sr.height+topOffset);
+    let svg=score.querySelector(".tuplet-layer");
+    if(!svg){svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("class","tuplet-layer");score.appendChild(svg)}
+    svg.setAttribute("viewBox",`0 0 ${sr.width} ${overlayHeight}`);svg.style.height=`${overlayHeight}px`;
+    const selected=selectedScoreTarget?.type==="tuplet"&&selectedScoreTarget.id===tuplet.id?" selected":"";
+    svg.insertAdjacentHTML("beforeend",`<g class="tuplet-item${selected}" data-tuplet-id="${esc(tuplet.id)}" aria-label="三連符"><path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} Q ${controlX.toFixed(2)} ${controlY.toFixed(2)} ${x2.toFixed(2)} ${y2.toFixed(2)}"/><text x="${controlX.toFixed(2)}" y="${labelY.toFixed(2)}">3</text></g>`);
+  });
 }
 function shamisenColumnDuration(anchor){const durations=columnEntries(anchor.m,anchor.p).map(note=>Number(note.d)).filter(value=>[1,2,4].includes(value));return durations.length?Math.min(...durations):1}
 function shamisenColumns(){return[...new Map(state.notes.sort((a,b)=>a.m-b.m||a.p-b.p).map(note=>[`${note.m},${note.p}`,{m:note.m,p:note.p}])).values()]}
@@ -730,7 +747,7 @@ function noteHtml(n,m,s){
   const value=n.rest?(rests.find(r=>r.d===n.d)||rests[0]).mark:(isOpenValue(n.v)?"0":n.v);
   const color=n.rest?"#222222":(n.color||(isOpenValue(n.v)?state.openColor:state.numberColor));
   const x=n.rest?(n.x||0):columnX(m,n.p);
-  const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"",currentAnchor=activeVocalAnchor(),anchorSelected=state.scoreEditLayer==="vocal"&&currentAnchor?.m===m&&currentAnchor?.p===n.p?" vocal-anchor-selected":"",tripletStart=tripletMode&&tripletStartAnchor?.m===m&&tripletStartAnchor?.p===n.p?" tuplet-start":"";
+  const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"",currentAnchor=activeVocalAnchor(),anchorSelected=state.scoreEditLayer==="vocal"&&currentAnchor?.m===m&&currentAnchor?.p===n.p?" vocal-anchor-selected":"",tripletStart=tripletMode&&tripletStartAnchor?.m===m&&tripletStartAnchor?.s===s&&tripletStartAnchor?.p===n.p?" tuplet-start":"";
   return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}${!n.rest&&isOpenValue(n.v)?" open-note":""}${rangeSelected}${anchorSelected}${tripletStart}" style="grid-column:${n.p+1};--note-color:${color};transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b>${n.rest?"":printTechniqueHtml(n)}</button>`;
 }
 function scalePrintNotePositions(){
@@ -1097,7 +1114,7 @@ function openPrintSettings(){
 load();state.scoreEditLayer="notes";drawing=false;
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(b.id==="tripletTool"){tripletMode=!tripletMode;tripletStartAnchor=null;selectedScoreTarget=null;selectedItemId=null;state.selectedSymbol=null;state.drawTool="select";drawing=false;state.scoreEditLayer="technique";cursorVisible=false}
-  else if(tripletMode&&b.dataset.note){const [m,,p]=b.dataset.note.split(",").map(Number),anchor={m,p};if(!tripletStartAnchor){tripletStartAnchor=anchor;selectedScoreTarget=null}else if(createTriplet(tripletStartAnchor,anchor)){tripletStartAnchor=null;selectedScoreTarget=null}}
+  else if(tripletMode&&b.dataset.note){const [m,s,p]=b.dataset.note.split(",").map(Number),anchor={m,s,p};if(!tripletStartAnchor){tripletStartAnchor=anchor;selectedScoreTarget=null}else if(createTriplet(tripletStartAnchor,anchor)){tripletStartAnchor=null;selectedScoreTarget=null}}
   else if(b.id==="vocalSlur"){vocalTool=vocalTool==="slur"?"note":"slur";vocalSlurStartId=null;selectedScoreTarget=null;cursorVisible=false}
   else if(b.id==="vocalDot"){const note=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(item=>item.id===selectedScoreTarget.id):null;if(note&&note.kind==="pitch"){snap();note.dotted=!note.dotted;state.vocalDotted=note.dotted}}
   else if(b.dataset.vocalString){state.vocalString=Number(b.dataset.vocalString)}
@@ -1278,6 +1295,12 @@ function beginRangeMove(event){
 }
 q("#annotations").addEventListener("pointerdown",event=>{if(event.target.closest(".range-selected"))beginRangeMove(event)},true);
 let scoreDrag=null;
+q("#scoreArea").addEventListener("click",event=>{
+  const target=event.target.closest("[data-tuplet-id]");
+  if(!target)return;
+  event.preventDefault();event.stopPropagation();
+  selectedScoreTarget={type:"tuplet",id:target.dataset.tupletId};selectedItemId=null;cursorVisible=false;render();
+});
 q("#scoreArea").addEventListener("pointerdown",event=>{
   if(drawing)return;
   const vocalButton=event.target.closest("[data-vocal-note]"),partButton=event.target.closest("[data-score-part-id]"),noteButton=event.target.closest("[data-note]"),barline=event.target.closest("[data-barline-key]");
@@ -1415,7 +1438,7 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=150"></script>
+  <script src="./print-v2.js?v=151"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
