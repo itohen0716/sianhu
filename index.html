@@ -179,7 +179,7 @@
     @media print{.measure.on .note b{background:transparent!important}}
     .vocal-note.dotted .vocal-note-value{margin-right:4px}.vocal-note-value>.vocal-dot{position:absolute;left:calc(100% - 1px);top:-2px;font-size:12px;font-weight:700}.score-scroll{padding-top:28px;margin-top:-28px}.score{padding-bottom:8px;margin-bottom:0}body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea{pointer-events:auto}body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea .note{pointer-events:auto;cursor:pointer}
   </style>
-  <link rel="stylesheet" href="./print-v2.css?v=151">
+  <link rel="stylesheet" href="./print-v2.css?v=152">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
@@ -406,6 +406,10 @@ function compareAnchors(a,b){return a.m-b.m||a.p-b.p}
 function normalizeTuplets(){
   state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).flatMap(entry=>{const start=tupletAnchor(entry?.start),end=tupletAnchor(entry?.end),targetBeats=Number(entry?.targetBeats);if(entry?.type!=="triplet"||!tupletColumnExists(start)||!tupletColumnExists(end)||compareAnchors(start,end)>=0||measureLocation(start.m).row!==measureLocation(end.m).row||!Number.isFinite(targetBeats)||targetBeats<=0||targetBeats>16)return[];return[{id:String(entry.id||uid()),type:"triplet",start,end,targetBeats}]});
 }
+function normalizeScoreParts(){
+  const total=totalMeasures(),capacity=measureCapacity();
+  state.scoreParts=(Array.isArray(state.scoreParts)?state.scoreParts:[]).flatMap(part=>{const kind=part?.kind==="same2"||Number(part?.repeatCount)===2?"same2":part?.kind==="same1"||Number(part?.repeatCount)===1?"same1":null,m=Number(part?.m),p=Number(part?.p);if(!kind||!Number.isInteger(m)||m<0||m>=total||!Number.isInteger(p)||p<0||p>=capacity)return[];const repeatCount=kind==="same2"?2:1;return[{...part,id:String(part.id||uid()),type:"measureRepeat",kind,repeatCount,sourceMeasureOffset:-1,displayMeasureSpan:1,playbackMeasureSpan:repeatCount,m,p,x:Number(part.x)||0}]});
+}
 function tupletColumns(start,end){return shamisenColumns().filter(anchor=>compareAnchors(anchor,start)>=0&&compareAnchors(anchor,end)<=0)}
 function createTriplet(start,end){
   if(!start||!end||compareAnchors(start,end)===0){alert("三連符の終了音には、開始音とは別の音を選んでください。");return false}
@@ -429,7 +433,7 @@ function migrateState(){
     const needed=Math.max(1,...state.notes.map(note=>note.m+1),...state.scoreParts.map(part=>part.m+1));state.rows=clamp(Math.ceil(needed/state.measuresPerRow),state.rows,20);state.measureOffsets=[];
     const cursor=remap(state.m,state.p);state.m=cursor.m;state.p=cursor.p;
   }
-  state.meter=parsed.signature;normalizeRowMeasureCounts();normalizeMeasureSpecials();normalizeLyrics();normalizeVocalNotes();normalizeTuplets();
+  state.meter=parsed.signature;normalizeRowMeasureCounts();normalizeMeasureSpecials();normalizeLyrics();normalizeVocalNotes();normalizeTuplets();normalizeScoreParts();
   const old=state.barlineKinds&&typeof state.barlineKinds==="object"?state.barlineKinds:{};
   if(Object.keys(old).some(key=>!key.includes(":"))){const migrated={};for(let row=0;row<oldRows;row++){for(let boundary=0;boundary<=state.measuresPerRow;boundary++){const global=row*state.measuresPerRow+boundary;if(old[global])migrated[barlineKey(row,boundary)]=old[global]}}state.barlineKinds=migrated}
 }
@@ -513,7 +517,7 @@ function renderPrintRoot(){
   root.innerHTML=model.pages.map(page=>`<section class="print-page" data-print-page="${page.index+1}">${page.index===0?`<div class="print-meta"><div class="print-meta-left"><span>〈</span><span>${esc(model.tuning)}</span><span>〉</span><span>${esc(model.meter)}</span></div><div class="print-title">${esc(model.title)}</div><div class="print-summary"></div></div>`:""}${page.rows.map(row=>`<section class="print-staff" style="height:${((283*96/25.4-(page.index===0?34:0))/page.rows.length).toFixed(2)}px"><div class="print-score-wrap"><div class="print-labels">${row.index===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="print-score">${row.measures.map(printMeasureModelHtml).join("")}</div></div></section>`).join("")}</section>`).join("");
   root.dataset.printModelVersion=String(model.version);
 }
-function serializable(){normalizeVocalSlurs();normalizeTuplets();normalizeMeasureSpecials();return{notes:state.notes,tuplets:state.tuplets,vocalNotes:state.vocalNotes,vocalSlurs:state.vocalSlurs,vocalString:state.vocalString,vocalDuration:state.vocalDuration,vocalVisible:state.vocalVisible,lyricsVisible:state.lyricsVisible,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,measureSpecials:state.measureSpecials,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,markerStyleVersion:state.markerStyleVersion,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,annotationTarget:state.annotationTarget,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function serializable(){normalizeVocalSlurs();normalizeTuplets();normalizeMeasureSpecials();normalizeScoreParts();return{notes:state.notes,tuplets:state.tuplets,vocalNotes:state.vocalNotes,vocalSlurs:state.vocalSlurs,vocalString:state.vocalString,vocalDuration:state.vocalDuration,vocalVisible:state.vocalVisible,lyricsVisible:state.lyricsVisible,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,measureSpecials:state.measureSpecials,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,markerStyleVersion:state.markerStyleVersion,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,annotationTarget:state.annotationTarget,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
@@ -1152,7 +1156,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   }
   else if(b.dataset.v){insert(b.dataset.v)}
   else if(b.dataset.rest){insert("",true,+b.dataset.rest)}
-  else if(b.dataset.scorePart){snap();state.scoreParts=Array.isArray(state.scoreParts)?state.scoreParts:[];const part={id:uid(),kind:b.dataset.scorePart,m:state.m,p:state.p,x:0};state.scoreParts.push(part);selectedScoreTarget={type:"scorePart",id:part.id};cursorVisible=false}
+  else if(b.dataset.scorePart){if(state.m===0){alert("『同じ1』『同じ2』は、繰り返す直前の小節がある2小節目以降へ入力してください。");return}snap();state.scoreParts=Array.isArray(state.scoreParts)?state.scoreParts:[];const repeatCount=b.dataset.scorePart==="same2"?2:1,part={id:uid(),type:"measureRepeat",kind:b.dataset.scorePart,repeatCount,sourceMeasureOffset:-1,displayMeasureSpan:1,playbackMeasureSpan:repeatCount,m:state.m,p:state.p,x:0};state.scoreParts.push(part);selectedScoreTarget={type:"scorePart",id:part.id};cursorVisible=false}
   else if(b.dataset.measureSelect!==undefined){state.m=Number(b.dataset.measureSelect);selectedScoreTarget=null;selectedItemId=null;cursorVisible=false}
   else if(b.id==="toggleHanma"){snap();state.measureSpecials={...(state.measureSpecials||{})};if(isHanma(state.m))delete state.measureSpecials[String(state.m)];else state.measureSpecials[String(state.m)]={type:"hanma",lengthRatio:0.5,label:"〔半間〕"};selectedScoreTarget=null;selectedItemId=null;cursorVisible=false}
   else if(b.dataset.barKind){if(selectedScoreTarget?.type!=="barline"){alert("先に変更する小節線を譜面上で選択してください。");return}snap();state.barlineKinds={...(state.barlineKinds||{}),[selectedScoreTarget.key]:b.dataset.barKind}}
@@ -1438,7 +1442,7 @@ window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage
 render();if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=151"></script>
+  <script src="./print-v2.js?v=152"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
