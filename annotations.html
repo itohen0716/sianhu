@@ -336,8 +336,7 @@ function ensureTechniqueLayer(){
   if(!state.layers.some(item=>item.id===state.activeLayerId&&item.id!==TECHNIQUE_LAYER_ID))state.activeLayerId=state.layers.find(item=>item.id!==TECHNIQUE_LAYER_ID)?.id||null;
 }
 function validTechniqueAnchor(value){const m=Number(value?.m),s=Number(value?.s),p=Number(value?.p);return Number.isInteger(m)&&[1,2,3].includes(s)&&Number.isInteger(p)&&state.notes.some(note=>!note.rest&&note.m===m&&note.s===s&&note.p===p)?{m,s,p}:null}
-function nextTechniqueSlurAnchor(start){if(!start)return null;const row=measureLocation(start.m).row,columns=[...new Set(state.notes.filter(note=>!note.rest&&measureLocation(note.m).row===row&&(note.m>start.m||note.m===start.m&&note.p>start.p)).map(note=>`${note.m},${note.p}`))].map(key=>key.split(",").map(Number)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);if(!columns.length)return null;const [m,p]=columns[0],notes=state.notes.filter(note=>!note.rest&&note.m===m&&note.p===p).sort((a,b)=>Number(b.s)-Number(a.s)),chosen=notes.find(note=>Number(note.s)===start.s)||notes[0];return chosen?{m:Number(chosen.m),s:Number(chosen.s),p:Number(chosen.p)}:null}
-function normalizeTechniqueSlurs(layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID)){(layer?.items||[]).forEach(item=>{if(item.type!=="symbol"||item.text!=="スリ")return;const start=validTechniqueAnchor(item.anchor);if(!start)return;let end=validTechniqueAnchor(item.endAnchor);if(!end)end=nextTechniqueSlurAnchor(start);item.anchor=start;if(end&&compareAnchors(start,end)<0&&measureLocation(start.m).row===measureLocation(end.m).row)item.endAnchor=end;else delete item.endAnchor})}
+function normalizeTechniqueSlurs(layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID)){(layer?.items||[]).forEach(item=>{if(item.type!=="symbol"||item.text!=="スリ")return;const start=validTechniqueAnchor(item.anchor),end=validTechniqueAnchor(item.endAnchor);if(!start)return;item.anchor=start;if(end&&compareAnchors(start,end)<0&&measureLocation(start.m).row===measureLocation(end.m).row){item.endAnchor=end;delete item.legacySlurPending}else{delete item.endAnchor;item.legacySlurPending=true}})}
 function automaticPageRows(rowCount=state.rows){
   const maxRows=state.lyricsMode?7:10,pages=Math.max(1,Math.ceil(rowCount/maxRows)),base=Math.floor(rowCount/pages),extra=rowCount%pages;
   return Array.from({length:pages},(_,index)=>base+(index<extra?1:0));
@@ -578,6 +577,23 @@ function noteAnchorPoint(anchor,side="above",symbolText=""){
     y:((side==="below"?glyphRect.bottom+gap:glyphRect.top-gap)-svgRect.top)*view.height/svgRect.height
   };
 }
+function migrateLegacyTechniqueSlurs(){
+  const layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);if(!layer)return false;
+  let changed=false;
+  (layer.items||[]).forEach(item=>{
+    if(item.type!=="symbol"||item.text!=="スリ"||item.endAnchor||!item.legacySlurPending)return;
+    const start=validTechniqueAnchor(item.anchor),startPoint=start&&noteAnchorPoint(start,item.side||"above","スリ");if(!start||!startPoint)return;ensureTechniquePixelOffset(item);
+    const row=measureLocation(start.m).row,units=svgUnitsPerCssPx(),savedCenter=Number(item.x),legacyCenter=Number.isFinite(savedCenter)?savedCenter:startPoint.x+(Number(item.offsetXPx)||0)*units,legacyRight=legacyCenter+clamp(Number(item.slurWidth)||34,22,90)/2;
+    let best=null,bestScore=Infinity,bestXDistance=Infinity;
+    state.notes.filter(note=>!note.rest&&measureLocation(note.m).row===row&&compareAnchors(start,note)<0).forEach(note=>{
+      const anchor={m:Number(note.m),s:Number(note.s),p:Number(note.p)},point=noteAnchorPoint(anchor,item.side||"above","スリ");if(!point)return;
+      const score=Math.abs(point.x-legacyRight)+Math.abs(point.y-startPoint.y)*.12;
+      if(score<bestScore){bestScore=score;bestXDistance=Math.abs(point.x-legacyRight);best=anchor}
+    });
+    if(best&&bestXDistance<=Math.max(18,clamp(Number(item.slurWidth)||34,22,90)*.65)){item.endAnchor=best;delete item.legacySlurPending;changed=true}
+  });
+  return changed;
+}
 function syncLinkedSymbols(){
   const layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
   if(!layer)return;
@@ -686,6 +702,7 @@ function renderLayers(){
   }
   [svg,underlay].forEach(element=>{element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);element.setAttribute("preserveAspectRatio","xMinYMin meet")});
   ensureAnnotationRowAnchors();
+  migrateLegacyTechniqueSlurs();
   syncLinkedSymbols();
   const visibleLayers=state.layers.filter(layer=>printing?layer.printEnabled!==false:layer.visible!==false);
   const drawVisibleLayers=()=>{

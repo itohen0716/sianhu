@@ -1,6 +1,6 @@
 "use strict";
 
-const SCORE_FONT_CACHE="shian-score-font-v164";
+const SCORE_FONT_CACHE="shian-score-font-v165";
 const SCORE_FONT_FILES=[
   "./fonts/BIZUDPMincho-Regular.ttf"
 ];
