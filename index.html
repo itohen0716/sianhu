@@ -228,7 +228,7 @@
         <button class="roman" data-symbol="Ⅰ">Ⅰ</button><button class="roman" data-symbol="Ⅱ">Ⅱ</button><button class="roman" data-symbol="Ⅲ">Ⅲ</button><button id="tripletTool" title="開始音と終了音を選んで三連符を設定">三連符<br><small>⌒ 3</small></button>
       </div>
     </div>
-    <div class="edit-tools"><button id="nudgeLeft">← 左へ</button><button id="nudgeRight">右へ →</button><button id="editComment" hidden>再編集</button><button id="deleteItem">選択した奏法記号を削除</button><button id="bringFront">最前面へ</button></div>
+    <div class="edit-tools"><button id="nudgeLeft">← 左へ</button><button id="nudgeRight">右へ →</button><button id="nudgeUp">↑ 上へ</button><button id="nudgeDown">↓ 下へ</button><button id="clearTechniqueSelection">選択解除</button><button id="editComment" hidden>再編集</button><button id="deleteItem">選択した奏法記号を削除</button><button id="bringFront">最前面へ</button></div>
     <div class="symbol-position"><strong>配置位置</strong><button data-symbol-side="above">音の上</button><button data-symbol-side="below">音の下</button><small>初期設定は「上」です。選択中の部品にも適用できます。</small></div>
     <div id="slurWidthControls" class="slur-width-controls" hidden><strong>スリの⌒の長さ</strong><button id="slurShorter">− 短く</button><button id="slurLonger">＋ 長く</button><small id="slurWidthValue"></small></div>
     <div class="color-settings">
@@ -254,7 +254,7 @@
     <div class="staff-only part-tools" id="barlineParts"><button data-bar-kind="single"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>通常線</button><button data-bar-kind="double"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="11" y1="2" x2="11" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="17" y1="2" x2="17" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>2本線</button><button data-bar-kind="repeat-start"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="13" y1="2" x2="13" y2="26" stroke="currentColor" stroke-width="1.5"/><circle cx="21" cy="10" r="2" fill="currentColor"/><circle cx="21" cy="18" r="2" fill="currentColor"/></svg>くり返しA</button><button data-bar-kind="repeat-end"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><circle cx="7" cy="10" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/><line x1="15" y1="2" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="2" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>くり返しB</button><button data-bar-kind="final"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="10" y1="2" x2="10" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="18" y1="2" x2="18" y2="26" stroke="currentColor" stroke-width="4"/></svg>終止符</button></div>
     <button type="button" id="openKeyboardHelp" class="keyboard-help-label notes-only">キーボードで入力する方法</button>
     <div class="bottom notes-only"><span>入力内容はこの端末に自動保存されます。</span><button id="clear" class="clear">譜面を空にする</button></div>
-    <div class="status status-bottom"><div class="notes-only"><small>現在の入力位置</small><strong id="status"></strong><small id="keyboardStatus">キーボード：糸*音価*数字（例 3*16*19）</small></div><div class="staff-only"><small>小節線の編集</small><strong>動かす小節線を選択してください</strong><small>数字には反応しません。</small></div><div class="move"><button id="prev" class="notes-only" aria-label="前の入力位置">←</button><button id="next" class="notes-only" aria-label="次の入力位置">→</button><button id="moveSelectedLeft">選択を左へ</button><button id="moveSelectedRight">選択を右へ</button><button id="resetPositions">位置を標準に戻す</button><button id="delete" class="del notes-only">選択した音を削除</button></div></div>
+    <div class="status status-bottom"><div class="notes-only"><small>現在の入力位置</small><strong id="status"></strong><small id="keyboardStatus">キーボード：糸*音価*数字（例 3*16*19）</small></div><div class="staff-only"><small>小節線の編集</small><strong>動かす小節線を選択してください</strong><small>数字には反応しません。</small></div><div class="move"><button id="prev" class="notes-only" aria-label="前の入力位置">←</button><button id="next" class="notes-only" aria-label="次の入力位置">→</button><button id="moveSelectedLeft">選択を左へ</button><button id="moveSelectedRight">選択を右へ</button><button id="clearScoreSelection" class="notes-only">選択解除</button><button id="resetPositions">位置を標準に戻す</button><button id="delete" class="del notes-only">選択した音を削除</button></div></div>
   </section>
   <section class="note-color-panel editor-panel" data-editor-panel="notes">
     <h2>数字・開放弦の色</h2>
@@ -341,8 +341,8 @@
     <section>
       <h3>範囲選択する・解除する</h3>
       <ol>
-        <li><code>Shift</code>キーを押しながら、譜面の空白部分からドラッグして囲みます。</li>
-        <li>枠に触れた音・開放弦・休符・奏法が、まとめて選択されます。</li>
+        <li>「数字・開放弦」または「奏法」レイヤーを選び、<code>Shift</code>キーを押しながら譜面をドラッグして囲みます。</li>
+        <li>「数字・開放弦」では数字と開放弦だけ、「奏法」では奏法だけがまとめて選択されます。</li>
         <li><code>Shift</code>キーを押しながら、画面をクリックすると解除されます。</li>
       </ol>
     </section>
@@ -742,18 +742,20 @@ function moveSelectedBarline(amount){
   state.measureOffsets[right]=(state.measureOffsets[right]||0)-dx;
   return dx!==0;
 }
-function nudgeRangeSelection(amount){
+function nudgeRangeSelection(dx,dy=0){
   if(!(rangeNoteKeys.size||rangeTechniqueIds.size))return false;
+  if(dy&& !rangeTechniqueIds.size)return false;
   const selected=state.notes.filter(note=>rangeNoteKeys.has(anchorKey(note.m,note.s,note.p))),groups=new Map();
   selected.forEach(note=>{const id=note.rest?`r:${anchorKey(note.m,note.s,note.p)}`:`c:${note.m},${note.p}`;if(!groups.has(id)){const origin=note.rest?(Number(note.x)||0):columnX(note.m,note.p),bounds=rangeNoteMoveBounds(note.m,note.p,origin);groups.set(id,{notes:note.rest?[note]:columnNotes(note.m,note.p),origin,bounds})}});
-  let dx=amount;groups.forEach(group=>{dx=clamp(dx,group.bounds.min-group.origin,group.bounds.max-group.origin)});groups.forEach(group=>group.notes.forEach(note=>{note.x=group.origin+dx}));
-  const layer=state.layers.find(entry=>entry.id===TECHNIQUE_LAYER_ID);(layer?.items||[]).filter(item=>rangeTechniqueIds.has(item.id)).forEach(item=>{if(item.anchor&&rangeNoteKeys.has(anchorKey(item.anchor.m,item.anchor.s,item.anchor.p)))return;ensureTechniquePixelOffset(item);item.offsetXPx=(Number(item.offsetXPx)||0)+dx});return true;
+  let appliedX=dx;groups.forEach(group=>{appliedX=clamp(appliedX,group.bounds.min-group.origin,group.bounds.max-group.origin)});groups.forEach(group=>group.notes.forEach(note=>{note.x=group.origin+appliedX}));
+  const layer=state.layers.find(entry=>entry.id===TECHNIQUE_LAYER_ID);(layer?.items||[]).filter(item=>rangeTechniqueIds.has(item.id)).forEach(item=>{ensureTechniquePixelOffset(item);if(dx&&!(item.anchor&&rangeNoteKeys.has(anchorKey(item.anchor.m,item.anchor.s,item.anchor.p))))item.offsetXPx=(Number(item.offsetXPx)||0)+appliedX;if(dy)item.offsetYPx=(Number(item.offsetYPx)||0)+dy});return true;
 }
-function nudgeCurrentSelection(amount){
-  if(rangeNoteKeys.size||rangeTechniqueIds.size)return nudgeRangeSelection(amount);
-  const item=selectedItem();if(item){translateItem(item,amount,0);return true}
-  if(selectedScoreTarget?.type==="note"){const [m,,p]=selectedScoreTarget.key.split(",").map(Number),chosen=state.notes.find(note=>anchorKey(note.m,note.s,note.p)===selectedScoreTarget.key),notes=chosen?.rest?[chosen]:columnNotes(m,p);if(!notes.length)return false;const origin=chosen?.rest?(Number(chosen.x)||0):columnX(m,p),bounds=noteMoveBounds(m,p,origin),x=clamp(origin+amount,bounds.min,bounds.max);notes.forEach(note=>note.x=x);return true}
-  if(selectedScoreTarget?.type==="barline")return moveSelectedBarline(amount);
+function nudgeCurrentSelection(dx,dy=0){
+  if(rangeNoteKeys.size||rangeTechniqueIds.size)return nudgeRangeSelection(dx,dy);
+  const item=selectedItem();if(item){translateItem(item,dx,dy);return true}
+  if(dy)return false;
+  if(selectedScoreTarget?.type==="note"){const [m,,p]=selectedScoreTarget.key.split(",").map(Number),chosen=state.notes.find(note=>anchorKey(note.m,note.s,note.p)===selectedScoreTarget.key),notes=chosen?.rest?[chosen]:columnNotes(m,p);if(!notes.length)return false;const origin=chosen?.rest?(Number(chosen.x)||0):columnX(m,p),bounds=noteMoveBounds(m,p,origin),x=clamp(origin+dx,bounds.min,bounds.max);notes.forEach(note=>note.x=x);return true}
+  if(selectedScoreTarget?.type==="barline")return moveSelectedBarline(dx);
   if(selectedScoreTarget?.type==="scorePart")return false;return false;
 }
 function svgUnitsPerCssPx(){
@@ -1280,9 +1282,9 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="loadScoreFile"){q("#scoreFileInput").click();return}
   else if(b.id==="printPreview"){openPrintSettings();return}
   else if(b.id==="deleteLayer"){alert("「奏法」レイヤーは標準レイヤーのため削除できません。");return}
-  else if(b.id==="toggleDrawing"){drawing=!drawing;state.scoreEditLayer=drawing?"technique":"notes";selectedScoreTarget=null;renderLayers();return}
+  else if(b.id==="toggleDrawing"){clearRangeSelection();drawing=!drawing;state.scoreEditLayer=drawing?"technique":"notes";selectedScoreTarget=null;renderLayers();return}
   else if(b.dataset.scoreLayer){
-    state.scoreEditLayer=b.dataset.scoreLayer;if(state.scoreEditLayer==="vocal"&&!state.vocalVisible&&!state.lyricsVisible)state.vocalVisible=true;if(state.scoreEditLayer!=="vocal")vocalAnchorSelection=null;keyboardBuffer="";drawing=state.scoreEditLayer==="technique";selectedScoreTarget=null;selectedItemId=null;cursorVisible=state.scoreEditLayer==="vocal";render();return;
+    clearRangeSelection();state.scoreEditLayer=b.dataset.scoreLayer;if(state.scoreEditLayer==="vocal"&&!state.vocalVisible&&!state.lyricsVisible)state.vocalVisible=true;if(state.scoreEditLayer!=="vocal")vocalAnchorSelection=null;keyboardBuffer="";drawing=state.scoreEditLayer==="technique";selectedScoreTarget=null;selectedItemId=null;cursorVisible=state.scoreEditLayer==="vocal";render();return;
   }
   else if(b.dataset.layer){state.activeLayerId=b.dataset.layer;selectedItemId=null;renderLayers();return}
   else if(b.dataset.tool){state.drawTool=b.dataset.tool;renderLayers();return}
@@ -1293,10 +1295,11 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
     else past.pop();
     render();return;
   }
-  else if(["nudgeLeft","nudgeRight","moveSelectedLeft","moveSelectedRight"].includes(b.id)){
-    const amount=["nudgeLeft","moveSelectedLeft"].includes(b.id)?-4:4;snap();if(!nudgeCurrentSelection(amount)){past.pop();alert("先に移動する部品を選択してください。")}
+  else if(["nudgeLeft","nudgeRight","nudgeUp","nudgeDown","moveSelectedLeft","moveSelectedRight"].includes(b.id)){
+    const movement={nudgeLeft:[-4,0],moveSelectedLeft:[-4,0],nudgeRight:[4,0],moveSelectedRight:[4,0],nudgeUp:[0,-4],nudgeDown:[0,4]}[b.id];snap();if(!nudgeCurrentSelection(...movement)){past.pop();alert("先に移動する部品を選択してください。")}
     render();return;
   }
+  else if(b.id==="clearTechniqueSelection"||b.id==="clearScoreSelection"){clearAllSelection();render();return}
   else if(b.id==="slurShorter"||b.id==="slurLonger"){
     const item=selectedItem();
     if(item?.type==="symbol"&&item.text==="スリ"){
@@ -1324,7 +1327,9 @@ q("#annotations").addEventListener("pointerup",endDraw);
 q("#annotations").addEventListener("pointercancel",()=>{draft=null;dragging=null});
 q("#scoreArea").addEventListener("click",event=>{const target=event.target.closest("[data-tuplet-id]");if(!target)return;event.preventDefault();event.stopPropagation();tripletMode=false;tripletStartAnchor=null;selectedItemId=null;selectedScoreTarget={type:"tuplet",id:target.dataset.tupletId};state.scoreEditLayer="technique";render()});
 function updateRangeSelectMode(active){shiftHeld=active;q(".paper")?.classList.toggle("range-select-mode",active)}
-function clearRangeSelection(){rangeNoteKeys.clear();rangeTechniqueIds.clear();rangeMove=null;q(".paper")?.classList.remove("range-moving");qAll(".range-selected").forEach(element=>element.classList.remove("range-selected"))}
+function clearRangeSelection(){rangeNoteKeys.clear();rangeTechniqueIds.clear();rangeMove=null;rangeBox?.remove();rangeBox=null;rangeDrag=null;q(".paper")?.classList.remove("range-moving");qAll(".range-selected").forEach(element=>element.classList.remove("range-selected"))}
+function hasEditorSelection(){return Boolean(selectedItemId||selectedScoreTarget||rangeNoteKeys.size||rangeTechniqueIds.size||rangeDrag)}
+function clearAllSelection(){clearRangeSelection();selectedItemId=null;selectedScoreTarget=null;q("#keyboardStatus").textContent="選択を解除しました。"}
 function selectionRect(startX,startY,endX,endY){return{left:Math.min(startX,endX),top:Math.min(startY,endY),right:Math.max(startX,endX),bottom:Math.max(startY,endY)}}
 function intersects(a,b){return a.left<=b.right&&a.right>=b.left&&a.top<=b.bottom&&a.bottom>=b.top}
 function updateRangeBox(event){
@@ -1332,16 +1337,17 @@ function updateRangeBox(event){
   Object.assign(rangeBox.style,{left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.right-rect.left}px`,height:`${rect.bottom-rect.top}px`});
 }
 function finishRangeSelection(event){
-  if(!rangeDrag)return;const rect=selectionRect(rangeDrag.startX,rangeDrag.startY,event.clientX,event.clientY);clearRangeSelection();
-  qAll("#scoreArea .note[data-note]").forEach(element=>{if(intersects(rect,element.getBoundingClientRect())){rangeNoteKeys.add(element.dataset.note);element.classList.add("range-selected")}});
-  qAll("#annotations .annotation-item.symbol-item[data-item]").forEach(element=>{if(intersects(rect,element.getBoundingClientRect())){rangeTechniqueIds.add(element.dataset.item);element.classList.add("range-selected")}});
+  if(!rangeDrag)return;const layer=rangeDrag.layer,rect=selectionRect(rangeDrag.startX,rangeDrag.startY,event.clientX,event.clientY);clearRangeSelection();
+  if(layer==="notes")qAll("#scoreArea .note[data-note]:not(.rest)").forEach(element=>{const glyph=element.querySelector("b")||element;if(intersects(rect,glyph.getBoundingClientRect())){rangeNoteKeys.add(element.dataset.note);element.classList.add("range-selected")}});
+  else if(layer==="technique")qAll("#annotations .annotation-item.symbol-item[data-item]").forEach(element=>{if(intersects(rect,element.getBoundingClientRect())){rangeTechniqueIds.add(element.dataset.item);element.classList.add("range-selected")}});
   rangeBox?.remove();rangeBox=null;rangeDrag=null;selectedScoreTarget=null;selectedItemId=null;lastInserted=null;
-  const count=rangeNoteKeys.size+rangeTechniqueIds.size;q("#keyboardStatus").textContent=count?`${count}件を選択中：ドラッグで移動、【Delete】で削除できます。`:"範囲内に選択できる音・休符・奏法がありません。";
+  const count=rangeNoteKeys.size+rangeTechniqueIds.size,targetName=layer==="notes"?"数字・開放弦":"奏法";q("#keyboardStatus").textContent=count?`${targetName} ${count}件を選択中：ドラッグで移動、【Delete】で削除できます。`:`範囲内に選択できる${targetName}がありません。`;
 }
 q(".paper").addEventListener("pointerdown",event=>{
-  if(IS_ANNOTATION_PAGE||state.scoreEditLayer==="vocal"||!event.shiftKey||(!q("#scoreArea").contains(event.target)&&!q("#annotations").contains(event.target)))return;
+  const layer=state.scoreEditLayer,surface=layer==="notes"?q("#scoreArea"):layer==="technique"?q("#annotations"):null;
+  if(IS_ANNOTATION_PAGE||!event.shiftKey||!surface?.contains(event.target))return;
   event.preventDefault();event.stopPropagation();clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;
-  rangeDrag={startX:event.clientX,startY:event.clientY,pointerId:event.pointerId};rangeBox=document.createElement("div");rangeBox.className="range-selection-box";document.body.appendChild(rangeBox);updateRangeBox(event);
+  rangeDrag={startX:event.clientX,startY:event.clientY,pointerId:event.pointerId,layer};rangeBox=document.createElement("div");rangeBox.className="range-selection-box";document.body.appendChild(rangeBox);updateRangeBox(event);
 },true);
 document.addEventListener("pointermove",event=>{if(rangeDrag){event.preventDefault();updateRangeBox(event)}});
 document.addEventListener("pointerup",event=>{if(rangeDrag){event.preventDefault();finishRangeSelection(event)}});
@@ -1387,7 +1393,7 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
 q("#vocalVisible").addEventListener("change",event=>{ensureAnnotationRowAnchors();snap();state.vocalVisible=event.target.checked;render()});
 q("#lyricsVisible").addEventListener("change",event=>{ensureAnnotationRowAnchors();snap();state.lyricsVisible=event.target.checked;render()});
 q("#scoreArea").addEventListener("input",event=>{const input=event.target.closest("[data-lyrics-row]");if(!input)return;const row=Number(input.dataset.lyricsRow);if(Number.isInteger(row)&&row>=0&&row<state.rows){state.lyrics[row]=input.value;save()}});
-q("#closePlayer").addEventListener("click",closeScorePlayer);q("#playerModal").addEventListener("click",event=>{if(event.target===q("#playerModal"))closeScorePlayer()});document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!q("#playerModal").hidden)closeScorePlayer()});
+q("#closePlayer").addEventListener("click",closeScorePlayer);q("#playerModal").addEventListener("click",event=>{if(event.target===q("#playerModal"))closeScorePlayer()});document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!q("#playerModal").hidden){event.preventDefault();event.stopImmediatePropagation();closeScorePlayer()}});
 q("#scoreArea").addEventListener("pointermove",event=>{
   if(rangeMove){event.preventDefault();const dx=clamp(event.clientX-rangeMove.startX,rangeMove.minDx,rangeMove.maxDx);rangeMove.groups.forEach(group=>{group.notes.forEach(note=>{note.x=group.origin+dx});group.notes.forEach(note=>{const element=q(`[data-note="${anchorKey(note.m,note.s,note.p)}"]`);if(element)element.style.setProperty("transform",`translateX(${group.origin+dx}px)`)})});rangeMove.techniques.forEach(entry=>{if(!entry.linked){entry.item.offsetXPx=entry.originXPx+dx;entry.item.x=entry.originX+dx*svgUnitsPerCssPx()}});renderLayers(true);q(".paper").classList.add("range-moving");return}
   if(!scoreDrag)return;event.preventDefault();const dx=event.clientX-scoreDrag.startX;
@@ -1429,6 +1435,7 @@ q("#meter").addEventListener("blur",e=>{e.target.value=meterLabel()});
 document.addEventListener("keydown",event=>{
   if(event.key==="Shift")updateRangeSelectMode(true);
   if(IS_ANNOTATION_PAGE||event.ctrlKey||event.metaKey||event.altKey)return;
+  if(event.key==="Escape"&&q("dialog[open]"))return;
   const target=event.target;if(target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target?.isContentEditable)return;
   if(!keyboardBuffer&&(event.key==="Delete"||event.key==="Backspace")&&(rangeNoteKeys.size||rangeTechniqueIds.size)){
     event.preventDefault();snap();const removedKeys=[...rangeNoteKeys],techniqueLayer=state.layers.find(layer=>layer.id===TECHNIQUE_LAYER_ID);
@@ -1449,6 +1456,7 @@ document.addEventListener("keydown",event=>{
   if(state.scoreEditLayer!=="vocal"&&/^[0-9*]$/.test(key)){event.preventDefault();keyboardBuffer+=key;render();return}
   if(event.key==="Backspace"&&keyboardBuffer){event.preventDefault();keyboardBuffer=keyboardBuffer.slice(0,-1);render();return}
   if(event.key==="Escape"&&keyboardBuffer){event.preventDefault();keyboardBuffer="";render();return}
+  if(event.key==="Escape"&&hasEditorSelection()){event.preventDefault();clearAllSelection();render();return}
   if(event.key==="Enter"&&keyboardBuffer){
     event.preventDefault();const match=keyboardBuffer.match(/^([1-3])\*(4|8|16)\*(\d+)$/),entered=keyboardBuffer;keyboardBuffer="";
     if(!match){alert(`入力形式を確認してください。\n「${entered}」は配置できません。\n例：3*16*19`);render();return}
@@ -1459,6 +1467,9 @@ document.addEventListener("keydown",event=>{
     event.preventDefault();if(state.scoreEditLayer==="vocal"&&vocalAnchorSelection&&selectedScoreTarget?.type!=="vocal"){const next=event.key==="ArrowLeft"?previousShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p):nextShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(next){vocalAnchorSelection=next;state.m=next.m;state.p=next.p}render();return}snap();
     if(selectedScoreTarget?.type==="vocal"){if(!nudgeSelectedVocal(event.key==="ArrowLeft"?-4:4))past.pop();render();return}
     if(!nudgeCurrentSelection(event.key==="ArrowLeft"?-4:4)){past.pop();q(event.key==="ArrowLeft"?"#prev":"#next").click();return}render()
+  }
+  if((event.key==="ArrowUp"||event.key==="ArrowDown")&&!keyboardBuffer&&(selectedItemId||rangeTechniqueIds.size)){
+    event.preventDefault();snap();if(!nudgeCurrentSelection(0,event.key==="ArrowUp"?-4:4))past.pop();render();return
   }
 });
 document.addEventListener("keyup",event=>{if(event.key==="Shift")updateRangeSelectMode(false)});
