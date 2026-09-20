@@ -84,8 +84,11 @@
     if (options.exclusive !== false) stopAll(0.01);
 
     const offset = Math.max(0, segment.start);
-    const sourceDuration = Math.max(0.05, Math.min(segment.end, audioBuffer.duration) - offset);
     const rate = Math.max(0.25, Math.min(4, Number(options.playbackRate) || 1));
+    const baseSourceDuration = Math.max(0.05, Math.min(segment.end, audioBuffer.duration) - offset);
+    const availableSourceDuration = Math.max(baseSourceDuration, Math.min(Number(segment.tailEnd) || segment.end, audioBuffer.duration) - offset);
+    const minimumOutputDuration = Math.max(0, Number(options.minimumDuration) || 0);
+    const sourceDuration = Math.min(availableSourceDuration, Math.max(baseSourceDuration, minimumOutputDuration * rate));
     const outputDuration = sourceDuration / rate;
     const startDelay = Math.max(0, Number(options.delay) || 0);
     const startAt = ctx.currentTime + startDelay;

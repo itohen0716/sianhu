@@ -5,7 +5,10 @@
   const ends = [.691,4.525,7.882,10.935,14.826,18.138,21.311,24.569,28.275,31.558,35.329,38.730,41.899,45.639,48.742,52.285,56.193,59.221,62.333,65.917,69.318,72.786,76.123,79.589];
   const segments = {};
   starts.forEach((start, index) => {
-    segments[index + 1] = Object.freeze({ start, end: ends[index], noteNumber: index + 1 });
+    // 通常は従来の end までを使う。自動演奏で低速の1拍に余韻が不足する場合だけ、
+    // 次の音の立ち上がり直前までに残っている同じ音の減衰部分を利用する。
+    const tailEnd = index + 1 < starts.length ? starts[index + 1] - 0.08 : start + 3.0;
+    segments[index + 1] = Object.freeze({ start, end: ends[index], tailEnd, noteNumber: index + 1 });
   });
   window.ShianSoundSegments = Object.freeze(segments);
 })();
