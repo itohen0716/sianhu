@@ -178,6 +178,16 @@
     }
     @media print{.measure.on .note b{background:transparent!important}}
     .vocal-note.dotted .vocal-note-value{margin-right:4px}.vocal-note-value>.vocal-dot{position:absolute;left:calc(100% - 1px);top:-2px;font-size:12px;font-weight:700}.score-scroll{padding-top:28px;margin-top:-28px}.score{padding-bottom:8px;margin-bottom:0}body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea{pointer-events:auto}body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea .note{pointer-events:auto;cursor:pointer}
+    /* v159: 画面幅に応じ、段内部だけを上限付きで緩やかに拡大する。印刷面は対象外。 */
+    @media screen{
+      .measure{--row-height:var(--screen-row-height,18px);--note-height:var(--screen-note-height,14px)}
+      .labels{grid-template-rows:repeat(3,var(--screen-row-height,18px));font-size:var(--screen-label-size,12px);line-height:var(--screen-row-height,18px)}
+      .note b,.note.open-note b,.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-size:calc(var(--note-size) * var(--screen-score-scale,1));line-height:var(--screen-note-height,14px)}
+      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--screen-rhythm-offset,8px))}
+      .string:last-child .note.d2:not(.rest)::after,.string:last-child .note.d1:not(.rest)::after{top:calc(50% + var(--screen-bottom-rhythm-offset,6px))}
+      .barline-handle,.measure:first-child>.barline-handle,.measure:last-child::after{top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2)}
+      .barline-handle .bar-symbol{overflow:hidden}
+    }
   </style>
   <link rel="stylesheet" href="./print-v2.css?v=152">
 </head>
@@ -354,6 +364,24 @@ let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="",vocalAnchorSelection=null,vocalAnchorOffset=0,vocalTool="note",vocalSlurStartId=null,tripletMode=false,tripletStartAnchor=null;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+function updateScreenScoreScale(){
+  const paper=q(".paper"),scoreWrap=q("#scoreArea .score-wrap");
+  if(!paper||!scoreWrap)return 1;
+  const scoreWidth=scoreWrap.getBoundingClientRect().width;
+  const scale=window.innerWidth>=900?clamp(1+Math.max(0,scoreWidth/900-1)*.5,1,1.15):1;
+  paper.style.setProperty("--screen-score-scale",scale.toFixed(4));
+  paper.style.setProperty("--screen-row-height",`${(18*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-note-height",`${(14*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-label-size",`${(12*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-rhythm-offset",`${(8*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-bottom-rhythm-offset",`${(6*scale).toFixed(2)}px`);
+  return scale;
+}
+function screenAnnotationLength(cssPixels){
+  const svg=q("#annotations"),rect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal,paper=q(".paper");
+  const scale=Number.parseFloat(getComputedStyle(paper).getPropertyValue("--screen-score-scale"))||1;
+  return rect?.width&&view?.width?cssPixels*scale*view.width/rect.width:cssPixels;
+}
 function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").replace(/[＊×]/g,"*").trim()}
 function isOpenValue(value){return value==="0"||value==="○"}
 function parseMeter(value){
@@ -813,7 +841,8 @@ function applyContentAwareMeasureWidths(){
     let fontSize=Number.parseFloat(getComputedStyle(measure).getPropertyValue("--note-size"))||14,scale=fitScale(1);
     if(scale<.999&&fontSize>13){measure.style.setProperty("--note-size","13px");scale=fitScale(13/fontSize);fontSize=13}
     measure.style.setProperty("--note-scale-x",String(scale));
-    measure.style.setProperty("--rhythm-width",`${Math.max(7,Math.min(14,measurePixels/capacity*.72)).toFixed(2)}px`);
+    const screenScale=Number.parseFloat(getComputedStyle(q(".paper")).getPropertyValue("--screen-score-scale"))||1;
+    measure.style.setProperty("--rhythm-width",`${Math.max(7*screenScale,Math.min(14*screenScale,measurePixels/capacity*.72)).toFixed(2)}px`);
     const score=measure.closest(".score"),vocalScore=measure.closest(".staff")?.querySelector(".vocal-score"),measureIndex=[...score.children].filter(child=>child.classList.contains("measure")).indexOf(measure),vocalMeasure=vocalScore?.children?.[measureIndex];if(vocalMeasure)vocalMeasure.style.minWidth="0px";
   });
 }
@@ -925,7 +954,7 @@ function itemHtml(item){
     return `<g class="annotation-item${selected}" data-item="${item.id}"><line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/><polyline ${common} points="${p1.x},${p1.y} ${item.x2},${item.y2} ${p2.x},${p2.y}"/></g>`;
   }
   if(item.type==="symbol"){
-    const size=14;
+    const size=screenAnnotationLength(14);
     if(item.text==="スリ"){
       const width=clamp(Number(item.slurWidth)||34,22,90),left=item.x-width/2,right=item.x+width/2,slurY=item.y;
     return `<g class="annotation-item symbol-item anchored-symbol slur-symbol${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y-9}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text><path d="M ${left} ${slurY+4} Q ${item.x} ${slurY-4} ${right} ${slurY+4}" fill="none" stroke="${item.color}" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>`;
@@ -1008,6 +1037,7 @@ function applyPreview(){
     score.style.transform="";scroll.style.height="";
     scroll.scrollLeft=0;
   });
+  updateScreenScoreScale();
   applyContentAwareMeasureWidths();
   renderLayers();
 }
@@ -1463,7 +1493,7 @@ document.querySelector('.page-link[href="./annotations.html"]')?.addEventListene
 window.addEventListener("pagehide",save);
 window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};migrateState();drawing=false;render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();
-if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=>{applyContentAwareMeasureWidths();syncAnchoredVocalPositions();syncVocalSlurs();syncTuplets()}));
+if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=>{applyPreview();syncAnchoredVocalPositions();syncVocalSlurs();syncTuplets()}));
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>

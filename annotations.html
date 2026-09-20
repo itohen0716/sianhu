@@ -125,6 +125,16 @@
     }
     @media print{.measure.on .note b{background:transparent!important}}
     .vocal-note.dotted .vocal-note-value{margin-right:4px}.vocal-note-value>.vocal-dot{position:absolute;left:calc(100% - 1px);top:-2px;font-size:12px;font-weight:700}.score-scroll{padding-top:28px;margin-top:-28px}.score{padding-bottom:8px;margin-bottom:0}
+    /* v159: 画面幅に応じ、段内部だけを上限付きで緩やかに拡大する。印刷面は対象外。 */
+    @media screen{
+      .measure{--row-height:var(--screen-row-height,18px);--note-height:var(--screen-note-height,14px)}
+      .labels{grid-template-rows:repeat(3,var(--screen-row-height,18px));font-size:var(--screen-label-size,12px);line-height:var(--screen-row-height,18px)}
+      .note b,.note.open-note b,.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-size:calc(var(--note-size) * var(--screen-score-scale,1));line-height:var(--screen-note-height,14px)}
+      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--screen-rhythm-offset,8px))}
+      .string:last-child .note.d2:not(.rest)::after,.string:last-child .note.d1:not(.rest)::after{top:calc(50% + var(--screen-bottom-rhythm-offset,6px))}
+      .measure::before,.measure:last-child::after,.bar-symbol{top:calc(var(--row-height)/2);height:calc(var(--row-height)*2);bottom:auto}
+      .bar-symbol{overflow:hidden}
+    }
   </style>
 </head>
 <body class="annotation-page">
@@ -250,6 +260,24 @@ let drawing=false,draft=null,selectedItemId=null,dragging=null,resizing=null,pri
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;
 const rangeItemIds=new Set();
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+function updateScreenScoreScale(){
+  const paper=q(".paper"),scoreWrap=q("#scoreArea .score-wrap");
+  if(!paper||!scoreWrap)return 1;
+  const scoreWidth=scoreWrap.getBoundingClientRect().width;
+  const scale=window.innerWidth>=900?clamp(1+Math.max(0,scoreWidth/900-1)*.5,1,1.15):1;
+  paper.style.setProperty("--screen-score-scale",scale.toFixed(4));
+  paper.style.setProperty("--screen-row-height",`${(18*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-note-height",`${(14*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-label-size",`${(12*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-rhythm-offset",`${(8*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-bottom-rhythm-offset",`${(6*scale).toFixed(2)}px`);
+  return scale;
+}
+function screenAnnotationLength(cssPixels){
+  const svg=q("#annotations"),rect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal,paper=q(".paper");
+  const scale=Number.parseFloat(getComputedStyle(paper).getPropertyValue("--screen-score-scale"))||1;
+  return rect?.width&&view?.width?cssPixels*scale*view.width/rect.width:cssPixels;
+}
 function isOpenValue(value){return value==="0"||value==="○"}
 function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").trim()}
 function parseMeter(value){const raw=toAscii(value).replace(/\s+/g,"");let match=raw.match(/^(\d{1,2})\/(\d{1,2})$/);if(!match){const nums=raw.match(/(三十二|十六|十二|十一|十|一|二|三|四|五|六|七|八|九|\d+)/g);if(nums?.length>=2){const map={一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12,十六:16,三十二:32};match=[raw,String(map[nums[1]]||nums[1]),String(map[nums[0]]||nums[0])]}}if(!match)return null;const numerator=Number(match[1]),denominator=Number(match[2]);if(!Number.isInteger(numerator)||numerator<1||numerator>99||![1,2,4,8,16].includes(denominator))return null;const capacity=16*numerator/denominator;if(!Number.isInteger(capacity)||capacity<1||capacity>64)return null;return{numerator,denominator,capacity,signature:`${numerator}/${denominator}`}}
@@ -503,7 +531,7 @@ function measureHtml(m){
   const location=measureLocation(m),row=location.row,boundary=location.local,rowMeasures=location.count,capacity=measureCapacityFor(m),hanma=isHanma(m),notes=state.notes.filter(note=>note.m===m&&!note.rest),maxOnString=Math.max(0,...[1,2,3].map(stringNumber=>notes.filter(note=>note.s===stringNumber).length)),noteSize=maxOnString>=8?13:14,kind=state.barlineKinds?.[barlineKey(row,boundary)]||"single",atRowEnd=boundary===rowMeasures-1,endKind=state.barlineKinds?.[barlineKey(row,rowMeasures)]||"single",width=measureWidth(m),grow=screenMeasureGrow(m),endLine=atRowEnd&&endKind!=="single"?barlineSvg(endKind,"end").replace('class="bar-symbol ','class="bar-symbol end-bar '):"";return `<div class="measure ${m===state.m?"on":""}${hanma?" hanma":""}${kind!=="single"?" custom-bar":""}${endLine?" custom-end":""}" data-measure="${m}" style="--measure-width:${width}px;--measure-grow:${grow};--meter-columns:${capacity};--note-size:${noteSize}px">${barlineSvg(kind,boundary===0?"start":"middle")}${endLine}${scorePartsHtml(m)}${[3,2,1].map(s=>`<div class="string">${Array.from({length:capacity},(_,p)=>`<button class="cell ${m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s&&n.p<capacity).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}${hanma?'<span class="hanma-label">〔半間〕</span>':""}</div>`;
 }
 function applyContentAwareMeasureWidths(){
-  qAll("#scoreArea .measure[data-measure]").forEach(measure=>{const m=Number(measure.dataset.measure),capacity=measureCapacityFor(m),measurePixels=measure.getBoundingClientRect().width,byString=new Map(),edgeGap=0,columnGap=0;measure.style.setProperty("--content-min-width","0px");measure.querySelectorAll(".note[data-note]").forEach(element=>{const parts=element.dataset.note.split(",").map(Number),s=parts[1],p=parts[2],glyph=element.querySelector("b")||element,note=state.notes.find(entry=>entry.m===m&&entry.s===s&&entry.p===p);if(!note||p>=capacity)return;const width=Math.max(12,Number(glyph.offsetWidth)||Number(glyph.scrollWidth)||12),x=note.rest?Number(note.x)||0:columnX(m,p),columns=byString.get(s)||new Map(),current=columns.get(p);if(!current||width>current.width)columns.set(p,{p,width,x});byString.set(s,columns)});const fitScale=fontRatio=>{let scale=1;byString.forEach(columns=>{const entries=[...columns.values()].sort((a,b)=>a.p-b.p).map(entry=>({...entry,width:entry.width*fontRatio,center:(entry.p+.5)*measurePixels/capacity+entry.x}));entries.forEach(entry=>{const half=entry.width/2;if(half>0)scale=Math.min(scale,(entry.center-edgeGap)/half,(measurePixels-edgeGap-entry.center)/half)});for(let index=1;index<entries.length;index++){const previous=entries[index-1],current=entries[index],room=current.center-previous.center-columnGap,halfWidths=previous.width/2+current.width/2;if(halfWidths>0)scale=Math.min(scale,room/halfWidths)}});return clamp(Number.isFinite(scale)?scale:1,.58,1)};let fontSize=Number.parseFloat(getComputedStyle(measure).getPropertyValue("--note-size"))||14,scale=fitScale(1);if(scale<.999&&fontSize>13){measure.style.setProperty("--note-size","13px");scale=fitScale(13/fontSize);fontSize=13}measure.style.setProperty("--note-scale-x",String(scale));measure.style.setProperty("--rhythm-width",`${Math.max(7,Math.min(14,measurePixels/capacity*.72)).toFixed(2)}px`);const score=measure.closest(".score"),vocalScore=measure.closest(".staff")?.querySelector(".vocal-score"),measureIndex=[...score.children].filter(child=>child.classList.contains("measure")).indexOf(measure),vocalMeasure=vocalScore?.children?.[measureIndex];if(vocalMeasure)vocalMeasure.style.minWidth="0px"})
+  qAll("#scoreArea .measure[data-measure]").forEach(measure=>{const m=Number(measure.dataset.measure),capacity=measureCapacityFor(m),measurePixels=measure.getBoundingClientRect().width,byString=new Map(),edgeGap=0,columnGap=0;measure.style.setProperty("--content-min-width","0px");measure.querySelectorAll(".note[data-note]").forEach(element=>{const parts=element.dataset.note.split(",").map(Number),s=parts[1],p=parts[2],glyph=element.querySelector("b")||element,note=state.notes.find(entry=>entry.m===m&&entry.s===s&&entry.p===p);if(!note||p>=capacity)return;const width=Math.max(12,Number(glyph.offsetWidth)||Number(glyph.scrollWidth)||12),x=note.rest?Number(note.x)||0:columnX(m,p),columns=byString.get(s)||new Map(),current=columns.get(p);if(!current||width>current.width)columns.set(p,{p,width,x});byString.set(s,columns)});const fitScale=fontRatio=>{let scale=1;byString.forEach(columns=>{const entries=[...columns.values()].sort((a,b)=>a.p-b.p).map(entry=>({...entry,width:entry.width*fontRatio,center:(entry.p+.5)*measurePixels/capacity+entry.x}));entries.forEach(entry=>{const half=entry.width/2;if(half>0)scale=Math.min(scale,(entry.center-edgeGap)/half,(measurePixels-edgeGap-entry.center)/half)});for(let index=1;index<entries.length;index++){const previous=entries[index-1],current=entries[index],room=current.center-previous.center-columnGap,halfWidths=previous.width/2+current.width/2;if(halfWidths>0)scale=Math.min(scale,room/halfWidths)}});return clamp(Number.isFinite(scale)?scale:1,.58,1)};let fontSize=Number.parseFloat(getComputedStyle(measure).getPropertyValue("--note-size"))||14,scale=fitScale(1);if(scale<.999&&fontSize>13){measure.style.setProperty("--note-size","13px");scale=fitScale(13/fontSize);fontSize=13}measure.style.setProperty("--note-scale-x",String(scale));const screenScale=Number.parseFloat(getComputedStyle(q(".paper")).getPropertyValue("--screen-score-scale"))||1;measure.style.setProperty("--rhythm-width",`${Math.max(7*screenScale,Math.min(14*screenScale,measurePixels/capacity*.72)).toFixed(2)}px`);const score=measure.closest(".score"),vocalScore=measure.closest(".staff")?.querySelector(".vocal-score"),measureIndex=[...score.children].filter(child=>child.classList.contains("measure")).indexOf(measure),vocalMeasure=vocalScore?.children?.[measureIndex];if(vocalMeasure)vocalMeasure.style.minWidth="0px"})
 }
 function render(){
   normalizeLyrics();normalizeVocalNotes();normalizeVocalSlurs();normalizeTuplets();
@@ -611,7 +639,7 @@ function itemHtml(item){
     return `<g class="annotation-item${selected}" data-item="${item.id}"><line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/><polyline ${common} points="${p1.x},${p1.y} ${item.x2},${item.y2} ${p2.x},${p2.y}"/></g>`;
   }
   if(item.type==="symbol"){
-    const size=14;
+    const size=screenAnnotationLength(14);
     if(item.text==="スリ"){
       const width=clamp(Number(item.slurWidth)||34,22,90),left=item.x-width/2,right=item.x+width/2,slurY=item.y;
       return `<g class="annotation-item symbol-item anchored-symbol slur-symbol${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y-9}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text><path d="M ${left} ${slurY+4} Q ${item.x} ${slurY-4} ${right} ${slurY+4}" fill="none" stroke="${item.color}" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>`;
@@ -691,6 +719,7 @@ function applyPreview(){
     score.style.transform="";scroll.style.height="";
     scroll.scrollLeft=0;
   });
+  updateScreenScoreScale();
   applyContentAwareMeasureWidths();
   renderLayers();
 }
@@ -954,7 +983,7 @@ document.querySelector('.page-link[href="./index.html"]')?.addEventListener("cli
 window.addEventListener("pagehide",()=>{stopAnnotationMode();save()});
 window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState()}startAnnotationMode();render()}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();
-if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=>{applyContentAwareMeasureWidths();syncAnnotationVocalPositions();syncAnnotationVocalSlurs();syncTuplets()}));
+if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=>{applyPreview();syncAnnotationVocalPositions();syncAnnotationVocalSlurs();syncTuplets()}));
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
