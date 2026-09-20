@@ -185,8 +185,13 @@
       .note b,.note.open-note b,.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-size:calc(var(--note-size) * var(--screen-score-scale,1));line-height:var(--screen-note-height,14px)}
       .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--screen-rhythm-offset,8px))}
       .string:last-child .note.d2:not(.rest)::after,.string:last-child .note.d1:not(.rest)::after{top:calc(50% + var(--screen-bottom-rhythm-offset,6px))}
-      .barline-handle,.measure:first-child>.barline-handle,.measure:last-child::after{top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2)}
-      .barline-handle .bar-symbol{overflow:hidden}
+      /* 左右端線は操作ボタンの外枠では描かず、専用の疑似要素／SVGだけで描く。 */
+      .barline-handle{top:calc(var(--row-height)/2);bottom:auto;height:calc(var(--row-height)*2)}
+      .barline-handle::after{top:0;bottom:auto;height:100%}
+      .measure:first-child>.barline-handle{left:-17px;border-left:0}
+      .measure:last-child::after{display:none}
+      .barline-handle.endline-handle{right:0}
+      .barline-handle .bar-symbol{top:0;bottom:auto;height:100%;overflow:visible}
     }
   </style>
   <link rel="stylesheet" href="./print-v2.css?v=152">
@@ -806,7 +811,7 @@ function scalePrintNotePositions(){
 function samePartSvg(kind){const second=kind==="same2"?'<line x1="13" y1="62" x2="27" y2="6" stroke="currentColor" stroke-width="2"/>':"";return `<svg viewBox="0 0 34 68" aria-hidden="true"><circle cx="5" cy="18" r="2.5" fill="currentColor"/><circle cx="29" cy="50" r="2.5" fill="currentColor"/><line x1="7" y1="62" x2="21" y2="6" stroke="currentColor" stroke-width="2"/>${second}</svg>`}
 function barlineSvg(kind,edge="middle"){
   if(kind==="single")return"";
-  const line=(x,width=1.5)=>`<line x1="${x}" y1="0" x2="${x}" y2="68" stroke="currentColor" stroke-width="${width}"/>`,dots=x=>`<circle cx="${x}" cy="23" r="2.2" fill="currentColor"/><circle cx="${x}" cy="45" r="2.2" fill="currentColor"/>`;
+  const line=(x,width=1.5)=>`<line x1="${x}" y1="0" x2="${x}" y2="68" stroke="currentColor" stroke-width="${width}" stroke-linecap="butt"/>`,dots=x=>`<circle cx="${x}" cy="23" r="2.2" fill="currentColor"/><circle cx="${x}" cy="45" r="2.2" fill="currentColor"/>`;
   if(edge===true)edge="end";
   if(edge==="start"){if(kind==="double")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(0)}${line(6)}</svg>`;if(kind==="repeat-start")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(0)}${line(6)}${dots(13)}</svg>`;if(kind==="repeat-end")return `<svg class="bar-symbol" viewBox="0 0 18 68">${dots(3)}${line(9)}${line(15)}</svg>`;if(kind==="final")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(0,4)}${line(8)}</svg>`}
   if(edge==="end"){if(kind==="double")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(12)}${line(18)}</svg>`;if(kind==="repeat-end")return `<svg class="bar-symbol" viewBox="0 0 18 68">${dots(5)}${line(12)}${line(18)}</svg>`;if(kind==="final")return `<svg class="bar-symbol" viewBox="0 0 18 68">${line(10)}${line(18,4)}</svg>`}
