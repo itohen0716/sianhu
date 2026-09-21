@@ -662,19 +662,20 @@ function captureAnnotationLayout(item,target=item.layoutTarget||state.annotation
 }
 function migrateV2Annotation(item,geometry){const target=item.layoutTarget||"staff",row=geometry.rows[Number(item.layoutRow)];if(!row||!Array.isArray(item.layoutPoints)||!item.layoutPoints.length)return false;const rect=targetElement(row,target)?.getBoundingClientRect();if(!rect?.width||!rect.height)return false;const baseScoreHeight=54+(row.staff.classList.contains("has-hanma")?28:8),anchors=item.layoutPoints.map(point=>{if(target==="page")return{pageX:Number(point.x)||0,pageY:Number(point.y)||0};const x=rect.left+Number(point.x||0)*rect.width,horizontal=measureAnchorForClient(row,x);if(!horizontal)return null;return{...horizontal,y:target==="staff"?((Number(point.y)||0)*baseScoreHeight-9)/18:Number(point.y)||0}});if(anchors.some(anchor=>!anchor))return false;item.layoutAnchors=anchors;item.layoutAnchorVersion=3;delete item.layoutPoints;delete item.layoutAnchorY;delete item.layoutOffsetY;return true}
 function projectedAnnotationItem(item,geometry=annotationGeometry()){
-  if(!geometry||item.layoutAnchorVersion!==3||!Array.isArray(item.layoutAnchors)||!item.layoutAnchors.length)return legacyVisualAnnotationItem(item,geometry);const target=item.layoutTarget||"staff";if(target==="lyrics"&&!state.lyricsVisible||target==="vocal"&&!state.vocalVisible)return null;const clients=item.layoutAnchors.map(anchor=>annotationClientFromAnchor(anchor,geometry,target,item.layoutRow));if(clients.some(point=>!point))return null;const copy=structuredClone(item),points=clients.map(point=>clientPointToSvg(point,geometry));setAnnotationSourcePoints(copy,points);return copy;
+  if(!geometry||item.layoutAnchorVersion!==3||!Array.isArray(item.layoutAnchors)||!item.layoutAnchors.length)return legacyVisualAnnotationItem(item,geometry);const target=item.layoutTarget||"staff",visibilityTarget=item.type==="text"?(item.layoutVisibilityTarget||target):target;if(visibilityTarget==="lyrics"&&!state.lyricsVisible||visibilityTarget==="vocal"&&!state.vocalVisible)return null;const clients=item.layoutAnchors.map(anchor=>annotationClientFromAnchor(anchor,geometry,target,item.layoutRow));if(clients.some(point=>!point))return null;const copy=structuredClone(item),points=clients.map(point=>clientPointToSvg(point,geometry));setAnnotationSourcePoints(copy,points);return copy;
 }
 function syncWritingItemsToLayout(){const geometry=annotationGeometry();if(!geometry)return;state.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).forEach(layer=>(layer.items||[]).forEach(item=>{const projected=projectedAnnotationItem(item,geometry);if(projected)setAnnotationSourcePoints(item,annotationSourcePoints(projected))}))}
 function attachAnnotationTarget(item,target=state.annotationTarget){
   if(!item||item.type==="symbol"&&item.anchor)return false;
-  const allowed=["staff","lyrics","vocal","page"],next=allowed.includes(target)?target:"staff";
+  const allowed=["staff","lyrics","vocal","page"],requested=allowed.includes(target)?target:"staff",next=item.type==="text"&&requested!=="page"?"staff":requested;
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;
   const bounds=annotationClientVerticalBounds(item,geometry),row=next==="page"?geometry.rows[0]:nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom),element=targetElement(row,next);
   if(!element)return false;
   if(next!=="page"&&item.type==="text"){
+    item.layoutVisibilityTarget=requested;
     const clients=annotationSourcePoints(item).map(point=>svgPointToClient(point,geometry)),lane=annotationPlacementLane(row,bounds),adjusted=constrainCommentToPlacementLane(item,clients,bounds,row,lane),side=adjusted.lane==="beforeScore"?"above":"below";
     setAnnotationSourcePoints(item,adjusted.clients.map(point=>clientPointToSvg(point,geometry)));
-    item.layoutSide=side;item.layoutLane=adjusted.lane;
+    item.layoutSide=side;item.layoutLane=adjusted.lane;item.layoutFlowVersion=1;
   }
   return captureAnnotationLayout(item,next,row.row,item);
 }
@@ -765,6 +766,19 @@ function constrainCommentToPlacementLane(item,clients,bounds,row,lane){
 }
 function resetAnnotationEditGaps(){qAll("#scoreArea .annotation-boundary-space").forEach(space=>{space.style.removeProperty("--annotation-boundary-gap");delete space.dataset.annotationEditGap})}
 function annotationLayoutIsInteracting(){return Boolean(dragging||resizing||rangeMove||draft)}
+function normalizeCommentFlowAnchors(visibleLayers){
+  const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
+  visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]).forEach(item=>{
+    if(item.type!=="text"||(item.layoutTarget||"staff")==="page")return;
+    const currentRow=geometry.rows[Number(item.layoutRow)];
+    if(item.layoutFlowVersion===1&&(item.layoutTarget||"staff")==="staff"&&currentRow)return;
+    const visibilityTarget=item.layoutVisibilityTarget||item.layoutTarget||"staff",visual=projectedAnnotationItem(item,geometry);if(!visual)return;
+    const clients=annotationSourcePoints(visual).map(point=>svgPointToClient(point,geometry)),bounds=annotationClientVerticalBounds(visual,geometry),row=nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom),lane=annotationPlacementLane(row,bounds),adjusted=constrainCommentToPlacementLane(item,clients,bounds,row,lane),anchors=adjusted.clients.map(point=>annotationAnchorFromClient(point,row,"staff"));
+    if(anchors.some(anchor=>!anchor))return;
+    item.layoutTarget="staff";item.layoutVisibilityTarget=visibilityTarget;item.layoutRow=row.row;item.layoutAnchors=anchors;item.layoutAnchorVersion=3;item.layoutFlowVersion=1;item.layoutLane=adjusted.lane;item.layoutSide=adjusted.lane==="beforeScore"?"above":"below";delete item.layoutPoints;delete item.layoutAnchorY;delete item.layoutOffsetY;setAnnotationSourcePoints(item,adjusted.clients.map(point=>clientPointToSvg(point,geometry)));changed=true;
+  });
+  return changed;
+}
 function applyAnnotationEditGaps(visibleLayers){
   if(printing||annotationLayoutIsInteracting())return false;
   const paper=q(".paper");if(!paper)return false;
@@ -812,6 +826,7 @@ function renderLayers(){
   [svg,underlay].forEach(element=>{element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);element.setAttribute("preserveAspectRatio","xMinYMin meet")});
   ensureAnnotationRowAnchors();
   const visibleLayers=state.layers.filter(layer=>printing?layer.printEnabled!==false:layer.visible!==false);
+  if(!printing&&!annotationLayoutIsInteracting())normalizeCommentFlowAnchors(visibleLayers);
   if(!printing&&!annotationLayoutIsInteracting())constrainVisibleCommentsToOwnerScores(visibleLayers);
   if(applyAnnotationEditGaps(visibleLayers)){
     rect=svg.getBoundingClientRect();logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
@@ -838,7 +853,7 @@ function renderLayers(){
   const item=selectedItem();
   q("#markerColors").innerHTML=markerColors.map(color=>`<button class="marker-color ${color.value===(item?.type==="marker"?item.color:state.markerColor)?"on":""}" style="--c:${color.value}" data-marker-color="${color.value}" aria-label="${color.label}" title="${color.label}"></button>`).join("");
   q("#itemColor").value=item?.color||state.drawColor;q("#itemColor").disabled=item?.type==="marker";q("#textSize").value=String(item?.size||state.textSize);q("#textBackground").value=item?.background||state.textBackground;
-  const target=item?.layoutTarget||state.annotationTarget||"staff";qAll('input[name="itemAnchorTarget"]').forEach(input=>{input.checked=input.value===target;input.disabled=input.value==="lyrics"&&!state.lyricsVisible||input.value==="vocal"&&!state.vocalVisible});
+  const target=item?.type==="text"?(item.layoutVisibilityTarget||item.layoutTarget||state.annotationTarget||"staff"):(item?.layoutTarget||state.annotationTarget||"staff");qAll('input[name="itemAnchorTarget"]').forEach(input=>{input.checked=input.value===target;input.disabled=input.value==="lyrics"&&!state.lyricsVisible||input.value==="vocal"&&!state.vocalVisible});
   const lineItem=item&&["pen","arrow","rect"].includes(item.type),rectItem=item&&["rect","marker"].includes(item.type);
   q("#lineStyle").value=lineItem?(item.lineStyle||"solid"):(state.lineStyle||"solid");q("#lineStyle").disabled=Boolean(item&&!lineItem);
   q("#rectWidth").disabled=!rectItem;q("#rectHeight").disabled=!rectItem;
@@ -929,12 +944,12 @@ function reattachMovedAnnotations(items,contexts=new Map()){
   const movable=[...new Set((items||[]).filter(item=>item&&!(item.type==="symbol"&&item.anchor)))];if(!movable.length)return;
   const before=annotationGeometry();if(!before)return;
   const snapshots=movable.map(item=>{
-    const target=item.layoutTarget||state.annotationTarget||"staff",context=contexts.get(item.id)||annotationMoveContext(item),rawClients=annotationSourcePoints(item).map(point=>svgPointToClient(point,before)),rawBounds=annotationClientVerticalBounds(item,before),row=target==="page"?before.rows[0]:movedAnnotationOwnerRow(item,before,rawBounds,context),lane=target==="page"?null:annotationPlacementLane(row,rawBounds),adjusted=target==="page"?{clients:rawClients,bounds:rawBounds,lane:null}:constrainCommentToPlacementLane(item,rawClients,rawBounds,row,lane),side=adjusted.lane==="beforeScore"?"above":"below",anchors=adjusted.clients.map(point=>annotationAnchorFromClient(point,row,target));
+    const requested=item.layoutTarget||state.annotationTarget||"staff",target=item.type==="text"&&requested!=="page"?"staff":requested,context=contexts.get(item.id)||annotationMoveContext(item),rawClients=annotationSourcePoints(item).map(point=>svgPointToClient(point,before)),rawBounds=annotationClientVerticalBounds(item,before),row=target==="page"?before.rows[0]:item.type==="text"?nearestAnnotationScoreRow(before.rows,rawBounds.top,rawBounds.bottom):movedAnnotationOwnerRow(item,before,rawBounds,context),lane=target==="page"?null:annotationPlacementLane(row,rawBounds),adjusted=target==="page"?{clients:rawClients,bounds:rawBounds,lane:null}:constrainCommentToPlacementLane(item,rawClients,rawBounds,row,lane),side=adjusted.lane==="beforeScore"?"above":"below",anchors=adjusted.clients.map(point=>annotationAnchorFromClient(point,row,target));
     return{item,target,row:row.row,side,lane:adjusted.lane,anchors};
   }).filter(snapshot=>snapshot.anchors.every(Boolean));
   const natural=resetAnnotationLayoutForDrop();if(!natural?.rows?.length)return;
   snapshots.forEach(snapshot=>{
-    snapshot.item.layoutTarget=snapshot.target;snapshot.item.layoutRow=snapshot.target==="page"?0:snapshot.row;snapshot.item.layoutAnchors=snapshot.anchors;snapshot.item.layoutAnchorVersion=3;if(snapshot.item.type==="text"&&snapshot.target!=="page"){snapshot.item.layoutSide=snapshot.side;snapshot.item.layoutLane=snapshot.lane}delete snapshot.item.layoutPoints;delete snapshot.item.layoutAnchorY;delete snapshot.item.layoutOffsetY;
+    snapshot.item.layoutTarget=snapshot.target;snapshot.item.layoutRow=snapshot.target==="page"?0:snapshot.row;snapshot.item.layoutAnchors=snapshot.anchors;snapshot.item.layoutAnchorVersion=3;if(snapshot.item.type==="text"&&snapshot.target!=="page"){snapshot.item.layoutVisibilityTarget=snapshot.item.layoutVisibilityTarget||"staff";snapshot.item.layoutSide=snapshot.side;snapshot.item.layoutLane=snapshot.lane;snapshot.item.layoutFlowVersion=1}delete snapshot.item.layoutPoints;delete snapshot.item.layoutAnchorY;delete snapshot.item.layoutOffsetY;
     const clients=snapshot.anchors.map(anchor=>annotationClientFromAnchor(anchor,natural,snapshot.target,snapshot.row));if(clients.some(point=>!point))return;
     setAnnotationSourcePoints(snapshot.item,clients.map(point=>clientPointToSvg(point,natural)));
   });
@@ -1099,11 +1114,11 @@ q("#textSize").addEventListener("change",event=>{const item=selectedItem(),value
 q("#textBackground").addEventListener("change",event=>{const item=selectedItem();state.textBackground=event.target.value;if(item?.type==="text"){snap();item.background=event.target.value}render()});
 qAll('input[name="itemAnchorTarget"]').forEach(input=>input.addEventListener("change",event=>{
   if(!event.target.checked)return;
-  const target=event.target.value,item=selectedItem();state.annotationTarget=target;
+  const requested=event.target.value,item=selectedItem(),target=item?.type==="text"&&requested!=="page"?"staff":requested;state.annotationTarget=requested;
   if(!item){save();renderLayers();return}
   const geometry=annotationGeometry(),row=geometry?.rows?.[Number(item.layoutRow)];if(!geometry||!row)return;
   const element=targetElement(row,target);if(target!=="page"&&!element){alert("現在は非表示の行へ関連付けできません。");renderLayers();return}
-  const displayed=visualAnnotationItem(item);if(!displayed)return;snap();setAnnotationSourcePoints(item,annotationSourcePoints(displayed));captureAnnotationLayout(item,target,item.layoutRow,item);renderLayers();
+  const displayed=visualAnnotationItem(item);if(!displayed)return;snap();setAnnotationSourcePoints(item,annotationSourcePoints(displayed));captureAnnotationLayout(item,target,item.layoutRow,item);if(item.type==="text"){item.layoutVisibilityTarget=requested;if(target!=="page")item.layoutFlowVersion=1}renderLayers();
 }));
 q("#numberColor").addEventListener("change",event=>{snap();state.numberColor=event.target.value;state.notes.filter(n=>!n.rest&&!isOpenValue(n.v)&&!n.individualColor).forEach(n=>n.color=state.numberColor);render()});
 q("#openColor").addEventListener("change",event=>{snap();state.openColor=event.target.value;state.notes.filter(n=>!n.rest&&isOpenValue(n.v)&&!n.individualColor).forEach(n=>n.color=state.openColor);render()});
