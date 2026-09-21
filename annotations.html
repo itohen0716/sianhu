@@ -613,8 +613,17 @@ function syncLinkedSymbols(){
 function techniqueSlurGeometry(item){if(item?.text!=="スリ"||!item.anchor||!item.endAnchor)return null;let start=noteAnchorPoint(item.anchor,item.side||"above","スリ"),end=noteAnchorPoint(item.endAnchor,item.side||"above","スリ");if(!start||!end)return null;if(start.x>end.x)[start,end]=[end,start];const units=svgUnitsPerCssPx(),offsetX=(Number(item.offsetXPx)||0)*units,offsetY=(Number(item.offsetYPx)||0)*units,below=item.side==="below",edgeShift=(below?-4:4)*units,arch=(below?8:-8)*units,x1=start.x+offsetX,x2=end.x+offsetX,y1=start.y+offsetY+edgeShift,y2=end.y+offsetY+edgeShift,centerX=(x1+x2)/2,centerY=(y1+y2)/2,controlY=centerY+arch,textY=centerY+(below?13:-13)*units;return{x1,x2,y1,y2,centerX,centerY,controlY,textY}}
 function esc(value){return String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]))}
 function pointsAttr(points){return points.map(point=>`${point.x},${point.y}`).join(" ")}
+function commentWrapColumns(size){
+  const width=q("#annotations")?.getBoundingClientRect().width;if(!width)return 28;
+  return Math.round(clamp(width/45*20/Math.max(12,size),6,28));
+}
+function wrapCommentLine(line,columns){
+  const glyphs=lyricGraphemes(line);if(!glyphs.length)return[""];
+  const count=Math.ceil(glyphs.length/columns),chunk=Math.ceil(glyphs.length/count);
+  return Array.from({length:count},(_,index)=>glyphs.slice(index*chunk,(index+1)*chunk).join("")).filter(Boolean);
+}
 function commentLayout(item,sizeScale=1){
-  const size=(Number(item.size)||20)*sizeScale,lines=String(item.text||"").replace(/\r\n?/g,"\n").split("\n"),lineHeight=size*1.35;
+  const size=(Number(item.size)||20)*sizeScale,columns=commentWrapColumns(size),lines=String(item.text||"").replace(/\r\n?/g,"\n").split("\n").flatMap(line=>wrapCommentLine(line,columns)),lineHeight=size*1.35;
   const longest=Math.max(1,...lines.map(line=>Array.from(line).length)),width=Math.max(size*2.5,longest*size*.95),height=size*1.55+(lines.length-1)*lineHeight;
   return{size,lines,lineHeight,width,height,top:item.y-size*1.05-5};
 }
@@ -709,7 +718,20 @@ function annotationItemBottom(item){
   if(item.type==="symbol")return Number(item.y||0)+12;
   return Math.max(Number(item.y1)||0,Number(item.y2)||0)+(item.type==="arrow"?20:4);
 }
-const ANNOTATION_EDIT_CLEARANCE=14;
+function annotationItemTop(item){
+  if(item.type==="pen")return Math.min(...(item.points||[]).map(point=>Number(point.y)||0))-4;
+  if(item.type==="text")return commentLayout(item).top-4;
+  if(item.type==="symbol")return Number(item.y||0)-12;
+  return Math.min(Number(item.y1)||0,Number(item.y2)||0)-(item.type==="arrow"?20:4);
+}
+const ANNOTATION_COLLISION_CLEARANCE=14,COMMENT_READABLE_CLEARANCE_MIN=44,COMMENT_READABLE_CLEARANCE_MAX=68;
+function annotationClearance(item,visual,row,geometry){
+  if(item.type!=="text"||!row.scoreRect)return ANNOTATION_COLLISION_CLEARANCE;
+  const scale=geometry.svgRect.height/geometry.view.height,top=geometry.svgRect.top+annotationItemTop(visual)*scale;
+  if(top<row.scoreRect.bottom-2)return ANNOTATION_COLLISION_CLEARANCE;
+  const lineHeight=commentLayout(visual).lineHeight*scale;
+  return clamp(lineHeight*1.55+16,COMMENT_READABLE_CLEARANCE_MIN,COMMENT_READABLE_CLEARANCE_MAX);
+}
 function resetAnnotationEditGaps(){qAll("#scoreArea .staff").forEach(staff=>staff.style.removeProperty("--annotation-edit-gap"))}
 function annotationLayoutIsInteracting(){return Boolean(dragging||resizing||rangeMove||draft)}
 function applyAnnotationEditGaps(visibleLayers){
@@ -725,7 +747,7 @@ function applyAnnotationEditGaps(visibleLayers){
     const visual=projectedAnnotationItem(item,geometry);if(!visual)return;
     const bottom=geometry.svgRect.top+annotationItemBottom(visual)*geometry.svgRect.height/geometry.view.height;
     const nextTop=geometry.rows[rowIndex+1]?.rect.top??row.rect.bottom;
-    const needed=Math.ceil(bottom+ANNOTATION_EDIT_CLEARANCE-nextTop);
+    const needed=Math.ceil(bottom+annotationClearance(item,visual,row,geometry)-nextTop);
     if(needed>gaps[rowIndex])gaps[rowIndex]=needed;
   });
   let changed=false;
@@ -847,6 +869,7 @@ async function startDraw(event){
   event.preventDefault();q("#annotations").setPointerCapture(event.pointerId);draft={type:state.drawTool,start:p,points:[p]};
 }
 function translateItem(item,dx,dy){if(item.type==="pen")item.points=item.points.map(p=>({x:p.x+dx,y:p.y+dy}));else if(item.type==="text"||item.type==="symbol"){item.x+=dx;item.y+=dy}else{item.x1+=dx;item.y1+=dy;item.x2+=dx;item.y2+=dy}if(!(item.type==="symbol"&&item.anchor))captureAnnotationLayout(item,item.layoutTarget,item.layoutRow,item)}
+function reattachMovedAnnotation(item){if(item&&!(item.type==="symbol"&&item.anchor))captureAnnotationLayout(item,item.layoutTarget,Number.NaN,item)}
 function resizeAnnotationItem(item,handle,dx,dy){let left=Math.min(item.x1,item.x2),right=Math.max(item.x1,item.x2),top=Math.min(item.y1,item.y2),bottom=Math.max(item.y1,item.y2);const minimum=10;if(handle.includes("w"))left=clamp(left+dx,0,right-minimum);if(handle.includes("e"))right=Math.max(left+minimum,right+dx);if(handle.includes("n"))top=clamp(top+dy,0,bottom-minimum);if(handle.includes("s"))bottom=Math.max(top+minimum,bottom+dy);item.x1=left;item.x2=right;item.y1=top;item.y2=bottom;captureAnnotationLayout(item,item.layoutTarget,item.layoutRow,item)}
 function moveDraw(event){
   if(resizing){event.preventDefault();const p=pointFromEvent(event);resizeAnnotationItem(resizing.item,resizing.handle,p.x-resizing.last.x,p.y-resizing.last.y);resizing.last=p;renderLayers();return}
@@ -855,7 +878,7 @@ function moveDraw(event){
 }
 function endDraw(event){
   if(resizing){resizing=null;save();renderLayers();return}
-  if(dragging){dragging=null;save();renderLayers();return}
+  if(dragging){const item=dragging.item;dragging=null;reattachMovedAnnotation(item);save();renderLayers();return}
   if(!draft)return;const layer=activeLayer(),end=draft.end||pointFromEvent(event);snap();
   if(draft.type==="pen"&&draft.points.length>1){const item={id:uid(),type:"pen",points:draft.points,color:state.drawColor,lineStyle:state.lineStyle};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id}
   else if(draft.type==="line"&&Math.hypot(end.x-draft.start.x,end.y-draft.start.y)>5){const item={id:uid(),type:"line",x1:draft.start.x,y1:draft.start.y,x2:end.x,y2:end.y,color:state.drawColor,lineStyle:state.lineStyle};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id}
@@ -988,7 +1011,7 @@ document.addEventListener("pointermove",event=>{
 });
 document.addEventListener("pointerup",event=>{
   if(rangeDrag){event.preventDefault();finishWritingRange(event);return}
-  if(rangeMove){rangeMove=null;q(".paper").classList.remove("range-moving");save();renderLayers()}
+  if(rangeMove){rangeMove=null;q(".paper").classList.remove("range-moving");selectedWritingItems().forEach(reattachMovedAnnotation);save();renderLayers()}
 });
 document.addEventListener("pointercancel",()=>{if(rangeDrag){rangeBox?.remove();rangeBox=null;rangeDrag=null}if(rangeMove){rangeMove=null;q(".paper").classList.remove("range-moving");renderLayers()}});
 q("#annotations").addEventListener("pointerdown",startDraw);
