@@ -671,6 +671,11 @@ function attachAnnotationTarget(item,target=state.annotationTarget){
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;
   const bounds=annotationClientVerticalBounds(item,geometry),row=next==="page"?geometry.rows[0]:nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom),element=targetElement(row,next);
   if(!element)return false;
+  if(next!=="page"&&item.type==="text"){
+    const clients=annotationSourcePoints(item).map(point=>svgPointToClient(point,geometry)),side=(bounds.top+bounds.bottom)/2<(row.scoreRect.top+row.scoreRect.bottom)/2?"above":"below",adjusted=constrainCommentToOwnerScore(item,clients,bounds,row,side);
+    setAnnotationSourcePoints(item,adjusted.clients.map(point=>clientPointToSvg(point,geometry)));
+    item.layoutSide=side;
+  }
   return captureAnnotationLayout(item,next,row.row,item);
 }
 function ensureAnnotationRowAnchors(){const geometry=annotationGeometry();if(!geometry)return;state.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).forEach(layer=>(layer.items||[]).forEach(item=>{if(item.layoutAnchorVersion===3&&Array.isArray(item.layoutAnchors)&&item.layoutAnchors.length)return;if(item.layoutAnchorVersion===2&&migrateV2Annotation(item,geometry))return;const legacyRowOffset=legacyRowOffsetAnnotationItem(item,geometry);if(legacyRowOffset){captureAnnotationLayout(item,legacyRowOffset.target,legacyRowOffset.row.row,legacyRowOffset.copy);return}const visual=legacyVisualAnnotationItem(item,geometry),clientY=geometry.svgRect.top+annotationCenterY(visual)*geometry.svgRect.height/geometry.view.height,row=nearestAnnotationRow(geometry.rows,clientY),lyricsRect=row.lyrics?.getBoundingClientRect(),vocalRect=row.vocal?.getBoundingClientRect(),target=item.layoutTarget||((lyricsRect&&clientY>=lyricsRect.top&&clientY<=lyricsRect.bottom)?"lyrics":(vocalRect&&clientY>=vocalRect.top&&clientY<=vocalRect.bottom)?"vocal":"staff");captureAnnotationLayout(item,target,row.row,visual)}))}
@@ -735,7 +740,7 @@ function annotationClearance(item,visual,row,geometry){
   const lineHeight=commentLayout(visual).lineHeight*scale;
   return clamp(lineHeight*1.55+16,COMMENT_READABLE_CLEARANCE_MIN,COMMENT_READABLE_CLEARANCE_MAX);
 }
-function resetAnnotationEditGaps(){qAll("#scoreArea .staff").forEach(staff=>staff.style.removeProperty("--annotation-edit-gap"))}
+function resetAnnotationEditGaps(){qAll("#scoreArea .staff").forEach(staff=>{staff.style.removeProperty("--annotation-edit-gap");delete staff.dataset.annotationEditGap})}
 function annotationLayoutIsInteracting(){return Boolean(dragging||resizing||rangeMove||draft)}
 function applyAnnotationEditGaps(visibleLayers){
   if(printing||annotationLayoutIsInteracting())return false;
@@ -754,7 +759,7 @@ function applyAnnotationEditGaps(visibleLayers){
     if(needed>gaps[rowIndex])gaps[rowIndex]=needed;
   });
   let changed=false;
-  gaps.forEach((gap,row)=>{if(gap<=0)return;geometry.rows[row].staff.style.setProperty("--annotation-edit-gap",`${gap}px`);changed=true});
+  gaps.forEach((gap,row)=>{if(gap<=0)return;geometry.rows[row].staff.style.setProperty("--annotation-edit-gap",`${gap}px`);geometry.rows[row].staff.dataset.annotationEditGap=String(gap);changed=true});
   return changed;
 }
 function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
@@ -783,6 +788,7 @@ function renderLayers(){
   [svg,underlay].forEach(element=>{element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);element.setAttribute("preserveAspectRatio","xMinYMin meet")});
   ensureAnnotationRowAnchors();
   const visibleLayers=state.layers.filter(layer=>printing?layer.printEnabled!==false:layer.visible!==false);
+  if(!printing&&!annotationLayoutIsInteracting())constrainVisibleCommentsToOwnerScores(visibleLayers);
   if(applyAnnotationEditGaps(visibleLayers)){
     rect=svg.getBoundingClientRect();logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
     [svg,underlay].forEach(element=>element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`));
@@ -865,24 +871,54 @@ async function startDraw(event){
     const target=event.target.closest("[data-item]"),id=target?.dataset.item;
     if(!id){clearWritingRange();selectedItemId=null;renderLayers();return}
     const record=annotationItemRecord(id);if(!record)return;clearWritingRange();state.activeLayerId=record.layer.id;selectedItemId=id;const item=record.item;
-    event.preventDefault();snap();dragging={item,last:p};q("#annotations").setPointerCapture(event.pointerId);renderLayers();return;
+    event.preventDefault();snap();dragging={item,last:p,context:annotationMoveContext(item)};q("#annotations").setPointerCapture(event.pointerId);renderLayers();return;
   }
   if(state.drawTool==="text"){const text=await requestComment("","譜面に入れるコメント");if(text&&text.trim()){snap();const item={id:uid(),type:"text",x:p.x,y:p.y,text:text.trim(),color:state.drawColor,size:state.textSize,background:state.textBackground};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id;render()}return}
   if(state.drawTool==="eraser"){const target=event.target.closest("[data-item]");if(target){snap();layer.items=layer.items.filter(item=>item.id!==target.dataset.item);render()}return}
   event.preventDefault();q("#annotations").setPointerCapture(event.pointerId);draft={type:state.drawTool,start:p,points:[p]};
 }
 function translateItem(item,dx,dy){if(item.type==="pen")item.points=item.points.map(p=>({x:p.x+dx,y:p.y+dy}));else if(item.type==="text"||item.type==="symbol"){item.x+=dx;item.y+=dy}else{item.x1+=dx;item.y1+=dy;item.x2+=dx;item.y2+=dy}if(!(item.type==="symbol"&&item.anchor))captureAnnotationLayout(item,item.layoutTarget,item.layoutRow,item)}
+function annotationMoveContext(item){
+  const geometry=annotationGeometry(),row=geometry?.rows?.[Number(item?.layoutRow)];if(!item||!geometry||!row)return null;
+  const bounds=annotationClientVerticalBounds(item,geometry),score=row.scoreRect,center=(bounds.top+bounds.bottom)/2,scoreCenter=(score.top+score.bottom)/2;
+  return{row:row.row,side:bounds.bottom<=score.top?"above":bounds.top>=score.bottom?"below":center<=scoreCenter?"above":"below"};
+}
+function movedAnnotationOwnerRow(item,geometry,bounds,context){
+  const current=geometry.rows[Number(context?.row??item.layoutRow)];if(item.type!=="text"||!current)return nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom);
+  const center=(bounds.top+bounds.bottom)/2,explicit=geometry.rows.find(row=>row.row!==current.row&&center>=row.scoreRect.top&&center<=row.scoreRect.bottom);
+  return explicit||current;
+}
+const ANNOTATION_SCORE_CLEARANCE=8;
+function constrainCommentToOwnerScore(item,clients,bounds,row,side){
+  if(item.type!=="text"||!row?.scoreRect)return{clients,bounds};
+  let dy=0;if(side==="above"&&bounds.bottom>row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE)dy=row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE-bounds.bottom;
+  else if(side==="below"&&bounds.top<row.scoreRect.bottom+ANNOTATION_SCORE_CLEARANCE)dy=row.scoreRect.bottom+ANNOTATION_SCORE_CLEARANCE-bounds.top;
+  if(!dy)return{clients,bounds};
+  return{clients:clients.map(point=>({...point,y:point.y+dy})),bounds:{top:bounds.top+dy,bottom:bounds.bottom+dy}};
+}
+function constrainVisibleCommentsToOwnerScores(visibleLayers){
+  const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
+  visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]).forEach(item=>{
+    if(item.type!=="text"||(item.layoutTarget||"staff")!=="staff")return;
+    const row=geometry.rows[Number(item.layoutRow)],visual=row&&projectedAnnotationItem(item,geometry);if(!row||!visual)return;
+    const bounds=annotationClientVerticalBounds(visual,geometry),clients=annotationSourcePoints(visual).map(point=>svgPointToClient(point,geometry)),side=item.layoutSide||((bounds.top+bounds.bottom)/2<(row.scoreRect.top+row.scoreRect.bottom)/2?"above":"below"),adjusted=constrainCommentToOwnerScore(item,clients,bounds,row,side);
+    if(adjusted.clients.every((point,index)=>Math.abs(point.y-clients[index].y)<.01)){item.layoutSide=side;return}
+    const anchors=adjusted.clients.map(point=>annotationAnchorFromClient(point,row,"staff"));if(anchors.some(anchor=>!anchor))return;
+    item.layoutAnchors=anchors;item.layoutAnchorVersion=3;item.layoutSide=side;setAnnotationSourcePoints(item,adjusted.clients.map(point=>clientPointToSvg(point,geometry)));changed=true;
+  });
+  return changed;
+}
 function resetAnnotationLayoutForDrop(){const paper=q(".paper"),svg=q("#annotations"),underlay=q("#annotationUnderlay"),logicalWidth=1000;if(!paper||!svg||!underlay)return null;paper.style.minHeight="";resetAnnotationEditGaps();const rect=svg.getBoundingClientRect(),logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));[svg,underlay].forEach(element=>element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`));return annotationGeometry()}
-function reattachMovedAnnotations(items){
+function reattachMovedAnnotations(items,contexts=new Map()){
   const movable=[...new Set((items||[]).filter(item=>item&&!(item.type==="symbol"&&item.anchor)))];if(!movable.length)return;
   const before=annotationGeometry();if(!before)return;
   const snapshots=movable.map(item=>{
-    const target=item.layoutTarget||state.annotationTarget||"staff",clients=annotationSourcePoints(item).map(point=>svgPointToClient(point,before)),bounds=annotationClientVerticalBounds(item,before),row=target==="page"?before.rows[0]:nearestAnnotationScoreRow(before.rows,bounds.top,bounds.bottom),anchors=clients.map(point=>annotationAnchorFromClient(point,row,target));
-    return{item,target,row:row.row,anchors};
+    const target=item.layoutTarget||state.annotationTarget||"staff",context=contexts.get(item.id)||annotationMoveContext(item),rawClients=annotationSourcePoints(item).map(point=>svgPointToClient(point,before)),rawBounds=annotationClientVerticalBounds(item,before),row=target==="page"?before.rows[0]:movedAnnotationOwnerRow(item,before,rawBounds,context),side=row.row===context?.row?context.side:((rawBounds.top+rawBounds.bottom)/2<((row.scoreRect.top+row.scoreRect.bottom)/2)?"above":"below"),adjusted=target==="page"?{clients:rawClients,bounds:rawBounds}:constrainCommentToOwnerScore(item,rawClients,rawBounds,row,side),anchors=adjusted.clients.map(point=>annotationAnchorFromClient(point,row,target));
+    return{item,target,row:row.row,side,anchors};
   }).filter(snapshot=>snapshot.anchors.every(Boolean));
   const natural=resetAnnotationLayoutForDrop();if(!natural?.rows?.length)return;
   snapshots.forEach(snapshot=>{
-    snapshot.item.layoutTarget=snapshot.target;snapshot.item.layoutRow=snapshot.target==="page"?0:snapshot.row;snapshot.item.layoutAnchors=snapshot.anchors;snapshot.item.layoutAnchorVersion=3;delete snapshot.item.layoutPoints;delete snapshot.item.layoutAnchorY;delete snapshot.item.layoutOffsetY;
+    snapshot.item.layoutTarget=snapshot.target;snapshot.item.layoutRow=snapshot.target==="page"?0:snapshot.row;snapshot.item.layoutAnchors=snapshot.anchors;snapshot.item.layoutAnchorVersion=3;if(snapshot.item.type==="text"&&snapshot.target!=="page")snapshot.item.layoutSide=snapshot.side;delete snapshot.item.layoutPoints;delete snapshot.item.layoutAnchorY;delete snapshot.item.layoutOffsetY;
     const clients=snapshot.anchors.map(anchor=>annotationClientFromAnchor(anchor,natural,snapshot.target,snapshot.row));if(clients.some(point=>!point))return;
     setAnnotationSourcePoints(snapshot.item,clients.map(point=>clientPointToSvg(point,natural)));
   });
@@ -895,7 +931,7 @@ function moveDraw(event){
 }
 function endDraw(event){
   if(resizing){resizing=null;save();renderLayers();return}
-  if(dragging){const item=dragging.item;dragging=null;reattachMovedAnnotations([item]);save();renderLayers();return}
+  if(dragging){const{item,context}=dragging;dragging=null;reattachMovedAnnotations([item],new Map([[item.id,context]]));save();renderLayers();return}
   if(!draft)return;const layer=activeLayer(),end=draft.end||pointFromEvent(event);snap();
   if(draft.type==="pen"&&draft.points.length>1){const item={id:uid(),type:"pen",points:draft.points,color:state.drawColor,lineStyle:state.lineStyle};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id}
   else if(draft.type==="line"&&Math.hypot(end.x-draft.start.x,end.y-draft.start.y)>5){const item={id:uid(),type:"line",x1:draft.start.x,y1:draft.start.y,x2:end.x,y2:end.y,color:state.drawColor,lineStyle:state.lineStyle};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id}
@@ -1020,7 +1056,7 @@ q(".paper").addEventListener("pointerdown",event=>{
 },true);
 q("#annotations").addEventListener("pointerdown",event=>{
   const target=event.target.closest(".range-selected[data-item]");if(!target||!rangeItemIds.size||event.shiftKey)return;
-  event.preventDefault();event.stopImmediatePropagation();snap();rangeMove={last:pointFromEvent(event)};q("#annotations").setPointerCapture?.(event.pointerId);q(".paper").classList.add("range-moving");
+  event.preventDefault();event.stopImmediatePropagation();snap();rangeMove={last:pointFromEvent(event),contexts:new Map(selectedWritingItems().map(item=>[item.id,annotationMoveContext(item)]))};q("#annotations").setPointerCapture?.(event.pointerId);q(".paper").classList.add("range-moving");
 },true);
 document.addEventListener("pointermove",event=>{
   if(rangeDrag){event.preventDefault();updateWritingRangeBox(event);return}
@@ -1028,7 +1064,7 @@ document.addEventListener("pointermove",event=>{
 });
 document.addEventListener("pointerup",event=>{
   if(rangeDrag){event.preventDefault();finishWritingRange(event);return}
-  if(rangeMove){rangeMove=null;q(".paper").classList.remove("range-moving");reattachMovedAnnotations(selectedWritingItems());save();renderLayers()}
+  if(rangeMove){const contexts=rangeMove.contexts;rangeMove=null;q(".paper").classList.remove("range-moving");reattachMovedAnnotations(selectedWritingItems(),contexts);save();renderLayers()}
 });
 document.addEventListener("pointercancel",()=>{if(rangeDrag){rangeBox?.remove();rangeBox=null;rangeDrag=null}if(rangeMove){rangeMove=null;q(".paper").classList.remove("range-moving");renderLayers()}});
 q("#annotations").addEventListener("pointerdown",startDraw);
