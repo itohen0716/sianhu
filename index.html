@@ -22,7 +22,7 @@
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected,.annotation-item.range-selected{filter:drop-shadow(0 0 4px #f2c500)}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;font:15px serif}.score-meta{display:flex;align-items:flex-end;gap:6px}.score-meta select,.score-meta input{border:0;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
     .meta input{border:0;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}.meta #title{justify-self:center;width:8em;max-width:100%;box-sizing:border-box;border-bottom:1px solid #333;padding:4px 1em}
-    .staff{margin-top:28px}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:8px}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/32px serif;text-align:right}.lyrics-input{box-sizing:border-box;width:100%;height:32px;padding:3px 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
+    .staff{margin-top:28px}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:8px}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/32px serif;text-align:right}.lyrics-field{position:relative;min-width:0;height:32px}.lyrics-input{box-sizing:border-box;width:100%;height:32px;padding:3px 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif}.lyrics-field:not(:focus-within) .lyrics-input{color:transparent;caret-color:transparent}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-display{position:absolute;z-index:1;left:0;top:3px;height:26px;overflow:visible;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif;pointer-events:none;white-space:nowrap}.lyrics-field:focus-within .lyrics-display{display:none}.lyrics-glyph{position:absolute;top:0;transform:translateX(-50%);white-space:pre}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
     .vocal-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:2px;min-height:34px}.vocal-label{padding:2px 7px 0 0;color:#725f4d;font:11px/30px serif;text-align:right}.vocal-score{display:flex;min-width:0}.vocal-measure{position:relative;display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));flex:var(--measure-grow,384) 1 0;min-width:0;height:34px;border-left:1px solid transparent}.vocal-cell{min-width:0;border:0;background:transparent;padding:0}.vocal-cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}.vocal-note{position:relative;z-index:2;grid-row:1;align-self:start;justify-self:center;display:flex;flex-direction:column;align-items:center;min-width:18px;height:34px;border:0;background:transparent;padding:0;color:var(--vocal-color,var(--ink));font-family:Arial,sans-serif;line-height:1;transform:translateX(var(--vocal-x,0px));touch-action:none;cursor:ew-resize}.vocal-note.selected{outline:2px solid #c9a927;border-radius:4px}.vocal-note-value{position:relative;display:block;min-width:15px;height:18px;font-size:14px;font-weight:600;text-align:center}.vocal-note.d2 .vocal-note-value::after,.vocal-note.d1 .vocal-note-value::after{content:"";position:absolute;left:50%;bottom:0;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.d1 .vocal-note-value::before{content:"";position:absolute;left:50%;bottom:3px;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.kind-rest .vocal-note-value{font-size:19px;font-weight:700}.vocal-note.kind-interjection .vocal-note-value{font-family:"Yu Gothic",sans-serif}.vocal-string-mark{display:block;height:10px;font-size:10px;letter-spacing:1px;line-height:9px}.vocal-controls{display:grid;gap:12px}.vocal-controls .nums{grid-template-columns:repeat(4,minmax(0,1fr))}.vocal-extras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.vocal-extras button{min-height:50px;border:1px solid #cbbfb2;border-radius:9px;background:#fff;font-weight:700}.vocal-extras button:active{background:#fff2ac}.vocal-visibility{display:grid;gap:7px;padding:9px;border-radius:9px;background:var(--pale)}.vocal-visibility label{display:flex;align-items:center;gap:8px;font-size:13px}.vocal-visibility input{width:18px;height:18px}
     .note.vocal-anchor-selected{outline:2px solid #477d91;border-radius:4px;background:rgba(71,125,145,.10)}.vocal-link-guide{position:absolute;z-index:18;height:2px;pointer-events:none;transform-origin:left center;background:repeating-linear-gradient(to right,#477d91 0 4px,transparent 4px 7px);opacity:.75}.vocal-link-guide::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#477d91}
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.staff.has-hanma .score{padding-bottom:28px}.labels{display:grid;grid-template-rows:repeat(3,18px);font:12px/18px serif;text-align:right;padding-right:7px}
@@ -194,7 +194,7 @@
       .barline-handle .bar-symbol{top:0;bottom:auto;height:100%;overflow:visible}
     }
   </style>
-  <link rel="stylesheet" href="./print-v2.css?v=152">
+  <link rel="stylesheet" href="./print-v2.css?v=171">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
@@ -855,6 +855,19 @@ function applyContentAwareMeasureWidths(){
     const score=measure.closest(".score"),vocalScore=measure.closest(".staff")?.querySelector(".vocal-score"),measureIndex=[...score.children].filter(child=>child.classList.contains("measure")).indexOf(measure),vocalMeasure=vocalScore?.children?.[measureIndex];if(vocalMeasure)vocalMeasure.style.minWidth="0px";
   });
 }
+const lyricMeasureCanvas=document.createElement("canvas");
+function lyricGraphemes(text){return typeof Intl?.Segmenter==="function"?[...new Intl.Segmenter("ja",{granularity:"grapheme"}).segment(text)].map(item=>item.segment):Array.from(text)}
+function lyricGlyphPositions(text,font){
+  const glyphs=lyricGraphemes(String(text||"")),context=lyricMeasureCanvas.getContext("2d");context.font=font||'16px "Yu Gothic",sans-serif';
+  const widths=glyphs.map(glyph=>context.measureText(glyph).width),total=Math.max(1,widths.reduce((sum,width)=>sum+width,0));let advance=0;return glyphs.map((glyph,index)=>{const width=widths[index],start=advance;advance+=width;return{glyph,x:clamp((start+width/2)/total,0,1)}}).filter(item=>!/^\s+$/u.test(item.glyph));
+}
+function syncLyricsToScore(){
+  qAll("#scoreArea .lyrics-row").forEach(row=>{const input=row.querySelector("[data-lyrics-row]"),display=row.querySelector("[data-lyrics-display-row]"),field=row.querySelector(".lyrics-field"),score=row.closest(".staff")?.querySelector(".score");if(!input||!display||!field||!score)return;
+    const scoreRect=score.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();if(!scoreRect.width||!fieldRect.width)return;display.style.left=`${scoreRect.left-fieldRect.left}px`;display.style.width=`${scoreRect.width}px`;display.replaceChildren();
+    const measures=[...row.closest(".staff").querySelectorAll(".score>.measure[data-measure]")].map(element=>({element,m:Number(element.dataset.measure),rect:element.getBoundingClientRect()}));
+    lyricGlyphPositions(input.value,getComputedStyle(input).font).forEach(item=>{const glyph=document.createElement("span"),clientX=scoreRect.left+item.x*scoreRect.width,measure=measures.find(entry=>clientX>=entry.rect.left&&clientX<=entry.rect.right)||measures.at(-1);glyph.className="lyrics-glyph";glyph.dataset.lyricX=String(item.x);if(measure){glyph.dataset.lyricMeasure=String(measure.m);glyph.dataset.lyricMeasureX=String(clamp((clientX-measure.rect.left)/Math.max(1,measure.rect.width),0,1))}glyph.style.left=`${(item.x*100).toFixed(5)}%`;glyph.textContent=item.glyph;display.appendChild(glyph)});
+  });
+}
 function render(){
   normalizeLyrics();normalizeVocalNotes();normalizeVocalSlurs();normalizeTuplets();
   const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,measureCapacityFor(state.m)-1);const currentCapacity=measureCapacityFor(state.m);
@@ -874,7 +887,7 @@ function render(){
   q("#tripletTool").classList.toggle("on",tripletMode);q("#tripletTool").setAttribute("aria-pressed",String(tripletMode));document.body.classList.toggle("triplet-selecting",tripletMode);
   q("#vocalStatus").textContent=vocalTool==="slur"?(vocalSlurStartId?"スラーの終点を押してください":"スラーの始点を押してください"):`${location.row+1}段・${location.local+1}小節・16分位置${state.p+1}/${currentCapacity}（${vocalAnchorLabel(activeVocalAnchor())}）${selectedScoreTarget?.type==="vocal"?"（選択中：ドラッグ／矢印で微調整）":""}`;
   const printStarts=pageStartRows();
-  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}${Array.from({length:measuresInRow(r)},(_,i)=>rowStartMeasure(r)+i).some(isHanma)?" has-hanma":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div>`:""}</section>`).join("");
+  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}${Array.from({length:measuresInRow(r)},(_,i)=>rowStartMeasure(r)+i).some(isHanma)?" has-hanma":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><span class="lyrics-field"><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"><span class="lyrics-display" data-lyrics-display-row="${r}" aria-hidden="true"></span></span></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div>`:""}</section>`).join("");
   applyContentAwareMeasureWidths();
   q(".paper").classList.toggle("lyrics-mode",state.lyricsMode);q("#vocalVisible").checked=state.vocalVisible;q("#lyricsVisible").checked=state.lyricsVisible;
   q(".paper").classList.toggle("preview-mode",state.preview);
@@ -1093,6 +1106,7 @@ function applyPreview(){
   });
   updateScreenScoreScale();
   applyContentAwareMeasureWidths();
+  syncLyricsToScore();
   renderLayers();
 }
 function pointFromEvent(event){const rect=q("#annotations").getBoundingClientRect();return{x:(event.clientX-rect.left)*q("#annotations").viewBox.baseVal.width/rect.width,y:(event.clientY-rect.top)*q("#annotations").viewBox.baseVal.height/rect.height}}
@@ -1445,7 +1459,7 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
 });
 q("#vocalVisible").addEventListener("change",event=>{ensureAnnotationRowAnchors();snap();state.vocalVisible=event.target.checked;render()});
 q("#lyricsVisible").addEventListener("change",event=>{ensureAnnotationRowAnchors();snap();state.lyricsVisible=event.target.checked;render()});
-q("#scoreArea").addEventListener("input",event=>{const input=event.target.closest("[data-lyrics-row]");if(!input)return;const row=Number(input.dataset.lyricsRow);if(Number.isInteger(row)&&row>=0&&row<state.rows){state.lyrics[row]=input.value;save()}});
+q("#scoreArea").addEventListener("input",event=>{const input=event.target.closest("[data-lyrics-row]");if(!input)return;const row=Number(input.dataset.lyricsRow);if(Number.isInteger(row)&&row>=0&&row<state.rows){state.lyrics[row]=input.value;syncLyricsToScore();save()}});
 q("#closePlayer").addEventListener("click",closeScorePlayer);q("#playerModal").addEventListener("click",event=>{if(event.target===q("#playerModal"))closeScorePlayer()});document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!q("#playerModal").hidden){event.preventDefault();event.stopImmediatePropagation();closeScorePlayer()}});
 q("#scoreArea").addEventListener("pointermove",event=>{
   if(rangeMove){event.preventDefault();const dx=clamp(event.clientX-rangeMove.startX,rangeMove.minDx,rangeMove.maxDx);rangeMove.groups.forEach(group=>{group.notes.forEach(note=>{note.x=group.origin+dx});group.notes.forEach(note=>{const element=q(`[data-note="${anchorKey(note.m,note.s,note.p)}"]`);if(element)element.style.setProperty("transform",`translateX(${group.origin+dx}px)`)})});rangeMove.techniques.forEach(entry=>{if(!entry.linked){entry.item.offsetXPx=entry.originXPx+dx;entry.item.x=entry.originX+dx*svgUnitsPerCssPx()}});renderLayers(true);q(".paper").classList.add("range-moving");return}
@@ -1566,7 +1580,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=169"></script>
+  <script src="./print-v2.js?v=171"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
