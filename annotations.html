@@ -25,7 +25,7 @@
     .range-selection-box{position:fixed;z-index:10000;border:2px solid #477d91;background:rgba(71,125,145,.14);pointer-events:none}.paper.range-select-mode,.paper.range-select-mode *{-webkit-user-select:none!important;user-select:none!important}.paper.range-moving{cursor:grabbing}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;font:15px serif}.score-meta{display:flex;align-items:flex-end;gap:6px}.score-meta select,.score-meta input{border:0;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
     .meta input{border:0;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}.meta #title{justify-self:center;width:8em;max-width:100%;box-sizing:border-box;border-bottom:1px solid #333;padding:4px 1em}
-    .staff{margin-top:28px}.annotation-page #scoreArea .staff{box-sizing:border-box;padding-bottom:var(--annotation-edit-gap,0px)}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:8px}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/32px serif;text-align:right}.lyrics-field{position:relative;min-width:0;height:32px}.lyrics-input{box-sizing:border-box;width:100%;height:32px;padding:3px 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif}.lyrics-field:not(:focus-within) .lyrics-input{color:transparent;caret-color:transparent}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-display{position:absolute;z-index:1;left:0;top:3px;height:26px;overflow:visible;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif;pointer-events:none;white-space:nowrap}.lyrics-field:focus-within .lyrics-display{display:none}.lyrics-glyph{position:absolute;top:0;transform:translateX(-50%);white-space:pre}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
+    .staff{margin-top:28px}.annotation-boundary-space{display:none;height:0}.annotation-page #scoreArea .annotation-boundary-space{display:block;height:var(--annotation-boundary-gap,0px)}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:8px}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/32px serif;text-align:right}.lyrics-field{position:relative;min-width:0;height:32px}.lyrics-input{box-sizing:border-box;width:100%;height:32px;padding:3px 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif}.lyrics-field:not(:focus-within) .lyrics-input{color:transparent;caret-color:transparent}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-display{position:absolute;z-index:1;left:0;top:3px;height:26px;overflow:visible;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif;pointer-events:none;white-space:nowrap}.lyrics-field:focus-within .lyrics-display{display:none}.lyrics-glyph{position:absolute;top:0;transform:translateX(-50%);white-space:pre}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
     .vocal-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:2px;min-height:34px}.vocal-label{padding:2px 7px 0 0;color:#725f4d;font:11px/30px serif;text-align:right}.vocal-score{display:flex;min-width:0}.vocal-measure{position:relative;display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));flex:var(--measure-grow,384) 1 0;min-width:0;height:34px}.vocal-note{position:relative;z-index:2;grid-row:1;align-self:start;justify-self:center;display:flex;flex-direction:column;align-items:center;min-width:18px;height:34px;border:0;background:transparent;padding:0;color:var(--ink);font-family:Arial,sans-serif;line-height:1;transform:translateX(var(--vocal-x,0px))}.vocal-note-value{position:relative;display:block;min-width:15px;height:18px;font-size:14px;font-weight:600;text-align:center}.vocal-note.d2 .vocal-note-value::after,.vocal-note.d1 .vocal-note-value::after{content:"";position:absolute;left:50%;bottom:0;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.d1 .vocal-note-value::before{content:"";position:absolute;left:50%;bottom:3px;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-string-mark{display:block;height:10px;font-size:10px;letter-spacing:1px;line-height:9px}
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.staff.has-hanma .score{padding-bottom:28px}.labels{display:grid;grid-template-rows:repeat(3,18px);font:12px/18px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow:visible}
@@ -82,7 +82,7 @@
     .tool-rail .color-settings{flex-direction:column}
     .tool-rail button{padding-left:7px;padding-right:7px}
     @media(max-width:899px){.app{width:auto;max-width:1100px}.workspace-shell{width:auto;grid-template-columns:1fr}.score-viewport,.tool-rail{grid-column:auto;grid-row:auto}.score-viewport{width:auto;overflow:visible;padding-bottom:0}.score-toolbar{width:auto;min-width:0}.score-viewport>.paper{width:auto;min-width:0}.tool-rail{position:static;max-height:none;overflow:visible;padding-left:0}.tool-rail .layer-card{grid-template-columns:minmax(110px,1fr) auto}.tool-rail .color-settings{flex-direction:row}}
-    @media print{.workspace-shell{display:block;margin:0}.score-viewport{display:block;width:auto;overflow:visible;padding:0}.score-toolbar,.tool-rail,.resize-ui{display:none!important}.annotation-page #scoreArea .staff{--annotation-edit-gap:0px!important;padding-bottom:0!important}}
+    @media print{.workspace-shell{display:block;margin:0}.score-viewport{display:block;width:auto;overflow:visible;padding:0}.score-toolbar,.tool-rail,.resize-ui{display:none!important}.annotation-page #scoreArea .annotation-boundary-space{--annotation-boundary-gap:0px!important;height:0!important;display:none!important}}
     .player-modal[hidden]{display:none}.player-modal{position:fixed;z-index:10000;inset:0;display:grid;place-items:start;padding:6px;background:rgba(49,40,31,.34)}.player-dialog{position:relative;width:min(390px,calc(100vw - 12px));height:min(370px,calc(100vh - 12px));overflow:hidden;border:1px solid #bcae9e;border-radius:15px;background:#fffdf8;box-shadow:0 14px 42px rgba(42,32,22,.3)}.player-dialog iframe{display:block;width:100%;height:100%;border:0}.player-close{position:absolute;z-index:2;top:7px;right:8px;width:34px;height:34px;border:1px solid #ad9984;border-radius:50%;background:#fff;color:#4f4034;font-size:21px;line-height:1;cursor:pointer}body.player-modal-open{overflow:hidden;width:var(--player-layout-width,auto)}
     @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.tool-rail .nums{grid-template-columns:repeat(5,minmax(0,1fr))}.tool-rail .nums button{min-width:0;min-height:54px}.tool-rail .rests{grid-template-columns:repeat(2,minmax(0,1fr))}.tool-rail .rests button{min-width:0}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}.colors{margin-left:0}.draw-tools button{flex:1 0 28%}.layer-card{grid-template-columns:1fr}.score-viewport{width:100%;overflow:visible}.score-viewport>.paper{width:100%;min-width:0;max-width:none;zoom:1}.score-toolbar{width:auto;min-width:0}}
     @page{size:A4 portrait;margin:7mm}
@@ -553,7 +553,7 @@ function render(){
   q("#numbers").innerHTML=vals.map(v=>`<button data-v="${v}">${v}</button>`).join("");
   q("#rests").innerHTML=`<button data-v="0"><span class="mark">0</span>開放弦</button>`+rests.map(r=>`<button data-rest="${r.d}"><span class="mark">${r.mark}</span>${r.label}</button>`).join("");
   const printStarts=pageStartRows();
-  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}${Array.from({length:measuresInRow(r)},(_,i)=>rowStartMeasure(r)+i).some(isHanma)?" has-hanma":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><span class="lyrics-field"><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"><span class="lyrics-display" data-lyrics-display-row="${r}" aria-hidden="true"></span></span></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div>`:""}</section>`).join("");
+  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}${Array.from({length:measuresInRow(r)},(_,i)=>rowStartMeasure(r)+i).some(isHanma)?" has-hanma":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div><div class="annotation-boundary-space" data-annotation-boundary="afterScore" aria-hidden="true"></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><span class="lyrics-field"><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"><span class="lyrics-display" data-lyrics-display-row="${r}" aria-hidden="true"></span></span></div><div class="annotation-boundary-space" data-annotation-boundary="afterLyrics" aria-hidden="true"></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div><div class="annotation-boundary-space" data-annotation-boundary="afterVocal" aria-hidden="true"></div>`:""}</section>`).join("");
   applyContentAwareMeasureWidths();
   q(".paper").classList.toggle("lyrics-mode",state.lyricsMode);q("#lyricsMode").checked=state.lyricsMode;
   q(".paper").classList.toggle("preview-mode",state.preview);
@@ -672,9 +672,9 @@ function attachAnnotationTarget(item,target=state.annotationTarget){
   const bounds=annotationClientVerticalBounds(item,geometry),row=next==="page"?geometry.rows[0]:nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom),element=targetElement(row,next);
   if(!element)return false;
   if(next!=="page"&&item.type==="text"){
-    const clients=annotationSourcePoints(item).map(point=>svgPointToClient(point,geometry)),side=(bounds.top+bounds.bottom)/2<(row.scoreRect.top+row.scoreRect.bottom)/2?"above":"below",adjusted=constrainCommentToOwnerScore(item,clients,bounds,row,side);
+    const clients=annotationSourcePoints(item).map(point=>svgPointToClient(point,geometry)),lane=annotationPlacementLane(row,bounds),adjusted=constrainCommentToPlacementLane(item,clients,bounds,row,lane),side=adjusted.lane==="beforeScore"?"above":"below";
     setAnnotationSourcePoints(item,adjusted.clients.map(point=>clientPointToSvg(point,geometry)));
-    item.layoutSide=side;
+    item.layoutSide=side;item.layoutLane=adjusted.lane;
   }
   return captureAnnotationLayout(item,next,row.row,item);
 }
@@ -732,15 +732,38 @@ function annotationItemTop(item){
   if(item.type==="symbol")return Number(item.y||0)-12;
   return Math.min(Number(item.y1)||0,Number(item.y2)||0)-(item.type==="arrow"?20:4);
 }
-const ANNOTATION_COLLISION_CLEARANCE=14,COMMENT_READABLE_CLEARANCE_MIN=44,COMMENT_READABLE_CLEARANCE_MAX=68;
-function annotationClearance(item,visual,row,geometry){
-  if(item.type!=="text"||!row.scoreRect)return ANNOTATION_COLLISION_CLEARANCE;
-  const scale=geometry.svgRect.height/geometry.view.height,top=geometry.svgRect.top+annotationItemTop(visual)*scale;
-  if(top<row.scoreRect.bottom-2)return ANNOTATION_COLLISION_CLEARANCE;
-  const lineHeight=commentLayout(visual).lineHeight*scale;
-  return clamp(lineHeight*1.55+16,COMMENT_READABLE_CLEARANCE_MIN,COMMENT_READABLE_CLEARANCE_MAX);
+const ANNOTATION_COLLISION_CLEARANCE=14,ANNOTATION_SCORE_CLEARANCE=8,ANNOTATION_LANES=new Set(["beforeScore","afterScore","afterLyrics","afterVocal"]);
+function annotationRowRegions(row){return{score:row?.scoreRect||null,lyrics:row?.lyrics?.getBoundingClientRect()||null,vocal:row?.vocal?.getBoundingClientRect()||null}}
+function normalizeAnnotationLane(row,lane){
+  const regions=annotationRowRegions(row);if(lane==="beforeScore")return lane;
+  if(lane==="afterVocal"&&!regions.vocal)lane=regions.lyrics?"afterLyrics":"afterScore";
+  if(lane==="afterLyrics"&&!regions.lyrics)lane="afterScore";
+  return ANNOTATION_LANES.has(lane)?lane:"afterScore";
 }
-function resetAnnotationEditGaps(){qAll("#scoreArea .staff").forEach(staff=>{staff.style.removeProperty("--annotation-edit-gap");delete staff.dataset.annotationEditGap})}
+function annotationPlacementLane(row,bounds){
+  const regions=annotationRowRegions(row),score=regions.score;if(!score)return"afterScore";
+  const center=(bounds.top+bounds.bottom)/2;if(bounds.bottom<=score.top||center<(score.top+score.bottom)/2)return"beforeScore";
+  if(bounds.top<score.bottom)return"afterScore";
+  if(regions.lyrics&&bounds.top<regions.lyrics.bottom)return"afterScore";
+  if(regions.vocal&&bounds.top<regions.vocal.bottom)return regions.lyrics?"afterLyrics":"afterScore";
+  return regions.vocal?"afterVocal":regions.lyrics?"afterLyrics":"afterScore";
+}
+function annotationLaneEdges(row,nextRow,lane){
+  const regions=annotationRowRegions(row),nextTop=nextRow?.rect?.top??row?.rect?.bottom??0,laneName=normalizeAnnotationLane(row,lane);
+  if(laneName==="beforeScore")return{lane:laneName,before:null,after:regions.score};
+  if(laneName==="afterScore")return{lane:laneName,before:regions.score,after:regions.lyrics||regions.vocal||{top:nextTop}};
+  if(laneName==="afterLyrics")return{lane:laneName,before:regions.lyrics||regions.score,after:regions.vocal||{top:nextTop}};
+  return{lane:laneName,before:regions.vocal||regions.lyrics||regions.score,after:{top:nextTop}};
+}
+function shiftClientAnnotation(clients,bounds,dy){return!dy?{clients,bounds}:{clients:clients.map(point=>({...point,y:point.y+dy})),bounds:{top:bounds.top+dy,bottom:bounds.bottom+dy}}}
+function constrainCommentToPlacementLane(item,clients,bounds,row,lane){
+  if(item.type!=="text"||!row?.scoreRect)return{clients,bounds,lane:normalizeAnnotationLane(row,lane)};
+  const edges=annotationLaneEdges(row,null,lane);let dy=0;
+  if(edges.lane==="beforeScore"&&bounds.bottom>row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE)dy=row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE-bounds.bottom;
+  else if(edges.lane!=="beforeScore"&&edges.before&&bounds.top<edges.before.bottom+ANNOTATION_SCORE_CLEARANCE)dy=edges.before.bottom+ANNOTATION_SCORE_CLEARANCE-bounds.top;
+  return{...shiftClientAnnotation(clients,bounds,dy),lane:edges.lane};
+}
+function resetAnnotationEditGaps(){qAll("#scoreArea .annotation-boundary-space").forEach(space=>{space.style.removeProperty("--annotation-boundary-gap");delete space.dataset.annotationEditGap})}
 function annotationLayoutIsInteracting(){return Boolean(dragging||resizing||rangeMove||draft)}
 function applyAnnotationEditGaps(visibleLayers){
   if(printing||annotationLayoutIsInteracting())return false;
@@ -748,18 +771,19 @@ function applyAnnotationEditGaps(visibleLayers){
   paper.style.minHeight="";
   resetAnnotationEditGaps();
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;
-  const gaps=geometry.rows.map(()=>0),items=visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]);
+  const gaps=geometry.rows.map(()=>({afterScore:0,afterLyrics:0,afterVocal:0})),items=visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]);
   items.forEach(item=>{
-    if((item.layoutTarget||"staff")==="page")return;
+    if(item.type!=="text"||(item.layoutTarget||"staff")!=="staff")return;
     const rowIndex=Number(item.layoutRow),row=geometry.rows[rowIndex];if(!row)return;
     const visual=projectedAnnotationItem(item,geometry);if(!visual)return;
+    const bounds=annotationClientVerticalBounds(visual,geometry),lane=normalizeAnnotationLane(row,item.layoutLane||annotationPlacementLane(row,bounds));item.layoutLane=lane;
+    if(lane==="beforeScore")return;
     const bottom=geometry.svgRect.top+annotationItemBottom(visual)*geometry.svgRect.height/geometry.view.height;
-    const nextTop=geometry.rows[rowIndex+1]?.rect.top??row.rect.bottom;
-    const needed=Math.ceil(bottom+annotationClearance(item,visual,row,geometry)-nextTop);
-    if(needed>gaps[rowIndex])gaps[rowIndex]=needed;
+    const edges=annotationLaneEdges(row,geometry.rows[rowIndex+1],lane),needed=Math.ceil(bottom+ANNOTATION_COLLISION_CLEARANCE-edges.after.top);
+    if(needed>gaps[rowIndex][edges.lane])gaps[rowIndex][edges.lane]=needed;
   });
   let changed=false;
-  gaps.forEach((gap,row)=>{if(gap<=0)return;geometry.rows[row].staff.style.setProperty("--annotation-edit-gap",`${gap}px`);geometry.rows[row].staff.dataset.annotationEditGap=String(gap);changed=true});
+  gaps.forEach((rowGaps,row)=>Object.entries(rowGaps).forEach(([lane,gap])=>{if(gap<=0)return;const space=geometry.rows[row].staff.querySelector(`[data-annotation-boundary="${lane}"]`);if(!space)return;space.style.setProperty("--annotation-boundary-gap",`${gap}px`);space.dataset.annotationEditGap=String(gap);changed=true}));
   return changed;
 }
 function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
@@ -881,30 +905,22 @@ function translateItem(item,dx,dy){if(item.type==="pen")item.points=item.points.
 function annotationMoveContext(item){
   const geometry=annotationGeometry(),row=geometry?.rows?.[Number(item?.layoutRow)];if(!item||!geometry||!row)return null;
   const bounds=annotationClientVerticalBounds(item,geometry),score=row.scoreRect,center=(bounds.top+bounds.bottom)/2,scoreCenter=(score.top+score.bottom)/2;
-  return{row:row.row,side:bounds.bottom<=score.top?"above":bounds.top>=score.bottom?"below":center<=scoreCenter?"above":"below"};
+  return{row:row.row,side:bounds.bottom<=score.top?"above":bounds.top>=score.bottom?"below":center<=scoreCenter?"above":"below",lane:normalizeAnnotationLane(row,item.layoutLane||annotationPlacementLane(row,bounds))};
 }
 function movedAnnotationOwnerRow(item,geometry,bounds,context){
   const current=geometry.rows[Number(context?.row??item.layoutRow)];if(item.type!=="text"||!current)return nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom);
   const center=(bounds.top+bounds.bottom)/2,explicit=geometry.rows.find(row=>row.row!==current.row&&center>=row.scoreRect.top&&center<=row.scoreRect.bottom);
   return explicit||current;
 }
-const ANNOTATION_SCORE_CLEARANCE=8;
-function constrainCommentToOwnerScore(item,clients,bounds,row,side){
-  if(item.type!=="text"||!row?.scoreRect)return{clients,bounds};
-  let dy=0;if(side==="above"&&bounds.bottom>row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE)dy=row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE-bounds.bottom;
-  else if(side==="below"&&bounds.top<row.scoreRect.bottom+ANNOTATION_SCORE_CLEARANCE)dy=row.scoreRect.bottom+ANNOTATION_SCORE_CLEARANCE-bounds.top;
-  if(!dy)return{clients,bounds};
-  return{clients:clients.map(point=>({...point,y:point.y+dy})),bounds:{top:bounds.top+dy,bottom:bounds.bottom+dy}};
-}
 function constrainVisibleCommentsToOwnerScores(visibleLayers){
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
   visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]).forEach(item=>{
     if(item.type!=="text"||(item.layoutTarget||"staff")!=="staff")return;
     const row=geometry.rows[Number(item.layoutRow)],visual=row&&projectedAnnotationItem(item,geometry);if(!row||!visual)return;
-    const bounds=annotationClientVerticalBounds(visual,geometry),clients=annotationSourcePoints(visual).map(point=>svgPointToClient(point,geometry)),side=item.layoutSide||((bounds.top+bounds.bottom)/2<(row.scoreRect.top+row.scoreRect.bottom)/2?"above":"below"),adjusted=constrainCommentToOwnerScore(item,clients,bounds,row,side);
-    if(adjusted.clients.every((point,index)=>Math.abs(point.y-clients[index].y)<.01)){item.layoutSide=side;return}
+    const bounds=annotationClientVerticalBounds(visual,geometry),clients=annotationSourcePoints(visual).map(point=>svgPointToClient(point,geometry)),lane=normalizeAnnotationLane(row,item.layoutLane||annotationPlacementLane(row,bounds)),adjusted=constrainCommentToPlacementLane(item,clients,bounds,row,lane),side=adjusted.lane==="beforeScore"?"above":"below";
+    if(adjusted.clients.every((point,index)=>Math.abs(point.y-clients[index].y)<.01)){item.layoutSide=side;item.layoutLane=adjusted.lane;return}
     const anchors=adjusted.clients.map(point=>annotationAnchorFromClient(point,row,"staff"));if(anchors.some(anchor=>!anchor))return;
-    item.layoutAnchors=anchors;item.layoutAnchorVersion=3;item.layoutSide=side;setAnnotationSourcePoints(item,adjusted.clients.map(point=>clientPointToSvg(point,geometry)));changed=true;
+    item.layoutAnchors=anchors;item.layoutAnchorVersion=3;item.layoutSide=side;item.layoutLane=adjusted.lane;setAnnotationSourcePoints(item,adjusted.clients.map(point=>clientPointToSvg(point,geometry)));changed=true;
   });
   return changed;
 }
@@ -913,12 +929,12 @@ function reattachMovedAnnotations(items,contexts=new Map()){
   const movable=[...new Set((items||[]).filter(item=>item&&!(item.type==="symbol"&&item.anchor)))];if(!movable.length)return;
   const before=annotationGeometry();if(!before)return;
   const snapshots=movable.map(item=>{
-    const target=item.layoutTarget||state.annotationTarget||"staff",context=contexts.get(item.id)||annotationMoveContext(item),rawClients=annotationSourcePoints(item).map(point=>svgPointToClient(point,before)),rawBounds=annotationClientVerticalBounds(item,before),row=target==="page"?before.rows[0]:movedAnnotationOwnerRow(item,before,rawBounds,context),side=row.row===context?.row?context.side:((rawBounds.top+rawBounds.bottom)/2<((row.scoreRect.top+row.scoreRect.bottom)/2)?"above":"below"),adjusted=target==="page"?{clients:rawClients,bounds:rawBounds}:constrainCommentToOwnerScore(item,rawClients,rawBounds,row,side),anchors=adjusted.clients.map(point=>annotationAnchorFromClient(point,row,target));
-    return{item,target,row:row.row,side,anchors};
+    const target=item.layoutTarget||state.annotationTarget||"staff",context=contexts.get(item.id)||annotationMoveContext(item),rawClients=annotationSourcePoints(item).map(point=>svgPointToClient(point,before)),rawBounds=annotationClientVerticalBounds(item,before),row=target==="page"?before.rows[0]:movedAnnotationOwnerRow(item,before,rawBounds,context),lane=target==="page"?null:annotationPlacementLane(row,rawBounds),adjusted=target==="page"?{clients:rawClients,bounds:rawBounds,lane:null}:constrainCommentToPlacementLane(item,rawClients,rawBounds,row,lane),side=adjusted.lane==="beforeScore"?"above":"below",anchors=adjusted.clients.map(point=>annotationAnchorFromClient(point,row,target));
+    return{item,target,row:row.row,side,lane:adjusted.lane,anchors};
   }).filter(snapshot=>snapshot.anchors.every(Boolean));
   const natural=resetAnnotationLayoutForDrop();if(!natural?.rows?.length)return;
   snapshots.forEach(snapshot=>{
-    snapshot.item.layoutTarget=snapshot.target;snapshot.item.layoutRow=snapshot.target==="page"?0:snapshot.row;snapshot.item.layoutAnchors=snapshot.anchors;snapshot.item.layoutAnchorVersion=3;if(snapshot.item.type==="text"&&snapshot.target!=="page")snapshot.item.layoutSide=snapshot.side;delete snapshot.item.layoutPoints;delete snapshot.item.layoutAnchorY;delete snapshot.item.layoutOffsetY;
+    snapshot.item.layoutTarget=snapshot.target;snapshot.item.layoutRow=snapshot.target==="page"?0:snapshot.row;snapshot.item.layoutAnchors=snapshot.anchors;snapshot.item.layoutAnchorVersion=3;if(snapshot.item.type==="text"&&snapshot.target!=="page"){snapshot.item.layoutSide=snapshot.side;snapshot.item.layoutLane=snapshot.lane}delete snapshot.item.layoutPoints;delete snapshot.item.layoutAnchorY;delete snapshot.item.layoutOffsetY;
     const clients=snapshot.anchors.map(anchor=>annotationClientFromAnchor(anchor,natural,snapshot.target,snapshot.row));if(clients.some(point=>!point))return;
     setAnnotationSourcePoints(snapshot.item,clients.map(point=>clientPointToSvg(point,natural)));
   });
