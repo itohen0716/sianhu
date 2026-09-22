@@ -1,12 +1,12 @@
 (function(global){
   "use strict";
-  const VERSION=1,UNIT="staff-line",LANES=["afterScore","afterLyrics","afterVocal"],addressCache=new WeakMap();
-  const round=value=>Math.round(Math.max(0,Number(value)||0)*1000000)/1000000;
+  const VERSION=2,UNIT="staff-line",LANES=["beforeScore","afterScore","afterLyrics","afterVocal"],addressCache=new WeakMap();
+  const round=value=>Math.round(Math.max(0,Number(value)||0)*1000000)/1000000,signedRound=value=>Math.round((Number(value)||0)*1000000)/1000000;
   const key=(row,lane)=>`${Math.max(0,Math.trunc(Number(row)||0))}:${LANES.includes(lane)?lane:"afterScore"}`;
   function normalize(raw){
     const boundaries={};
     Object.entries(raw?.boundaries||{}).forEach(([name,value])=>{
-      if(!/^\d+:(afterScore|afterLyrics|afterVocal)$/.test(name))return;
+      if(!/^\d+:(beforeScore|afterScore|afterLyrics|afterVocal)$/.test(name))return;
       const gap=round(typeof value==="number"?value:value?.gap);
       if(gap>0)boundaries[name]={gap:Math.max(gap,Number(boundaries[name]?.gap)||0)};
     });
@@ -22,8 +22,8 @@
   }
   function rawGap(layout,row,lane){return Number(normalize(layout).boundaries[key(row,lane)]?.gap)||0}
   function rowGaps(layout,row,{lyricsVisible=true,vocalVisible=true}={}){
-    const source={afterScore:rawGap(layout,row,"afterScore"),afterLyrics:rawGap(layout,row,"afterLyrics"),afterVocal:rawGap(layout,row,"afterVocal")};
-    const result={afterScore:source.afterScore,afterLyrics:0,afterVocal:0};
+    const source={beforeScore:rawGap(layout,row,"beforeScore"),afterScore:rawGap(layout,row,"afterScore"),afterLyrics:rawGap(layout,row,"afterLyrics"),afterVocal:rawGap(layout,row,"afterVocal")};
+    const result={beforeScore:source.beforeScore,afterScore:source.afterScore,afterLyrics:0,afterVocal:0};
     if(lyricsVisible)result.afterLyrics=source.afterLyrics;else result.afterScore=Math.max(result.afterScore,source.afterLyrics);
     if(vocalVisible)result.afterVocal=source.afterVocal;else if(lyricsVisible)result.afterLyrics=Math.max(result.afterLyrics,source.afterVocal);else result.afterScore=Math.max(result.afterScore,source.afterVocal);
     return result;
@@ -40,6 +40,8 @@
     if(addressCache.has(geometry))return addressCache.get(geometry);
     const elements=[];geometry.rows.forEach(row=>{const regions=rowRegions(row);if(regions.score)elements.push({id:`score:${row.row}`,kind:"score",row:row.row,rect:regions.score});if(regions.lyrics)elements.push({id:`lyrics:${row.row}`,kind:"lyrics",row:row.row,rect:regions.lyrics});if(regions.vocal)elements.push({id:`vocal:${row.row}`,kind:"vocal",row:row.row,rect:regions.vocal})});
     elements.sort((a,b)=>a.rect.top-b.rect.top);const byId=new Map(elements.map(element=>[element.id,element])),addresses=[];
+    const firstRow=geometry.rows[0],firstScore=byId.get("score:0"),firstSpace=firstRow?.staff?.querySelector?.('[data-annotation-boundary="beforeScore"]'),metaRect=global.document?.querySelector?.(".paper .meta")?.getBoundingClientRect?.();
+    if(firstSpace&&firstScore){const previousRect=metaRect||{top:firstScore.rect.top-firstRow.lineSpacing*2,bottom:firstScore.rect.top-firstRow.lineSpacing*2,left:firstScore.rect.left,right:firstScore.rect.right};addresses.push({key:key(0,"beforeScore"),row:0,lane:"beforeScore",space:firstSpace,previous:{id:"page:header",kind:"header",row:-1,rect:previousRect},next:firstScore,baselinePreviousTop:previousRect.top,baselinePreviousBottom:previousRect.bottom,baselineNextTop:firstScore.rect.top,baselineNextBottom:firstScore.rect.bottom,lineSpacing:firstRow.lineSpacing||18})}
     geometry.rows.forEach((row,index)=>{
       const nextScore=geometry.rows[index+1]?`score:${index+1}`:null,regions=rowRegions(row),definitions=[
         ["afterScore",`score:${index}`,regions.lyrics?`lyrics:${index}`:regions.vocal?`vocal:${index}`:nextScore],
@@ -52,16 +54,16 @@
   }
   function addressForBounds(addresses,bounds){
     if(!addresses?.length||!bounds)return null;const top=Number(bounds.top),bottom=Number(bounds.bottom),center=(top+bottom)/2;
-    return addresses.reduce((best,address)=>{const low=address.baselinePreviousBottom,high=Math.max(low,address.baselineNextTop),distance=top<low?low-top:top>high?top-high:0,centerDistance=Math.abs(center-(low+high)/2),rank=distance*10000+centerDistance;return!best||rank<best.rank?{address,rank}:best},null)?.address||null;
+    return addresses.reduce((best,address)=>{const low=address.baselinePreviousBottom,high=Math.max(low,address.baselineNextTop),distance=center<low?low-center:center>high?center-high:0,centerDistance=Math.abs(center-(low+high)/2),rank=distance*10000+centerDistance;return!best||rank<best.rank?{address,rank}:best},null)?.address||null;
   }
   function placementFromBounds(address,bounds,clearance={top:0,bottom:0}){
     if(!address||!bounds)return null;const line=Math.max(1,Number(address.lineSpacing)||18),width=Math.max(0,Number(bounds.right)-Number(bounds.left)),height=Math.max(0,Number(bounds.bottom)-Number(bounds.top));
-    return{version:1,boundaryKey:address.key,row:address.row,lane:address.lane,previous:address.previous.id,next:address.next?.id||"page:end",offsetTop:round((Number(bounds.top)-address.baselinePreviousBottom)/line),widthRatio:round(width/Math.max(1,Number(address.previous.rect.right)-Number(address.previous.rect.left))),heightLines:round(height/line),clearanceTop:round((Number(clearance.top)||0)/line),clearanceBottom:round((Number(clearance.bottom)||0)/line)};
+    return{version:2,boundaryKey:address.key,row:address.row,lane:address.lane,previous:address.previous.id,next:address.next?.id||"page:end",offsetTop:signedRound((Number(bounds.top)-address.baselinePreviousBottom)/line),offsetFromNextTop:signedRound((Number(bounds.top)-address.baselineNextTop)/line),widthRatio:round(width/Math.max(1,Number(address.previous.rect.right)-Number(address.previous.rect.left))),heightLines:round(height/line),clearanceTop:round((Number(clearance.top)||0)/line),clearanceBottom:round((Number(clearance.bottom)||0)/line)};
   }
   function resolveAddress(addresses,placement){
-    if(!placement)return null;let found=addresses.find(address=>address.key===placement.boundaryKey);if(found)return found;const row=Math.max(0,Math.trunc(Number(placement.row)||0));for(const lane of placement.lane==="afterVocal"?["afterVocal","afterLyrics","afterScore"]:placement.lane==="afterLyrics"?["afterLyrics","afterScore"]:["afterScore"]){found=addresses.find(address=>address.row===row&&address.lane===lane);if(found)return found}return null;
+    if(!placement)return null;let found=addresses.find(address=>address.key===placement.boundaryKey);if(found)return found;const row=Math.max(0,Math.trunc(Number(placement.row)||0));for(const lane of placement.lane==="beforeScore"?["beforeScore","afterScore"]:placement.lane==="afterVocal"?["afterVocal","afterLyrics","afterScore"]:placement.lane==="afterLyrics"?["afterLyrics","afterScore"]:["afterScore"]){found=addresses.find(address=>address.row===row&&address.lane===lane);if(found)return found}return null;
   }
-  function placementTop(geometry,placement){const address=resolveAddress(domAddresses(geometry),placement);return address?address.previous.rect.bottom+(Number(placement.offsetTop)||0)*Math.max(1,address.lineSpacing||18):null}
+  function placementTop(geometry,placement){const address=resolveAddress(domAddresses(geometry),placement);if(!address)return null;const line=Math.max(1,address.lineSpacing||18);return address.lane==="beforeScore"?address.next.rect.top+(Number(placement.offsetFromNextTop)||0)*line:address.previous.rect.bottom+(Number(placement.offsetTop)||0)*line}
   function equal(a,b){return JSON.stringify(normalize(a))===JSON.stringify(normalize(b))}
   global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,rowRegions,domAddresses,addressForBounds,placementFromBounds,resolveAddress,placementTop,equal};
 })(window);
