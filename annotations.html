@@ -733,7 +733,7 @@ function annotationItemTop(item){
   if(item.type==="symbol")return Number(item.y||0)-12;
   return Math.min(Number(item.y1)||0,Number(item.y2)||0)-(item.type==="arrow"?20:4);
 }
-const ANNOTATION_COLLISION_CLEARANCE=14,ANNOTATION_SCORE_CLEARANCE=8,ANNOTATION_LANES=new Set(["beforeScore","afterScore","afterLyrics","afterVocal"]);
+const ANNOTATION_COLLISION_CLEARANCE=14,ANNOTATION_SCORE_CLEARANCE=3,ANNOTATION_LANES=new Set(["beforeScore","afterScore","afterLyrics","afterVocal"]);
 function annotationRowRegions(row){return{score:row?.scoreRect||null,lyrics:row?.lyrics?.getBoundingClientRect()||null,vocal:row?.vocal?.getBoundingClientRect()||null}}
 function normalizeAnnotationLane(row,lane){
   const regions=annotationRowRegions(row);if(lane==="beforeScore")return lane;
@@ -759,11 +759,18 @@ function annotationLaneEdges(row,nextRow,lane){
 function annotationRowLastLane(row){return row?.vocal?"afterVocal":row?.lyrics?"afterLyrics":"afterScore"}
 function annotationRowContentBottom(row){const regions=annotationRowRegions(row);return(regions.vocal||regions.lyrics||regions.score)?.bottom??row?.rect?.bottom??0}
 function shiftClientAnnotation(clients,bounds,dy){return!dy?{clients,bounds}:{clients:clients.map(point=>({...point,y:point.y+dy})),bounds:{top:bounds.top+dy,bottom:bounds.bottom+dy}}}
+function renderedCommentTextBounds(item,clients,fallback){
+  if(item.type!=="text")return fallback;
+  const group=[...qAll("#annotations .text-item[data-item]")].find(element=>element.dataset.item===String(item.id)),text=group?.querySelector("text"),anchorY=clients[0]?.y;
+  if(text&&Number.isFinite(anchorY))try{const box=text.getBBox(),rect=text.getBoundingClientRect(),baseline=Number(text.getAttribute("y")),scale=box.height>0?rect.height/box.height:0;if(Number.isFinite(baseline)&&scale>0)return{top:anchorY+(box.y-baseline)*scale,bottom:anchorY+(box.y+box.height-baseline)*scale}}catch(error){console.warn("コメント文字領域を取得できませんでした。推定値を使用します。",error)}
+  const layout=commentLayout(item),sourceTop=annotationItemTop(item),sourceBottom=annotationItemBottom(item),scale=(fallback.bottom-fallback.top)/Math.max(1,sourceBottom-sourceTop),estimatedTop=item.y-layout.size*.88,estimatedBottom=item.y+(layout.lines.length-1)*layout.lineHeight+layout.size*.24;
+  return{top:fallback.top+(estimatedTop-sourceTop)*scale,bottom:fallback.top+(estimatedBottom-sourceTop)*scale};
+}
 function constrainCommentToPlacementLane(item,clients,bounds,row,lane){
   if(item.type!=="text"||!row?.scoreRect)return{clients,bounds,lane:normalizeAnnotationLane(row,lane)};
-  const edges=annotationLaneEdges(row,null,lane);let dy=0;
-  if(edges.lane==="beforeScore"&&bounds.bottom>row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE)dy=row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE-bounds.bottom;
-  else if(edges.lane!=="beforeScore"&&edges.before&&bounds.top<edges.before.bottom+ANNOTATION_SCORE_CLEARANCE)dy=edges.before.bottom+ANNOTATION_SCORE_CLEARANCE-bounds.top;
+  const edges=annotationLaneEdges(row,null,lane),visibleBounds=renderedCommentTextBounds(item,clients,bounds);let dy=0;
+  if(edges.lane==="beforeScore"&&visibleBounds.bottom>row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE)dy=row.scoreRect.top-ANNOTATION_SCORE_CLEARANCE-visibleBounds.bottom;
+  else if(edges.lane!=="beforeScore"&&edges.before&&visibleBounds.top<edges.before.bottom+ANNOTATION_SCORE_CLEARANCE)dy=edges.before.bottom+ANNOTATION_SCORE_CLEARANCE-visibleBounds.top;
   return{...shiftClientAnnotation(clients,bounds,dy),lane:edges.lane};
 }
 function resetAnnotationEditGaps(){qAll("#scoreArea .annotation-boundary-space").forEach(space=>{space.style.removeProperty("--annotation-boundary-gap");delete space.dataset.annotationEditGap})}
