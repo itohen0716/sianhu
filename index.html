@@ -195,7 +195,7 @@
       .barline-handle .bar-symbol{top:0;bottom:auto;height:100%;overflow:visible}
     }
   </style>
-  <link rel="stylesheet" href="./print-v2.css?v=187">
+  <link rel="stylesheet" href="./print-v2.css?v=188">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
@@ -357,7 +357,7 @@
     <div class="dialog-actions"><button type="button" id="closeKeyboardHelp" class="primary">閉じる</button></div>
   </div>
 </dialog>
-<script src="./annotation-layout.js?v=187"></script>
+<script src="./annotation-layout.js?v=188"></script>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1)),vocalVals=["0",...vals];
@@ -1005,10 +1005,11 @@ function captureAnnotationLayout(item,target=item.layoutTarget||state.annotation
 }
 function migrateV2Annotation(item,geometry){const target=item.layoutTarget||"staff",row=geometry.rows[Number(item.layoutRow)];if(!row||!Array.isArray(item.layoutPoints)||!item.layoutPoints.length)return false;const rect=targetElement(row,target)?.getBoundingClientRect();if(!rect?.width||!rect.height)return false;const baseScoreHeight=54+(row.staff.classList.contains("has-hanma")?28:8),anchors=item.layoutPoints.map(point=>{if(target==="page")return{pageX:Number(point.x)||0,pageY:Number(point.y)||0};const x=rect.left+Number(point.x||0)*rect.width,horizontal=measureAnchorForClient(row,x);if(!horizontal)return null;const y=target==="staff"?((Number(point.y)||0)*baseScoreHeight-9)/18:Number(point.y)||0;return target==="staff"?{...horizontal,y,staffY:y-2}:{...horizontal,y}});if(anchors.some(anchor=>!anchor))return false;item.layoutAnchors=anchors;item.layoutAnchorVersion=3;delete item.layoutPoints;delete item.layoutAnchorY;delete item.layoutOffsetY;return true}
 function migrateCommentToTopAnchor(item,geometry){if(item?.type!=="text"||item.layoutTextAnchorVersion===2||!geometry)return false;const offsetSvg=(Number(item.size)||20)*1.05+5,offsetClient=offsetSvg*geometry.svgRect.height/geometry.view.height,target=item.layoutTarget||"staff";if(item.layoutAnchorVersion===3&&Array.isArray(item.layoutAnchors)&&item.layoutAnchors.length){item.layoutAnchors.forEach(anchor=>{if(target==="page"){const rect=q(".paper")?.getBoundingClientRect();if(rect?.height)anchor.pageY=Number(anchor.pageY||0)-offsetClient/rect.height;return}const located=geometry.measureMap.get(Number(anchor.m)),row=located?.row||geometry.rows[Number(item.layoutRow)],rect=targetElement(row,target)?.getBoundingClientRect();if(!row||!rect)return;const delta=target==="staff"?offsetClient/row.lineSpacing:offsetClient/rect.height;anchor.y=Number(anchor.y||0)-delta;if(target==="staff")anchor.staffY=Number.isFinite(Number(anchor.staffY))?Number(anchor.staffY)-delta:Number(anchor.y||0)-2})}else item.y=Number(item.y||0)-offsetSvg;item.layoutTextAnchorVersion=2;item.layoutTextAnchorBasis="comment-top";return true}
-function projectedAnnotationItem(item,geometry=annotationGeometry()){if(!geometry||item.layoutAnchorVersion!==3||!Array.isArray(item.layoutAnchors)||!item.layoutAnchors.length)return legacyVisualAnnotationItem(item,geometry);const target=item.layoutTarget||"staff";if(target==="lyrics"&&!state.lyricsVisible||target==="vocal"&&!state.vocalVisible)return null;const clients=item.layoutAnchors.map(anchor=>annotationClientFromAnchor(anchor,geometry,target,item.layoutRow));if(clients.some(point=>!point))return null;const copy=structuredClone(item),points=clients.map(point=>clientPointToSvg(point,geometry));setAnnotationSourcePoints(copy,points);return copy}
-function syncWritingItemsToLayout(){const geometry=annotationGeometry();if(!geometry)return;state.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).forEach(layer=>(layer.items||[]).forEach(item=>{const projected=projectedAnnotationItem(item,geometry);if(projected)setAnnotationSourcePoints(item,annotationSourcePoints(projected))}))}
+function projectedAnnotationItem(item,geometry=annotationGeometry()){if(!geometry||item.layoutAnchorVersion!==3||!Array.isArray(item.layoutAnchors)||!item.layoutAnchors.length)return legacyVisualAnnotationItem(item,geometry);const target=item.layoutTarget||"staff";if(target==="lyrics"&&!state.lyricsVisible||target==="vocal"&&!state.vocalVisible)return null;let clients=item.layoutAnchors.map(anchor=>annotationClientFromAnchor(anchor,geometry,target,item.layoutRow));if(clients.some(point=>!point))return null;const copy=structuredClone(item);setAnnotationSourcePoints(copy,clients.map(point=>clientPointToSvg(point,geometry)));const desiredTop=ShianAnnotationLayout.placementTop(geometry,item.layoutPlacement);if(Number.isFinite(desiredTop)){const currentTop=geometry.svgRect.top+annotationItemTop(copy)*geometry.svgRect.height/geometry.view.height,dy=desiredTop-currentTop;clients=clients.map(point=>({...point,y:point.y+dy}));setAnnotationSourcePoints(copy,clients.map(point=>clientPointToSvg(point,geometry)))}return copy}
+/* 写譜ページは閲覧のみ。投影結果を保存用x/yへ書き戻さず、ページ往復での微小誤差を防ぐ。 */
+function syncWritingItemsToLayout(){return}
 function ensureAnnotationRowAnchors(){const geometry=annotationGeometry();if(!geometry)return;const items=state.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]);items.forEach(item=>{if(item.layoutAnchorVersion===3&&Array.isArray(item.layoutAnchors)&&item.layoutAnchors.length){if((item.layoutTarget||"staff")==="staff"){item.layoutAnchors.forEach(anchor=>{if(!Number.isFinite(Number(anchor.staffY)))anchor.staffY=Number(anchor.y||0)-2});item.layoutAnchorBasis="staff-bottom-line"}return}if(item.layoutAnchorVersion===2&&migrateV2Annotation(item,geometry))return;const legacyRowOffset=legacyRowOffsetAnnotationItem(item,geometry);if(legacyRowOffset){captureAnnotationLayout(item,legacyRowOffset.target,legacyRowOffset.row.row,legacyRowOffset.copy);return}const visual=legacyVisualAnnotationItem(item,geometry),clientY=geometry.svgRect.top+annotationCenterY(visual)*geometry.svgRect.height/geometry.view.height,row=nearestAnnotationRow(geometry.rows,clientY),lyricsRect=row.lyrics?.getBoundingClientRect(),vocalRect=row.vocal?.getBoundingClientRect(),target=item.layoutTarget||((lyricsRect&&clientY>=lyricsRect.top&&clientY<=lyricsRect.bottom)?"lyrics":(vocalRect&&clientY>=vocalRect.top&&clientY<=vocalRect.bottom)?"vocal":"staff");captureAnnotationLayout(item,target,row.row,visual)});items.forEach(item=>migrateCommentToTopAnchor(item,geometry))}
-function visualAnnotationItem(item){if(item.type==="symbol"&&item.anchor)return item;return projectedAnnotationItem(item)}
+function visualAnnotationItem(item,geometry=annotationGeometry()){if(item.type==="symbol"&&item.anchor)return item;return projectedAnnotationItem(item,geometry)}
 function markerUnderlayHtml(item){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||"#f4df59")}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeTechniqueIds.has(item.id)?" range-selected":"";
@@ -1041,6 +1042,12 @@ function annotationItemBottom(item){
   if(item.type==="text"){const layout=commentLayout(item);return layout.top+layout.height+4}
   if(item.type==="symbol")return Number(item.y||0)+12;
   return Math.max(Number(item.y1)||0,Number(item.y2)||0)+(item.type==="arrow"?20:4);
+}
+function annotationItemTop(item){
+  if(item.type==="pen"){const values=(item.points||[]).map(point=>Number(point.y)||0);return(values.length?Math.min(...values):0)-4}
+  if(item.type==="text")return commentLayout(item).top-4;
+  if(item.type==="symbol")return Number(item.y||0)-12;
+  return Math.min(Number(item.y1)||0,Number(item.y2)||0)-(item.type==="arrow"?20:4);
 }
 function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
   if(!paper)return;
@@ -1084,15 +1091,17 @@ function renderLayers(skipSave=false){
      同じSVGへ描画する。編集対象は従来どおり奏法レイヤーだけに限定する。 */
   const visibleLayers=state.layers.filter(item=>item.visible!==false);
   const drawVisibleLayers=()=>{
-    underlay.innerHTML=visibleLayers.map(layer=>`<g data-layer="${layer.id}">${layer.items.filter(item=>item.type==="marker").map(visualAnnotationItem).filter(Boolean).map(markerUnderlayHtml).join("")}</g>`).join("");
-    svg.innerHTML=visibleLayers.map(item=>`<g data-layer="${item.id}">${item.items.map(visualAnnotationItem).filter(Boolean).map(itemHtml).join("")}</g>`).join("");
+    const drawGeometry=annotationGeometry(),visual=item=>visualAnnotationItem(item,drawGeometry),visualLayers=visibleLayers.map(layer=>({layer,items:layer.items.map(visual).filter(Boolean)}));
+    underlay.innerHTML=visualLayers.map(({layer,items})=>`<g data-layer="${layer.id}">${items.filter(item=>item.type==="marker").map(markerUnderlayHtml).join("")}</g>`).join("");
+    svg.innerHTML=visualLayers.map(({layer,items})=>`<g data-layer="${layer.id}">${items.map(itemHtml).join("")}</g>`).join("");
+    return visualLayers.flatMap(entry=>entry.items);
   };
-  drawVisibleLayers();
-  fitPaperToVisibleAnnotations(paper,visibleLayers.flatMap(item=>item.items).map(visualAnnotationItem).filter(Boolean),logicalWidth);
+  let drawnItems=drawVisibleLayers();
+  fitPaperToVisibleAnnotations(paper,drawnItems,logicalWidth);
   const finalRect=svg.getBoundingClientRect(),finalLogicalHeight=Math.max(1,finalRect.height*logicalWidth/Math.max(1,finalRect.width));
   if(Math.abs(finalLogicalHeight-logicalHeight)>.5){
     [svg,underlay].forEach(element=>element.setAttribute("viewBox",`0 0 ${logicalWidth} ${finalLogicalHeight}`));
-    syncWritingItemsToLayout();syncLinkedSymbols();drawVisibleLayers();
+    syncWritingItemsToLayout();syncLinkedSymbols();drawnItems=drawVisibleLayers();
   }
   let scoreLayer=["notes","staff","technique","vocal"].includes(state.scoreEditLayer)?state.scoreEditLayer:"notes";
   state.scoreEditLayer=scoreLayer;document.body.dataset.scoreLayer=scoreLayer;
@@ -1596,7 +1605,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=187"></script>
+  <script src="./print-v2.js?v=188"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>

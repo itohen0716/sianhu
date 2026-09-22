@@ -1,6 +1,6 @@
 (function(global){
   "use strict";
-  const VERSION=1,UNIT="staff-line",LANES=["afterScore","afterLyrics","afterVocal"];
+  const VERSION=1,UNIT="staff-line",LANES=["afterScore","afterLyrics","afterVocal"],addressCache=new WeakMap();
   const round=value=>Math.round(Math.max(0,Number(value)||0)*1000000)/1000000;
   const key=(row,lane)=>`${Math.max(0,Math.trunc(Number(row)||0))}:${LANES.includes(lane)?lane:"afterScore"}`;
   function normalize(raw){
@@ -32,6 +32,36 @@
     const unit=Math.max(1,Number(lineSpacing)||18),gaps=rowGaps(layout,row,visibility);
     return Object.fromEntries(LANES.map(lane=>[lane,round(gaps[lane]*unit)]));
   }
+  function rowRegions(row){
+    return{score:row?.scoreRect?{top:row.lineTop,bottom:row.lineBottom,left:row.scoreRect.left,right:row.scoreRect.right}:null,lyrics:row?.lyrics?.getBoundingClientRect()||null,vocal:row?.vocal?.getBoundingClientRect()||null};
+  }
+  function domAddresses(geometry){
+    if(!geometry?.rows?.length)return[];
+    if(addressCache.has(geometry))return addressCache.get(geometry);
+    const elements=[];geometry.rows.forEach(row=>{const regions=rowRegions(row);if(regions.score)elements.push({id:`score:${row.row}`,kind:"score",row:row.row,rect:regions.score});if(regions.lyrics)elements.push({id:`lyrics:${row.row}`,kind:"lyrics",row:row.row,rect:regions.lyrics});if(regions.vocal)elements.push({id:`vocal:${row.row}`,kind:"vocal",row:row.row,rect:regions.vocal})});
+    elements.sort((a,b)=>a.rect.top-b.rect.top);const byId=new Map(elements.map(element=>[element.id,element])),addresses=[];
+    geometry.rows.forEach((row,index)=>{
+      const nextScore=geometry.rows[index+1]?`score:${index+1}`:null,regions=rowRegions(row),definitions=[
+        ["afterScore",`score:${index}`,regions.lyrics?`lyrics:${index}`:regions.vocal?`vocal:${index}`:nextScore],
+        ["afterLyrics",`lyrics:${index}`,regions.vocal?`vocal:${index}`:nextScore],
+        ["afterVocal",regions.vocal?`vocal:${index}`:regions.lyrics?`lyrics:${index}`:`score:${index}`,nextScore]
+      ];
+      definitions.forEach(([lane,previousId,nextId])=>{const space=row.staff?.querySelector?.(`[data-annotation-boundary="${lane}"]`),previous=byId.get(previousId),next=byId.get(nextId);if(!space||!previous)return;const fallback=geometry.rows[index+1]?.lineTop??row.rect?.bottom??previous.rect.bottom;addresses.push({key:key(index,lane),row:index,lane,space,previous,next,baselinePreviousTop:previous.rect.top,baselinePreviousBottom:previous.rect.bottom,baselineNextTop:next?.rect.top??fallback,baselineNextBottom:next?.rect.bottom??fallback,lineSpacing:row.lineSpacing||18})});
+    });
+    const result=addresses.sort((a,b)=>a.baselinePreviousBottom-b.baselinePreviousBottom||a.baselineNextTop-b.baselineNextTop);addressCache.set(geometry,result);return result;
+  }
+  function addressForBounds(addresses,bounds){
+    if(!addresses?.length||!bounds)return null;const top=Number(bounds.top),bottom=Number(bounds.bottom),center=(top+bottom)/2;
+    return addresses.reduce((best,address)=>{const low=address.baselinePreviousBottom,high=Math.max(low,address.baselineNextTop),distance=top<low?low-top:top>high?top-high:0,centerDistance=Math.abs(center-(low+high)/2),rank=distance*10000+centerDistance;return!best||rank<best.rank?{address,rank}:best},null)?.address||null;
+  }
+  function placementFromBounds(address,bounds,clearance={top:0,bottom:0}){
+    if(!address||!bounds)return null;const line=Math.max(1,Number(address.lineSpacing)||18),width=Math.max(0,Number(bounds.right)-Number(bounds.left)),height=Math.max(0,Number(bounds.bottom)-Number(bounds.top));
+    return{version:1,boundaryKey:address.key,row:address.row,lane:address.lane,previous:address.previous.id,next:address.next?.id||"page:end",offsetTop:round((Number(bounds.top)-address.baselinePreviousBottom)/line),widthRatio:round(width/Math.max(1,Number(address.previous.rect.right)-Number(address.previous.rect.left))),heightLines:round(height/line),clearanceTop:round((Number(clearance.top)||0)/line),clearanceBottom:round((Number(clearance.bottom)||0)/line)};
+  }
+  function resolveAddress(addresses,placement){
+    if(!placement)return null;let found=addresses.find(address=>address.key===placement.boundaryKey);if(found)return found;const row=Math.max(0,Math.trunc(Number(placement.row)||0));for(const lane of placement.lane==="afterVocal"?["afterVocal","afterLyrics","afterScore"]:placement.lane==="afterLyrics"?["afterLyrics","afterScore"]:["afterScore"]){found=addresses.find(address=>address.row===row&&address.lane===lane);if(found)return found}return null;
+  }
+  function placementTop(geometry,placement){const address=resolveAddress(domAddresses(geometry),placement);return address?address.previous.rect.bottom+(Number(placement.offsetTop)||0)*Math.max(1,address.lineSpacing||18):null}
   function equal(a,b){return JSON.stringify(normalize(a))===JSON.stringify(normalize(b))}
-  global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,equal};
+  global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,rowRegions,domAddresses,addressForBounds,placementFromBounds,resolveAddress,placementTop,equal};
 })(window);
