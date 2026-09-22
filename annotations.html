@@ -675,7 +675,7 @@ function migrateCommentToTopAnchor(item,geometry){
   }else item.y=Number(item.y||0)-offsetSvg;
   item.layoutTextAnchorVersion=2;item.layoutTextAnchorBasis="comment-top";return true;
 }
-function annotationItemIsMoving(item){return Boolean(dragging?.item===item||rangeMove&&rangeItemIds.has(item.id))}
+function annotationItemIsMoving(item){return Boolean(dragging?.item===item||resizing?.item===item||rangeMove&&rangeItemIds.has(item.id))}
 function projectedAnnotationItem(item,geometry=annotationGeometry()){
   if(!geometry||item.layoutAnchorVersion!==3||!Array.isArray(item.layoutAnchors)||!item.layoutAnchors.length)return legacyVisualAnnotationItem(item,geometry);const target=item.layoutTarget||"staff",visibilityTarget=item.type==="text"?(item.layoutVisibilityTarget||target):target;if(visibilityTarget==="lyrics"&&!state.lyricsVisible||visibilityTarget==="vocal"&&!state.vocalVisible)return null;const clients=item.layoutAnchors.map(anchor=>annotationClientFromAnchor(anchor,geometry,target,item.layoutRow));if(clients.some(point=>!point))return null;const copy=structuredClone(item),points=clients.map(point=>clientPointToSvg(point,geometry));setAnnotationSourcePoints(copy,points);return copy;
 }
@@ -737,18 +737,30 @@ function itemHtml(item){
   return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${layout.top}" width="${layout.width+14}" height="${layout.height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${layout.baseline}" fill="${item.color}" stroke="none" font-size="${layout.size}" font-weight="600">${commentTextSvg(item,layout)}</text></g>`;
 }
 function annotationItemBottom(item){
-  if(item.type==="pen")return Math.max(0,...(item.points||[]).map(point=>Number(point.y)||0))+4;
+  if(item.type==="pen"){const values=(item.points||[]).map(point=>Number(point.y)||0);return(values.length?Math.max(...values):0)+4}
   if(item.type==="text"){const layout=commentLayout(item);return layout.top+layout.height+4}
   if(item.type==="symbol")return Number(item.y||0)+12;
   return Math.max(Number(item.y1)||0,Number(item.y2)||0)+(item.type==="arrow"?20:4);
 }
 function annotationItemTop(item){
-  if(item.type==="pen")return Math.min(...(item.points||[]).map(point=>Number(point.y)||0))-4;
+  if(item.type==="pen"){const values=(item.points||[]).map(point=>Number(point.y)||0);return(values.length?Math.min(...values):0)-4}
   if(item.type==="text")return commentLayout(item).top-4;
   if(item.type==="symbol")return Number(item.y||0)-12;
   return Math.min(Number(item.y1)||0,Number(item.y2)||0)-(item.type==="arrow"?20:4);
 }
-const ANNOTATION_COLLISION_CLEARANCE=14,ANNOTATION_SCORE_CLEARANCE=3,ANNOTATION_LANES=new Set(["beforeScore","afterScore","afterLyrics","afterVocal"]);
+function annotationItemLeft(item){
+  if(item.type==="pen"){const values=(item.points||[]).map(point=>Number(point.x)||0);return(values.length?Math.min(...values):0)-4}
+  if(item.type==="text")return(Number(item.x)||0)-7;
+  if(item.type==="symbol")return(Number(item.x)||0)-12;
+  return Math.min(Number(item.x1)||0,Number(item.x2)||0)-(item.type==="arrow"?20:4);
+}
+function annotationItemRight(item){
+  if(item.type==="pen"){const values=(item.points||[]).map(point=>Number(point.x)||0);return(values.length?Math.max(...values):0)+4}
+  if(item.type==="text"){const layout=commentLayout(item);return(Number(item.x)||0)+layout.width+7}
+  if(item.type==="symbol")return(Number(item.x)||0)+12;
+  return Math.max(Number(item.x1)||0,Number(item.x2)||0)+(item.type==="arrow"?20:4);
+}
+const ANNOTATION_SCORE_CLEARANCE=3,ANNOTATION_LANES=new Set(["beforeScore","afterScore","afterLyrics","afterVocal"]);
 function annotationRowRegions(row){const score=row?.scoreRect?{top:row.lineTop,bottom:row.lineBottom,left:row.scoreRect.left,right:row.scoreRect.right}:null;return{score,lyrics:row?.lyrics?.getBoundingClientRect()||null,vocal:row?.vocal?.getBoundingClientRect()||null}}
 function normalizeAnnotationLane(row,lane){
   const regions=annotationRowRegions(row);if(lane==="beforeScore")return lane;
@@ -765,14 +777,65 @@ function annotationPlacementLane(row,bounds){
   return regions.vocal?"afterVocal":regions.lyrics?"afterLyrics":"afterScore";
 }
 function annotationLaneEdges(row,nextRow,lane){
-  const regions=annotationRowRegions(row),nextTop=nextRow?.rect?.top??row?.rect?.bottom??0,laneName=normalizeAnnotationLane(row,lane);
+  const regions=annotationRowRegions(row),nextTop=nextRow?.lineTop??nextRow?.scoreRect?.top??row?.rect?.bottom??0,laneName=normalizeAnnotationLane(row,lane);
   if(laneName==="beforeScore")return{lane:laneName,before:null,after:regions.score};
   if(laneName==="afterScore")return{lane:laneName,before:regions.score,after:regions.lyrics||regions.vocal||{top:nextTop}};
   if(laneName==="afterLyrics")return{lane:laneName,before:regions.lyrics||regions.score,after:regions.vocal||{top:nextTop}};
   return{lane:laneName,before:regions.vocal||regions.lyrics||regions.score,after:{top:nextTop}};
 }
-function annotationRowLastLane(row){return row?.vocal?"afterVocal":row?.lyrics?"afterLyrics":"afterScore"}
-function annotationRowContentBottom(row){const regions=annotationRowRegions(row);return(regions.vocal||regions.lyrics||regions.score)?.bottom??row?.rect?.bottom??0}
+function annotationClientBounds(item,geometry){
+  const scaleX=geometry.svgRect.width/geometry.view.width,scaleY=geometry.svgRect.height/geometry.view.height;
+  return{left:geometry.svgRect.left+annotationItemLeft(item)*scaleX,right:geometry.svgRect.left+annotationItemRight(item)*scaleX,top:geometry.svgRect.top+annotationItemTop(item)*scaleY,bottom:geometry.svgRect.top+annotationItemBottom(item)*scaleY};
+}
+function annotationPartClearance(item){
+  if(item.type==="text")return{top:6,bottom:8};
+  if(item.type==="arrow")return{top:5,bottom:7};
+  if(item.type==="marker")return{top:3,bottom:3};
+  return{top:4,bottom:4};
+}
+function annotationBaselineElements(geometry){
+  return geometry.rows.flatMap(row=>{
+    const regions=annotationRowRegions(row),elements=[{id:`score:${row.row}`,kind:"score",row:row.row,rect:regions.score}];
+    if(regions.lyrics)elements.push({id:`lyrics:${row.row}`,kind:"lyrics",row:row.row,rect:regions.lyrics});
+    if(regions.vocal)elements.push({id:`vocal:${row.row}`,kind:"vocal",row:row.row,rect:regions.vocal});
+    return elements;
+  }).filter(element=>element.rect).sort((a,b)=>a.rect.top-b.rect.top);
+}
+function annotationOwnerRow(item,geometry,bounds){
+  if(annotationItemIsMoving(item))return nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom);
+  const saved=geometry.rows[Number(item.layoutRow)];
+  if((item.layoutTarget||"staff")!=="page"&&saved)return saved;
+  return nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom);
+}
+function annotationBoundaryForBounds(row,bounds){
+  const regions=annotationRowRegions(row);
+  if(regions.lyrics&&bounds.top<regions.lyrics.top)return"afterScore";
+  if(regions.lyrics&&(!regions.vocal||bounds.top<regions.vocal.top))return"afterLyrics";
+  if(regions.vocal&&bounds.top<regions.vocal.top)return"afterScore";
+  if(regions.vocal)return"afterVocal";
+  return"afterScore";
+}
+function annotationBoundaryElementIds(row,nextRow,lane){
+  const rowIndex=row.row,nextScore=nextRow?`score:${nextRow.row}`:null;
+  if(lane==="afterScore")return{previous:`score:${rowIndex}`,next:row.lyrics?`lyrics:${rowIndex}`:row.vocal?`vocal:${rowIndex}`:nextScore};
+  if(lane==="afterLyrics")return{previous:`lyrics:${rowIndex}`,next:row.vocal?`vocal:${rowIndex}`:nextScore};
+  return{previous:row.vocal?`vocal:${rowIndex}`:row.lyrics?`lyrics:${rowIndex}`:`score:${rowIndex}`,next:nextScore};
+}
+function movingAnnotationItems(){
+  if(dragging?.item)return[dragging.item];
+  if(resizing?.item)return[resizing.item];
+  if(rangeMove)return selectedWritingItems();
+  return[];
+}
+function snapshotMovingAnnotationClients(geometry){
+  const snapshots=new Map();if(!geometry)return snapshots;
+  movingAnnotationItems().forEach(item=>snapshots.set(item.id,{item,clients:annotationSourcePoints(item).map(point=>svgPointToClient(point,geometry))}));
+  return snapshots;
+}
+function restoreMovingAnnotationClients(snapshots,geometry){
+  if(!geometry||!snapshots?.size)return;
+  snapshots.forEach(snapshot=>setAnnotationSourcePoints(snapshot.item,snapshot.clients.map(point=>clientPointToSvg(point,geometry))));
+}
 function shiftClientAnnotation(clients,bounds,dy){return!dy?{clients,bounds}:{clients:clients.map(point=>({...point,y:point.y+dy})),bounds:{top:bounds.top+dy,bottom:bounds.bottom+dy}}}
 function renderedCommentTextBounds(item,clients,fallback){
   if(item.type!=="text")return fallback;
@@ -804,23 +867,17 @@ function normalizeCommentFlowAnchors(visibleLayers){
   return changed;
 }
 function applyAnnotationEditGaps(visibleLayers){
-  if(printing||annotationLayoutIsInteracting())return false;
+  if(printing)return false;
   const paper=q(".paper");if(!paper)return false;
-  paper.style.minHeight="";
-  resetAnnotationEditGaps();
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;
+  const baselineElements=annotationBaselineElements(geometry);
   const gaps=geometry.rows.map(()=>({afterScore:0,afterLyrics:0,afterVocal:0})),items=visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]);
   items.forEach(item=>{
-    if(item.type!=="text"||(item.layoutTarget||"staff")!=="staff")return;
-    const rowIndex=Number(item.layoutRow),row=geometry.rows[rowIndex];if(!row)return;
-    const visual=projectedAnnotationItem(item,geometry);if(!visual)return;
-    const bounds=annotationClientVerticalBounds(visual,geometry),lane=normalizeAnnotationLane(row,item.layoutLane||annotationPlacementLane(row,bounds));item.layoutLane=lane;
-    /* 対象段の上側に置いたコメントで、その対象段自身を押し下げない。
-       beforeScore の書き込みは譜面近傍への注記であり、前段の追加余白として
-       扱うと「近づけるほど対象段が逃げる」循環になる。 */
-    if(lane==="beforeScore")return;
-    const bottom=geometry.svgRect.top+annotationItemBottom(visual)*geometry.svgRect.height/geometry.view.height;
-    const edges=annotationLaneEdges(row,geometry.rows[rowIndex+1],lane),needed=Math.ceil(bottom+ANNOTATION_COLLISION_CLEARANCE-edges.after.top);
+    if(item.type==="symbol"&&item.anchor)return;
+    const visual=visualAnnotationItem(item);if(!visual)return;
+    const bounds=annotationClientBounds(visual,geometry),row=annotationOwnerRow(item,geometry,bounds);if(!row)return;
+    const rowIndex=row.row,clearance=annotationPartClearance(item),occupied={...bounds,top:bounds.top-clearance.top,bottom:bounds.bottom+clearance.bottom},lane=annotationBoundaryForBounds(row,occupied),nextRow=geometry.rows[rowIndex+1],edges=annotationLaneEdges(row,nextRow,lane),elementIds=annotationBoundaryElementIds(row,nextRow,lane),nextElement=baselineElements.find(element=>element.id===elementIds.next)||null,needed=Math.ceil(occupied.bottom-edges.after.top);
+    item.layoutBoundary=lane;item.layoutPreviousElement=elementIds.previous;item.layoutNextElement=nextElement?.id||elementIds.next||"page:end";
     if(needed>gaps[rowIndex][edges.lane])gaps[rowIndex][edges.lane]=needed;
   });
   let changed=false;
@@ -839,7 +896,9 @@ function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
 function renderLayers(){
   ensureTechniqueLayer();
   const svg=q("#annotations"),underlay=q("#annotationUnderlay"),paper=q(".paper");
-  if(!annotationLayoutIsInteracting()){paper.style.minHeight="";resetAnnotationEditGaps()}
+  const movingSnapshots=snapshotMovingAnnotationClients(annotationLayoutIsInteracting()?annotationGeometry():null);
+  /* 前回の表示結果を次回の基準にしない。毎回、書き込み追加量0のDOMへ戻す。 */
+  paper.style.minHeight="";resetAnnotationEditGaps();
   let rect=svg.getBoundingClientRect(),logicalWidth=1000,logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
   if(state.annotationCoordVersion!==2){
     state.layers.forEach(layer=>layer.items.forEach(item=>{
@@ -851,6 +910,7 @@ function renderLayers(){
     state.annotationCoordVersion=2;
   }
   [svg,underlay].forEach(element=>{element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`);element.setAttribute("preserveAspectRatio","xMinYMin meet")});
+  restoreMovingAnnotationClients(movingSnapshots,annotationGeometry());
   ensureAnnotationRowAnchors();
   const visibleLayers=state.layers.filter(layer=>printing?layer.printEnabled!==false:layer.visible!==false);
   if(!printing&&!annotationLayoutIsInteracting())normalizeCommentFlowAnchors(visibleLayers);
@@ -858,6 +918,7 @@ function renderLayers(){
   if(applyAnnotationEditGaps(visibleLayers)){
     rect=svg.getBoundingClientRect();logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
     [svg,underlay].forEach(element=>element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`));
+    restoreMovingAnnotationClients(movingSnapshots,annotationGeometry());
   }
   syncWritingItemsToLayout();
   migrateLegacyTechniqueSlurs();
@@ -871,6 +932,7 @@ function renderLayers(){
   const finalRect=svg.getBoundingClientRect(),finalLogicalHeight=Math.max(1,finalRect.height*logicalWidth/Math.max(1,finalRect.width));
   if(Math.abs(finalLogicalHeight-logicalHeight)>.5){
     [svg,underlay].forEach(element=>element.setAttribute("viewBox",`0 0 ${logicalWidth} ${finalLogicalHeight}`));
+    restoreMovingAnnotationClients(movingSnapshots,annotationGeometry());
     syncWritingItemsToLayout();syncLinkedSymbols();drawVisibleLayers();
   }
   const personalLayers=state.layers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID);
@@ -933,7 +995,7 @@ async function startDraw(event){
   const p=pointFromEvent(event);
   if(state.drawTool==="select"){
     const resizeTarget=event.target.closest("[data-resize-handle]"),resizeRecord=resizeTarget?annotationItemRecord(resizeTarget.dataset.item):null;
-    if(resizeRecord&&["rect","marker"].includes(resizeRecord.item.type)){clearWritingRange();state.activeLayerId=resizeRecord.layer.id;selectedItemId=resizeRecord.item.id;event.preventDefault();event.stopPropagation();snap();resizing={item:resizeRecord.item,handle:resizeTarget.dataset.resizeHandle,last:p};q("#annotations").setPointerCapture(event.pointerId);renderLayers();return}
+    if(resizeRecord&&["rect","marker"].includes(resizeRecord.item.type)){clearWritingRange();state.activeLayerId=resizeRecord.layer.id;selectedItemId=resizeRecord.item.id;event.preventDefault();event.stopPropagation();snap();resizing={item:resizeRecord.item,handle:resizeTarget.dataset.resizeHandle,last:p,context:annotationMoveContext(resizeRecord.item)};q("#annotations").setPointerCapture(event.pointerId);renderLayers();return}
     const target=event.target.closest("[data-item]"),id=target?.dataset.item;
     if(!id){clearWritingRange();selectedItemId=null;renderLayers();return}
     const record=annotationItemRecord(id);if(!record)return;clearWritingRange();state.activeLayerId=record.layer.id;selectedItemId=id;const item=record.item;
@@ -991,14 +1053,14 @@ function reattachMovedAnnotations(items,contexts=new Map()){
     setAnnotationSourcePoints(snapshot.item,clients.map(point=>clientPointToSvg(point,natural)));
   });
 }
-function resizeAnnotationItem(item,handle,dx,dy){let left=Math.min(item.x1,item.x2),right=Math.max(item.x1,item.x2),top=Math.min(item.y1,item.y2),bottom=Math.max(item.y1,item.y2);const minimum=10;if(handle.includes("w"))left=clamp(left+dx,0,right-minimum);if(handle.includes("e"))right=Math.max(left+minimum,right+dx);if(handle.includes("n"))top=clamp(top+dy,0,bottom-minimum);if(handle.includes("s"))bottom=Math.max(top+minimum,bottom+dy);item.x1=left;item.x2=right;item.y1=top;item.y2=bottom;captureAnnotationLayout(item,item.layoutTarget,item.layoutRow,item)}
+function resizeAnnotationItem(item,handle,dx,dy){let left=Math.min(item.x1,item.x2),right=Math.max(item.x1,item.x2),top=Math.min(item.y1,item.y2),bottom=Math.max(item.y1,item.y2);const minimum=10;if(handle.includes("w"))left=clamp(left+dx,0,right-minimum);if(handle.includes("e"))right=Math.max(left+minimum,right+dx);if(handle.includes("n"))top=clamp(top+dy,0,bottom-minimum);if(handle.includes("s"))bottom=Math.max(top+minimum,bottom+dy);item.x1=left;item.x2=right;item.y1=top;item.y2=bottom}
 function moveDraw(event){
   if(resizing){event.preventDefault();const p=pointFromEvent(event);resizeAnnotationItem(resizing.item,resizing.handle,p.x-resizing.last.x,p.y-resizing.last.y);resizing.last=p;renderLayers();return}
   if(dragging){event.preventDefault();const p=pointFromEvent(event);translateItem(dragging.item,p.x-dragging.last.x,p.y-dragging.last.y,false);dragging.last=p;renderLayers();return}
   if(!draft)return;event.preventDefault();const p=pointFromEvent(event);if(draft.type==="pen")draft.points.push(p);else draft.end=p
 }
 function endDraw(event){
-  if(resizing){resizing=null;save();renderLayers();return}
+  if(resizing){const{item,context}=resizing;resizing=null;reattachMovedAnnotations([item],new Map([[item.id,context]]));save();renderLayers();return}
   if(dragging){const{item,context}=dragging;dragging=null;reattachMovedAnnotations([item],new Map([[item.id,context]]));save();renderLayers();return}
   if(!draft)return;const layer=activeLayer(),end=draft.end||pointFromEvent(event);snap();
   if(draft.type==="pen"&&draft.points.length>1){const item={id:uid(),type:"pen",points:draft.points,color:state.drawColor,lineStyle:state.lineStyle};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id}
@@ -1138,7 +1200,7 @@ document.addEventListener("pointercancel",()=>{if(rangeDrag){rangeBox?.remove();
 q("#annotations").addEventListener("pointerdown",startDraw);
 q("#annotations").addEventListener("pointermove",moveDraw);
 q("#annotations").addEventListener("pointerup",endDraw);
-q("#annotations").addEventListener("pointercancel",()=>{draft=null;dragging=null;if(resizing){resizing=null;save()}renderLayers()});
+q("#annotations").addEventListener("pointercancel",()=>{draft=null;dragging=null;resizing=null;renderLayers()});
 q("#commentForm").addEventListener("submit",event=>{event.preventDefault();const text=q("#commentText").value;finishCommentDialog(text.trim()?text:null)});
 q("#cancelComment").addEventListener("click",()=>finishCommentDialog(null));
 q("#commentDialog").addEventListener("cancel",event=>{event.preventDefault();finishCommentDialog(null)});
