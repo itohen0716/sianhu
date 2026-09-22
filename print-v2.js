@@ -56,6 +56,26 @@
     document.querySelectorAll("#scoreArea [data-lyrics-row]").forEach(input=>{const row=Number(input.dataset.lyricsRow),width=Number(input.offsetWidth),display=input.closest(".lyrics-field")?.querySelector("[data-lyrics-display-row]");if(Number.isInteger(row)&&width>0){lyricsWidth.set(row,width);lyricsGlyphs.set(row,[...(display?.querySelectorAll("[data-lyric-x]")||[])].map(glyph=>({text:glyph.textContent||"",x:clamp(Number(glyph.dataset.lyricX)||0,0,1),m:Number(glyph.dataset.lyricMeasure),measureX:clamp(Number(glyph.dataset.lyricMeasureX)||0,0,1)})))}});
     columnSamples.forEach((values,id)=>columnLeft.set(id,values.reduce((sum,value)=>sum+value,0)/values.length));return{noteLeft,columnLeft,partLeft,lyricsWidth,lyricsGlyphs};
   }
+  /* 印刷面の段間隔は、保存済みの境界集計だけに依存させない。
+     印刷対象コメントが保持する境界・次要素基準の相対位置・実寸からも
+     必要量を復元し、両者の大きい方を使う。画面座標や元データは変更しない。 */
+  function buildPrintAnnotationLayout(state,annotationCapture){
+    const layoutApi=global.ShianAnnotationLayout,source=layoutApi?layoutApi.normalize(state.annotationLayout):{version:2,boundaries:{}};
+    const boundaries={};
+    let derivedCount=0;
+    (annotationCapture?.items||[]).filter(item=>item.type==="text").forEach(item=>{
+      const placement=item.layoutPlacement;if(!placement)return;
+      const lane=String(placement.lane||"");if(!["beforeScore","afterScore","afterLyrics","afterVocal"].includes(lane))return;
+      const row=Number(placement.row);if(!Number.isInteger(row)||row<0)return;
+      const boundaryKey=String(placement.boundaryKey||`${row}:${lane}`),savedGap=Math.max(0,Number(source?.boundaries?.[boundaryKey]?.gap)||0),current=Math.max(savedGap,Number(boundaries[boundaryKey]?.gap)||0);
+      boundaries[boundaryKey]={gap:current};
+      const offsetFromNextTop=Number(placement.offsetFromNextTop),heightLines=Number(placement.heightLines),clearanceBottom=Number(placement.clearanceBottom);
+      if(!Number.isFinite(offsetFromNextTop)||!Number.isFinite(heightLines))return;
+      const requiredGap=Math.max(0,offsetFromNextTop+Math.max(0,heightLines)+(Number.isFinite(clearanceBottom)?Math.max(0,clearanceBottom):0));
+      if(requiredGap>current+1e-6){boundaries[boundaryKey]={gap:requiredGap};derivedCount++}
+    });
+    return{layout:{version:Number(layoutApi?.VERSION)||Number(source?.version)||2,boundaries},derivedCount};
+  }
   function render(state,options={}){
     const root=document.querySelector(options.rootSelector||"#printRootV2");if(!root)throw new Error("印刷面を生成できません。");
     const showLyrics=state.lyricsVisible!==false,showVocal=state.vocalVisible!==false,showSong=showLyrics||showVocal;
@@ -81,7 +101,8 @@
     /* 段間隔は1ページ目の指定段数から一度だけ決め、全ページで共有する。
        最終ページの段数が少なくても再均等配置せず、余白はページ下部へ残す。 */
     const firstPageRowCount=Math.max(1,pages[0]?.rows.length||pageCounts[0]||1),availableHeight=283*96/25.4-46,fixedReferenceRows=showSong?7:10,printStaffLineSpacing=18;
-    rows.forEach(row=>{row.printGaps=global.ShianAnnotationLayout?global.ShianAnnotationLayout.pixelGaps(state.annotationLayout,row.row,{lyricsVisible:showLyrics,vocalVisible:showVocal},printStaffLineSpacing):{beforeScore:0,afterScore:0,afterLyrics:0,afterVocal:0};row.printGapTotal=Object.values(row.printGaps).reduce((sum,value)=>sum+(Number(value)||0),0)});
+    const printAnnotationLayout=buildPrintAnnotationLayout(state,annotationCapture);
+    rows.forEach(row=>{row.printGaps=global.ShianAnnotationLayout?global.ShianAnnotationLayout.pixelGaps(printAnnotationLayout.layout,row.row,{lyricsVisible:showLyrics,vocalVisible:showVocal},printStaffLineSpacing):{beforeScore:0,afterScore:0,afterLyrics:0,afterVocal:0};row.printGapTotal=Object.values(row.printGaps).reduce((sum,value)=>sum+(Number(value)||0),0)});
     const maxPageGap=Math.max(0,...pages.map(page=>page.rows.reduce((sum,row)=>sum+row.printGapTotal,0))),referenceRows=firstPageRowCount<=5?fixedReferenceRows:firstPageRowCount;
     /* A4の基本段高から追加余白を先に差し引く。追加量を段高へ足し続けず、
        各印刷生成時に論理境界情報から一度だけ再構築する。 */
@@ -129,7 +150,7 @@
       if(showLyrics)insertGap(staff.querySelector(".pv2-lyrics"),"afterLyrics");
       if(showVocal)insertGap(staff.querySelector(".pv2-vocal"),"afterVocal");
     });
-    root.dataset.modelVersion="17";root.dataset.annotationLayoutVersion=String(global.ShianAnnotationLayout?.VERSION||0);root.dataset.annotationAnchorBasis="staff-bottom-line/comment-top";root.dataset.noteCount=String((state.notes||[]).length);root.dataset.annotationCount=String(mappedAnnotations.length);root.dataset.techniqueCount=String([...techMap.values()].reduce((sum,items)=>sum+items.length,0)+linkedTechniqueSlurs.length);
+    root.dataset.modelVersion="18";root.dataset.annotationLayoutVersion=String(global.ShianAnnotationLayout?.VERSION||0);root.dataset.annotationLayoutSource="state+printable-comments";root.dataset.annotationDerivedGapCount=String(printAnnotationLayout.derivedCount);root.dataset.annotationAnchorBasis="staff-bottom-line/comment-top";root.dataset.noteCount=String((state.notes||[]).length);root.dataset.annotationCount=String(mappedAnnotations.length);root.dataset.techniqueCount=String([...techMap.values()].reduce((sum,items)=>sum+items.length,0)+linkedTechniqueSlurs.length);
   }
-  global.ShianPrintV2={render};
+  global.ShianPrintV2={render,buildPrintAnnotationLayout};
 })(window);
