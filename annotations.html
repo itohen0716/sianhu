@@ -801,6 +801,44 @@ function annotationBaselineElements(geometry){
     return elements;
   }).filter(element=>element.rect).sort((a,b)=>a.rect.top-b.rect.top);
 }
+function annotationBoundaryAddresses(geometry){
+  const elements=annotationBaselineElements(geometry),byId=new Map(elements.map(element=>[element.id,element])),addresses=[];
+  geometry.rows.forEach((row,rowIndex)=>{
+    const nextRow=geometry.rows[rowIndex+1];
+    ["afterScore","afterLyrics","afterVocal"].forEach(lane=>{
+      const space=row.staff.querySelector(`[data-annotation-boundary="${lane}"]`);if(!space)return;
+      const ids=annotationBoundaryElementIds(row,nextRow,lane),previous=byId.get(ids.previous),next=byId.get(ids.next);
+      if(!previous)return;
+      const fallbackTop=nextRow?.lineTop??nextRow?.scoreRect?.top??row.rect?.bottom??previous.rect.bottom;
+      addresses.push({
+        key:`${rowIndex}:${lane}`,row:rowIndex,lane,space,previous,next,
+        baselinePreviousTop:previous.rect.top,baselinePreviousBottom:previous.rect.bottom,
+        baselineNextTop:next?.rect?.top??fallbackTop,baselineNextBottom:next?.rect?.bottom??fallbackTop,
+        currentPreviousTop:previous.rect.top,currentPreviousBottom:previous.rect.bottom,
+        currentNextTop:next?.rect?.top??fallbackTop,currentNextBottom:next?.rect?.bottom??fallbackTop
+      });
+    });
+  });
+  return addresses.sort((a,b)=>a.baselineNextTop-b.baselineNextTop||a.baselinePreviousBottom-b.baselinePreviousBottom);
+}
+function annotationAddressAfterScore(addresses,row){return addresses.find(address=>address.row===row&&address.lane==="afterScore")||null}
+function annotationBoundaryAddressForBounds(addresses,occupied){
+  if(!addresses.length)return null;
+  const scoreOverlap=addresses.find(address=>address.lane==="afterScore"&&occupied.bottom>address.previous.rect.top&&occupied.top<address.previous.rect.bottom);
+  if(scoreOverlap)return scoreOverlap;
+  let address=addresses.find(candidate=>occupied.top<candidate.baselineNextTop)||addresses.at(-1);
+  if(!address)return null;
+  /* 唄→次文化譜の空間では、上端・下端から両側までの距離を比較する。
+     次文化譜側へ近づけた部品を前段の余白へ入れると、対象段自身が逃げるため、
+     次文化譜に近い側はその文化譜の afterScore として扱う。 */
+  if(address.next?.kind==="score"&&address.next.row!==address.previous.row){
+    const distanceFromPrevious=Math.max(0,occupied.top-address.baselinePreviousBottom),distanceToNext=Math.max(0,address.baselineNextTop-occupied.bottom);
+    if(distanceToNext<=distanceFromPrevious){
+      const nextScoreAddress=annotationAddressAfterScore(addresses,address.next.row);if(nextScoreAddress)address=nextScoreAddress;
+    }
+  }
+  return address;
+}
 function annotationOwnerRow(item,geometry,bounds){
   if(annotationItemIsMoving(item))return nearestAnnotationScoreRow(geometry.rows,bounds.top,bounds.bottom);
   const saved=geometry.rows[Number(item.layoutRow)];
@@ -851,7 +889,7 @@ function constrainCommentToPlacementLane(item,clients,bounds,row,lane){
   else if(edges.lane!=="beforeScore"&&edges.before&&visibleBounds.top<edges.before.bottom+ANNOTATION_SCORE_CLEARANCE)dy=edges.before.bottom+ANNOTATION_SCORE_CLEARANCE-visibleBounds.top;
   return{...shiftClientAnnotation(clients,bounds,dy),lane:edges.lane};
 }
-function resetAnnotationEditGaps(){qAll("#scoreArea .annotation-boundary-space").forEach(space=>{space.style.removeProperty("--annotation-boundary-gap");delete space.dataset.annotationEditGap})}
+function resetAnnotationEditGaps(){qAll("#scoreArea .annotation-boundary-space").forEach(space=>{space.style.removeProperty("--annotation-boundary-gap");delete space.dataset.annotationEditGap;delete space.dataset.annotationRange})}
 function annotationLayoutIsInteracting(){return Boolean(dragging||resizing||rangeMove||draft)}
 function normalizeCommentFlowAnchors(visibleLayers){
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
@@ -870,18 +908,22 @@ function applyAnnotationEditGaps(visibleLayers){
   if(printing)return false;
   const paper=q(".paper");if(!paper)return false;
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;
-  const baselineElements=annotationBaselineElements(geometry);
-  const gaps=geometry.rows.map(()=>({afterScore:0,afterLyrics:0,afterVocal:0})),items=visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]);
+  const addresses=annotationBoundaryAddresses(geometry),ranges=new Map(),items=visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]);
   items.forEach(item=>{
     if(item.type==="symbol"&&item.anchor)return;
     const visual=visualAnnotationItem(item);if(!visual)return;
-    const bounds=annotationClientBounds(visual,geometry),row=annotationOwnerRow(item,geometry,bounds);if(!row)return;
-    const rowIndex=row.row,clearance=annotationPartClearance(item),occupied={...bounds,top:bounds.top-clearance.top,bottom:bounds.bottom+clearance.bottom},lane=annotationBoundaryForBounds(row,occupied),nextRow=geometry.rows[rowIndex+1],edges=annotationLaneEdges(row,nextRow,lane),elementIds=annotationBoundaryElementIds(row,nextRow,lane),nextElement=baselineElements.find(element=>element.id===elementIds.next)||null,needed=Math.ceil(occupied.bottom-edges.after.top);
-    item.layoutBoundary=lane;item.layoutPreviousElement=elementIds.previous;item.layoutNextElement=nextElement?.id||elementIds.next||"page:end";
-    if(needed>gaps[rowIndex][edges.lane])gaps[rowIndex][edges.lane]=needed;
+    const bounds=annotationClientBounds(visual,geometry),clearance=annotationPartClearance(item),occupied={...bounds,top:bounds.top-clearance.top,bottom:bounds.bottom+clearance.bottom},address=annotationBoundaryAddressForBounds(addresses,bounds);if(!address)return;
+    const current=ranges.get(address.key)||{top:occupied.top,bottom:occupied.bottom,items:0};
+    current.top=Math.min(current.top,occupied.top);current.bottom=Math.max(current.bottom,occupied.bottom);current.items+=1;ranges.set(address.key,current);
+    item.layoutBoundary=address.lane;item.layoutPreviousElement=address.previous.id;item.layoutNextElement=address.next?.id||"page:end";
   });
-  let changed=false;
-  gaps.forEach((rowGaps,row)=>Object.entries(rowGaps).forEach(([lane,gap])=>{if(gap<=0)return;const space=geometry.rows[row].staff.querySelector(`[data-annotation-boundary="${lane}"]`);if(!space)return;space.style.setProperty("--annotation-boundary-gap",`${gap}px`);space.dataset.annotationEditGap=String(gap);changed=true}));
+  let changed=false,cumulativeShift=0;
+  addresses.forEach(address=>{
+    const range=ranges.get(address.key),gap=range?Math.max(0,Math.ceil(range.bottom-address.baselineNextTop)):0;
+    address.currentPreviousTop=address.baselinePreviousTop+cumulativeShift;address.currentPreviousBottom=address.baselinePreviousBottom+cumulativeShift;
+    if(gap>0){address.space.style.setProperty("--annotation-boundary-gap",`${gap}px`);address.space.dataset.annotationEditGap=String(gap);address.space.dataset.annotationRange=`${Math.floor(range.top)}:${Math.ceil(range.bottom)}`;changed=true;cumulativeShift+=gap}
+    address.currentNextTop=address.baselineNextTop+cumulativeShift;address.currentNextBottom=address.baselineNextBottom+cumulativeShift;
+  });
   return changed;
 }
 function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
