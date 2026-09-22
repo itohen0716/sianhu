@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>絲庵 文化譜書き込み</title>
   <link rel="preload" href="./fonts/BIZUDPMincho-Regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./print-v2.css?v=171">
+  <link rel="stylesheet" href="./print-v2.css?v=187">
   <style>
     @font-face{font-family:"Shian Score BIZ UDPMincho";src:url("./fonts/BIZUDPMincho-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
@@ -244,6 +244,7 @@
     <div class="dialog-actions"><button type="button" id="cancelComment">取消</button><button type="submit" class="primary">確定</button></div>
   </form>
 </dialog>
+<script src="./annotation-layout.js?v=187"></script>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1));
@@ -255,7 +256,7 @@ const markerColors=[
   {value:"#f2a9a0",label:"蛍光桃"},{value:"#c6b3e6",label:"蛍光藤"},{value:"#f5be6b",label:"蛍光橙"}
 ];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],tuplets:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},measureSpecials:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],markerColor:markerColors[0].value,markerStyleVersion:2,lineStyle:"solid",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",annotationTarget:"staff",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],tuplets:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},measureSpecials:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],markerColor:markerColors[0].value,markerStyleVersion:2,lineStyle:"solid",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",annotationTarget:"staff",preview:true,annotationCoordVersion:2,annotationLayout:{version:1,unit:"staff-line",boundaries:{}},printMode:"auto",manualPageRows:""};
 defaults.vocalSlurs=[];
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,dragging=null,resizing=null,printing=false,lastInserted=null,commentDialogResolve=null;
@@ -361,7 +362,7 @@ function pageStartRows(pageRows=currentPageRows()){
   return starts;
 }
 function printPlanText(pageRows=currentPageRows()){return`${pageRows.length}ページ：${pageRows.map(count=>`${count}段`).join(" ＋ ")}`}
-function serializable(){normalizeVocalSlurs();normalizeTuplets();normalizeMeasureSpecials();normalizeScoreParts();return{notes:state.notes,tuplets:state.tuplets,vocalNotes:state.vocalNotes,vocalSlurs:state.vocalSlurs,vocalString:state.vocalString,vocalDuration:state.vocalDuration,vocalVisible:state.vocalVisible,lyricsVisible:state.lyricsVisible,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,measureSpecials:state.measureSpecials,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,markerStyleVersion:state.markerStyleVersion,lineStyle:state.lineStyle,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,annotationTarget:state.annotationTarget,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function serializable(){normalizeVocalSlurs();normalizeTuplets();normalizeMeasureSpecials();normalizeScoreParts();return{notes:state.notes,tuplets:state.tuplets,vocalNotes:state.vocalNotes,vocalSlurs:state.vocalSlurs,vocalString:state.vocalString,vocalDuration:state.vocalDuration,vocalVisible:state.vocalVisible,lyricsVisible:state.lyricsVisible,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,measureSpecials:state.measureSpecials,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,markerStyleVersion:state.markerStyleVersion,lineStyle:state.lineStyle,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,annotationTarget:state.annotationTarget,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,annotationLayout:ShianAnnotationLayout.normalize(state.annotationLayout),printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
@@ -917,13 +918,19 @@ function applyAnnotationEditGaps(visibleLayers){
     current.top=Math.min(current.top,occupied.top);current.bottom=Math.max(current.bottom,occupied.bottom);current.items+=1;ranges.set(address.key,current);
     item.layoutBoundary=address.lane;item.layoutPreviousElement=address.previous.id;item.layoutNextElement=address.next?.id||"page:end";
   });
-  let changed=false,cumulativeShift=0;
+  let changed=false,cumulativeShift=0;const logicalGaps=[];
   addresses.forEach(address=>{
     const range=ranges.get(address.key),gap=range?Math.max(0,Math.ceil(range.bottom-address.baselineNextTop)):0;
+    logicalGaps.push({row:address.row,lane:address.lane,gapPx:gap,lineSpacing:geometry.rows[address.row]?.lineSpacing||18});
     address.currentPreviousTop=address.baselinePreviousTop+cumulativeShift;address.currentPreviousBottom=address.baselinePreviousBottom+cumulativeShift;
     if(gap>0){address.space.style.setProperty("--annotation-boundary-gap",`${gap}px`);address.space.dataset.annotationEditGap=String(gap);address.space.dataset.annotationRange=`${Math.floor(range.top)}:${Math.ceil(range.bottom)}`;changed=true;cumulativeShift+=gap}
     address.currentNextTop=address.baselineNextTop+cumulativeShift;address.currentNextBottom=address.baselineNextBottom+cumulativeShift;
   });
+  const nextLayout=ShianAnnotationLayout.fromPixelGaps(logicalGaps),layoutChanged=!ShianAnnotationLayout.equal(state.annotationLayout,nextLayout);
+  state.annotationLayout=nextLayout;
+  /* ドラッグ中は状態だけを更新し、pointermove ごとの storage 書込はしない。
+     静止時の再計算（削除・表示切替を含む）はここで確定する。 */
+  if(layoutChanged&&!annotationLayoutIsInteracting())save();
   return changed;
 }
 function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
@@ -1317,7 +1324,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=183"></script>
+  <script src="./print-v2.js?v=187"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>

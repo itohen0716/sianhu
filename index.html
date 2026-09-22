@@ -8,6 +8,7 @@
   <style>
     @font-face{font-family:"Shian Score BIZ UDPMincho";src:url("./fonts/BIZUDPMincho-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
+    .annotation-boundary-space{display:block;height:var(--annotation-boundary-gap,0px)}
     *{box-sizing:border-box}body{margin:0;background:#e5ded3;color:var(--ink);font-family:"Yu Gothic",sans-serif}
     button,input{font:inherit}button{cursor:pointer}.app{max-width:1100px;margin:auto;padding:14px}main.app{display:flex;flex-direction:column}
     .head{display:flex;justify-content:space-between;align-items:end;gap:10px}h1{margin:0;font:600 27px serif}
@@ -194,7 +195,7 @@
       .barline-handle .bar-symbol{top:0;bottom:auto;height:100%;overflow:visible}
     }
   </style>
-  <link rel="stylesheet" href="./print-v2.css?v=171">
+  <link rel="stylesheet" href="./print-v2.css?v=187">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
@@ -356,6 +357,7 @@
     <div class="dialog-actions"><button type="button" id="closeKeyboardHelp" class="primary">閉じる</button></div>
   </div>
 </dialog>
+<script src="./annotation-layout.js?v=187"></script>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1)),vocalVals=["0",...vals];
@@ -363,7 +365,7 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
-const defaults={notes:[],tuplets:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalDotted:false,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},measureSpecials:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#f4df59",markerStyleVersion:2,numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",annotationTarget:"staff",preview:true,annotationCoordVersion:2,printMode:"auto",manualPageRows:""};
+const defaults={notes:[],tuplets:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalDotted:false,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},measureSpecials:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#f4df59",markerStyleVersion:2,numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",annotationTarget:"staff",preview:true,annotationCoordVersion:2,annotationLayout:{version:1,unit:"staff-line",boundaries:{}},printMode:"auto",manualPageRows:""};
 defaults.vocalSlurs=[];
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="",vocalAnchorSelection=null,vocalAnchorOffset=0,vocalTool="note",vocalSlurStartId=null,tripletMode=false,tripletStartAnchor=null,slurStartAnchor=null;
@@ -552,7 +554,7 @@ function renderPrintRoot(){
   root.innerHTML=model.pages.map(page=>`<section class="print-page" data-print-page="${page.index+1}">${page.index===0?`<div class="print-meta"><div class="print-meta-left"><span>〈</span><span>${esc(model.tuning)}</span><span>〉</span><span>${esc(model.meter)}</span></div><div class="print-title">${esc(model.title)}</div><div class="print-summary"></div></div>`:""}${page.rows.map(row=>`<section class="print-staff" style="height:${((283*96/25.4-(page.index===0?34:0))/page.rows.length).toFixed(2)}px"><div class="print-score-wrap"><div class="print-labels">${row.index===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="print-score">${row.measures.map(printMeasureModelHtml).join("")}</div></div></section>`).join("")}</section>`).join("");
   root.dataset.printModelVersion=String(model.version);
 }
-function serializable(){normalizeVocalSlurs();normalizeTuplets();normalizeMeasureSpecials();normalizeScoreParts();return{notes:state.notes,tuplets:state.tuplets,vocalNotes:state.vocalNotes,vocalSlurs:state.vocalSlurs,vocalString:state.vocalString,vocalDuration:state.vocalDuration,vocalVisible:state.vocalVisible,lyricsVisible:state.lyricsVisible,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,measureSpecials:state.measureSpecials,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,markerStyleVersion:state.markerStyleVersion,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,annotationTarget:state.annotationTarget,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,printMode:state.printMode,manualPageRows:state.manualPageRows}}
+function serializable(){normalizeVocalSlurs();normalizeTuplets();normalizeMeasureSpecials();normalizeScoreParts();return{notes:state.notes,tuplets:state.tuplets,vocalNotes:state.vocalNotes,vocalSlurs:state.vocalSlurs,vocalString:state.vocalString,vocalDuration:state.vocalDuration,vocalVisible:state.vocalVisible,lyricsVisible:state.lyricsVisible,scoreParts:state.scoreParts,barlineKinds:state.barlineKinds,measureSpecials:state.measureSpecials,title:state.title,tuning:state.tuning,meter:state.meter,rows:state.rows,measuresPerRow:state.measuresPerRow,rowMeasureCounts:state.rowMeasureCounts,measureOffsets:state.measureOffsets,lyricsMode:state.lyricsMode,lyrics:state.lyrics,m:state.m,s:state.s,p:state.p,d:state.d,layers:state.layers,activeLayerId:state.activeLayerId,scoreEditLayer:state.scoreEditLayer,drawTool:state.drawTool,selectedSymbol:state.selectedSymbol,symbolSide:state.symbolSide,drawColor:state.drawColor,markerColor:state.markerColor,markerStyleVersion:state.markerStyleVersion,numberColor:state.numberColor,openColor:state.openColor,textSize:state.textSize,textBackground:state.textBackground,annotationTarget:state.annotationTarget,preview:state.preview,annotationCoordVersion:state.annotationCoordVersion,annotationLayout:ShianAnnotationLayout.normalize(state.annotationLayout),printMode:state.printMode,manualPageRows:state.manualPageRows}}
 function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
@@ -887,7 +889,7 @@ function render(){
   q("#tripletTool").classList.toggle("on",tripletMode);q("#tripletTool").setAttribute("aria-pressed",String(tripletMode));document.body.classList.toggle("triplet-selecting",tripletMode);
   q("#vocalStatus").textContent=vocalTool==="slur"?(vocalSlurStartId?"スラーの終点を押してください":"スラーの始点を押してください"):`${location.row+1}段・${location.local+1}小節・16分位置${state.p+1}/${currentCapacity}（${vocalAnchorLabel(activeVocalAnchor())}）${selectedScoreTarget?.type==="vocal"?"（選択中：ドラッグ／矢印で微調整）":""}`;
   const printStarts=pageStartRows();
-  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}${Array.from({length:measuresInRow(r)},(_,i)=>rowStartMeasure(r)+i).some(isHanma)?" has-hanma":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><span class="lyrics-field"><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"><span class="lyrics-display" data-lyrics-display-row="${r}" aria-hidden="true"></span></span></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div>`:""}</section>`).join("");
+  q("#scoreArea").innerHTML=Array.from({length:state.rows},(_,r)=>`<section class="staff${printStarts.has(r)?" print-page-start":""}${Array.from({length:measuresInRow(r)},(_,i)=>rowStartMeasure(r)+i).some(isHanma)?" has-hanma":""}"><div class="score-wrap"><div class="labels">${r===0?"<span>三の糸</span><span>二の糸</span><span>一の糸</span>":"<span></span><span></span><span></span>"}</div><div class="score-scroll"><div class="score">${Array.from({length:measuresInRow(r)},(_,i)=>measureHtml(rowStartMeasure(r)+i)).join("")}</div></div></div><div class="annotation-boundary-space" data-annotation-boundary="afterScore" aria-hidden="true"></div>${state.lyricsVisible?`<div class="lyrics-row"><span class="lyrics-label">歌詞</span><span class="lyrics-field"><input class="lyrics-input" data-lyrics-row="${r}" value="${esc(state.lyrics[r]||"")}" maxlength="500" aria-label="${r+1}段目の歌詞"><span class="lyrics-display" data-lyrics-display-row="${r}" aria-hidden="true"></span></span></div><div class="annotation-boundary-space" data-annotation-boundary="afterLyrics" aria-hidden="true"></div>`:""}${state.vocalVisible?`<div class="vocal-row"><span class="vocal-label">唄</span><div class="vocal-score">${Array.from({length:measuresInRow(r)},(_,i)=>vocalMeasureHtml(rowStartMeasure(r)+i)).join("")}</div></div><div class="annotation-boundary-space" data-annotation-boundary="afterVocal" aria-hidden="true"></div>`:""}</section>`).join("");
   applyContentAwareMeasureWidths();
   q(".paper").classList.toggle("lyrics-mode",state.lyricsMode);q("#vocalVisible").checked=state.vocalVisible;q("#lyricsVisible").checked=state.lyricsVisible;
   q(".paper").classList.toggle("preview-mode",state.preview);
@@ -1049,9 +1051,19 @@ function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
   const cssScale=paperRect.width/Math.max(1,paper.offsetWidth);
   paper.style.minHeight=`${Math.ceil(Math.max(naturalHeight,annotationHeight)/Math.max(.01,cssScale))}px`;
 }
+function applySharedAnnotationLayout(){
+  qAll("#scoreArea .annotation-boundary-space").forEach(space=>space.style.removeProperty("--annotation-boundary-gap"));
+  const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
+  geometry.rows.forEach(row=>{
+    const gaps=ShianAnnotationLayout.pixelGaps(state.annotationLayout,row.row,{lyricsVisible:state.lyricsVisible,vocalVisible:state.vocalVisible},row.lineSpacing);
+    ShianAnnotationLayout.LANES.forEach(lane=>{const space=row.staff.querySelector(`[data-annotation-boundary="${lane}"]`),gap=gaps[lane]||0;if(space&&gap>0){space.style.setProperty("--annotation-boundary-gap",`${gap}px`);changed=true}});
+  });
+  return changed;
+}
 function renderLayers(skipSave=false){
   ensureTechniqueLayer();
   const svg=q("#annotations"),underlay=q("#annotationUnderlay"),paper=q(".paper");
+  paper.style.minHeight="";applySharedAnnotationLayout();
   const rect=svg.getBoundingClientRect(),logicalWidth=1000,logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
   if(state.annotationCoordVersion!==2){
     state.layers.forEach(layer=>layer.items.forEach(item=>{
@@ -1584,7 +1596,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=183"></script>
+  <script src="./print-v2.js?v=187"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
