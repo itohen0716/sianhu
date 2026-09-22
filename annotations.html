@@ -756,6 +756,8 @@ function annotationLaneEdges(row,nextRow,lane){
   if(laneName==="afterLyrics")return{lane:laneName,before:regions.lyrics||regions.score,after:regions.vocal||{top:nextTop}};
   return{lane:laneName,before:regions.vocal||regions.lyrics||regions.score,after:{top:nextTop}};
 }
+function annotationRowLastLane(row){return row?.vocal?"afterVocal":row?.lyrics?"afterLyrics":"afterScore"}
+function annotationRowContentBottom(row){const regions=annotationRowRegions(row);return(regions.vocal||regions.lyrics||regions.score)?.bottom??row?.rect?.bottom??0}
 function shiftClientAnnotation(clients,bounds,dy){return!dy?{clients,bounds}:{clients:clients.map(point=>({...point,y:point.y+dy})),bounds:{top:bounds.top+dy,bottom:bounds.bottom+dy}}}
 function constrainCommentToPlacementLane(item,clients,bounds,row,lane){
   if(item.type!=="text"||!row?.scoreRect)return{clients,bounds,lane:normalizeAnnotationLane(row,lane)};
@@ -791,7 +793,12 @@ function applyAnnotationEditGaps(visibleLayers){
     const rowIndex=Number(item.layoutRow),row=geometry.rows[rowIndex];if(!row)return;
     const visual=projectedAnnotationItem(item,geometry);if(!visual)return;
     const bounds=annotationClientVerticalBounds(visual,geometry),lane=normalizeAnnotationLane(row,item.layoutLane||annotationPlacementLane(row,bounds));item.layoutLane=lane;
-    if(lane==="beforeScore")return;
+    if(lane==="beforeScore"){
+      if(rowIndex<=0)return;
+      const previousRow=geometry.rows[rowIndex-1],previousLane=annotationRowLastLane(previousRow),needed=Math.ceil(annotationRowContentBottom(previousRow)+ANNOTATION_COLLISION_CLEARANCE-bounds.top);
+      if(needed>gaps[rowIndex-1][previousLane])gaps[rowIndex-1][previousLane]=needed;
+      return;
+    }
     const bottom=geometry.svgRect.top+annotationItemBottom(visual)*geometry.svgRect.height/geometry.view.height;
     const edges=annotationLaneEdges(row,geometry.rows[rowIndex+1],lane),needed=Math.ceil(bottom+ANNOTATION_COLLISION_CLEARANCE-edges.after.top);
     if(needed>gaps[rowIndex][edges.lane])gaps[rowIndex][edges.lane]=needed;
