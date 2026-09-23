@@ -677,7 +677,7 @@ function migrateCommentToTopAnchor(item,geometry){
   }else item.y=Number(item.y||0)-offsetSvg;
   item.layoutTextAnchorVersion=2;item.layoutTextAnchorBasis="comment-top";return true;
 }
-function annotationItemIsMoving(item){return Boolean(dragging?.item===item||resizing?.item===item||rangeMove?.started&&rangeItemIds.has(item.id))}
+function annotationItemIsMoving(item){return Boolean(dragging?.item===item||resizing?.started&&resizing.item===item||rangeMove?.started&&rangeItemIds.has(item.id))}
 function projectedAnnotationItem(item,geometry=annotationGeometry()){
   if(!geometry||item.layoutAnchorVersion!==3||!Array.isArray(item.layoutAnchors)||!item.layoutAnchors.length)return legacyVisualAnnotationItem(item,geometry);const target=item.layoutTarget||"staff",visibilityTarget=item.type==="text"?(item.layoutVisibilityTarget||target):target;if(visibilityTarget==="lyrics"&&!state.lyricsVisible||visibilityTarget==="vocal"&&!state.vocalVisible)return null;let clients=item.layoutAnchors.map(anchor=>annotationClientFromAnchor(anchor,geometry,target,item.layoutRow));if(clients.some(point=>!point))return null;const copy=structuredClone(item);setAnnotationSourcePoints(copy,clients.map(point=>clientPointToSvg(point,geometry)));
   const desiredTop=item.type==="text"?ShianAnnotationLayout.placementTop(geometry,item.layoutPlacement):null;if(Number.isFinite(desiredTop)){const current=annotationClientBounds(copy,geometry),dy=desiredTop-current.top;clients=clients.map(point=>({...point,y:point.y+dy}));setAnnotationSourcePoints(copy,clients.map(point=>clientPointToSvg(point,geometry)))}return copy;
@@ -835,7 +835,7 @@ function annotationBoundaryElementIds(row,nextRow,lane){
 }
 function movingAnnotationItems(){
   if(dragging?.item)return[dragging.item];
-  if(resizing?.item)return[resizing.item];
+  if(resizing?.started&&resizing.item)return[resizing.item];
   if(rangeMove?.started)return selectedWritingItems();
   return[];
 }
@@ -864,7 +864,7 @@ function constrainCommentToPlacementLane(item,clients,bounds,row,lane){
   return{...shiftClientAnnotation(clients,bounds,dy),lane:edges.lane};
 }
 function resetAnnotationEditGaps(){qAll("#scoreArea .annotation-boundary-space").forEach(space=>{space.style.removeProperty("--annotation-boundary-gap");delete space.dataset.annotationEditGap;delete space.dataset.annotationRange})}
-function annotationLayoutIsInteracting(){return Boolean(dragging||resizing||rangeMove?.started||draft)}
+function annotationLayoutIsInteracting(){return Boolean(dragging||resizing?.started||rangeMove?.started||draft)}
 function normalizeCommentFlowAnchors(visibleLayers){
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
   visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]).forEach(item=>{
@@ -1020,7 +1020,7 @@ async function startDraw(event){
   const p=pointFromEvent(event);
   if(state.drawTool==="select"){
     const resizeTarget=event.target.closest("[data-resize-handle]"),resizeRecord=resizeTarget?annotationItemRecord(resizeTarget.dataset.item):null;
-    if(resizeRecord&&["rect","marker"].includes(resizeRecord.item.type)){clearWritingRange();state.activeLayerId=resizeRecord.layer.id;selectedItemId=resizeRecord.item.id;event.preventDefault();event.stopPropagation();snap();materializeAnnotationItem(resizeRecord.item);resizing={item:resizeRecord.item,handle:resizeTarget.dataset.resizeHandle,last:p,context:annotationMoveContext(resizeRecord.item)};q("#annotations").setPointerCapture(event.pointerId);renderLayers();return}
+    if(resizeRecord&&["rect","marker"].includes(resizeRecord.item.type)){clearWritingRange();state.activeLayerId=resizeRecord.layer.id;selectedItemId=resizeRecord.item.id;event.preventDefault();event.stopPropagation();resizing={item:resizeRecord.item,handle:resizeTarget.dataset.resizeHandle,start:p,last:p,clientX:event.clientX,clientY:event.clientY,started:false,context:null};q("#annotations").setPointerCapture(event.pointerId);return}
     const target=event.target.closest("[data-item]"),id=target?.dataset.item;
     if(!id){clearWritingRange();selectedItemId=null;renderLayers();return}
     const record=annotationItemRecord(id);if(!record)return;clearWritingRange();state.activeLayerId=record.layer.id;selectedItemId=id;const item=record.item;
@@ -1058,8 +1058,8 @@ function resetAnnotationLayoutForDrop(){const paper=q(".paper"),svg=q("#annotati
 function reattachMovedAnnotations(items,contexts=new Map()){
   const movable=[...new Set((items||[]).filter(item=>item&&!(item.type==="symbol"&&item.anchor)))];if(!movable.length)return;
   const before=annotationGeometry();if(!before)return;
-  /* 画面上のドロップ位置だけを先に退避する。所属段・lane・アンカーは、
-     過去の動的余白を外した通常配置に戻してから決める。 */
+  /* 画面上のドロップ位置だけを先に退避する。コメントは従来どおり
+     動的余白なし配置で境界を決め、描画部品は現在表示中の譜面で決める。 */
   const dropped=movable.map(item=>({
     item,
     requested:item.layoutTarget||state.annotationTarget||"staff",
@@ -1067,27 +1067,44 @@ function reattachMovedAnnotations(items,contexts=new Map()){
     clients:annotationSourcePoints(item).map(point=>svgPointToClient(point,before)),
     bounds:annotationClientVerticalBounds(item,before)
   }));
-  const natural=resetAnnotationLayoutForDrop();if(!natural?.rows?.length)return;const addresses=annotationBoundaryAddresses(natural);
-  const snapshots=dropped.map(drop=>{
-    const{item,context}=drop,target=item.type==="text"&&drop.requested!=="page"?"staff":drop.requested,row=target==="page"?natural.rows[0]:movedAnnotationOwnerRow(item,natural,drop.bounds,context),address=target==="page"?null:annotationBoundaryAddressForBounds(addresses,drop.bounds),lane=address?.lane||annotationPlacementLane(row,drop.bounds),side=lane==="beforeScore"?"above":"below",anchors=drop.clients.map(point=>annotationAnchorFromClient(point,row,target)),placement=item.type==="text"&&address?ShianAnnotationLayout.placementFromBounds(address,drop.bounds,annotationPartClearance(item)):null;
-    return{item,target,row:row.row,side,lane,anchors,placement,address};
+  /* コメント以外は、現在表示中の譜面要素と一緒に動いている。その表示座標を
+     動的余白なし座標へそのまま持ち込むと段移動量を相対Yへ二重取り込みするため、
+     現在の譜面座標系でアンカーを確定する。 */
+  const drawingSnapshots=dropped.filter(drop=>drop.item.type!=="text").map(drop=>{
+    const{item,context}=drop,target=drop.requested,row=target==="page"?before.rows[0]:movedAnnotationOwnerRow(item,before,drop.bounds,context),anchors=drop.clients.map(point=>annotationAnchorFromClient(point,row,target));
+    return{item,target,row:row.row,anchors,clients:drop.clients,geometry:before};
   }).filter(snapshot=>snapshot.anchors.every(Boolean));
+  const commentDrops=dropped.filter(drop=>drop.item.type==="text");let commentSnapshots=[];
+  if(commentDrops.length){
+    const natural=resetAnnotationLayoutForDrop();if(!natural?.rows?.length)return;const addresses=annotationBoundaryAddresses(natural);
+    commentSnapshots=commentDrops.map(drop=>{
+    const{item,context}=drop,target=item.type==="text"&&drop.requested!=="page"?"staff":drop.requested,row=target==="page"?natural.rows[0]:movedAnnotationOwnerRow(item,natural,drop.bounds,context),address=target==="page"?null:annotationBoundaryAddressForBounds(addresses,drop.bounds),lane=address?.lane||annotationPlacementLane(row,drop.bounds),side=lane==="beforeScore"?"above":"below",anchors=drop.clients.map(point=>annotationAnchorFromClient(point,row,target)),placement=item.type==="text"&&address?ShianAnnotationLayout.placementFromBounds(address,drop.bounds,annotationPartClearance(item)):null;
+      return{item,target,row:row.row,side,lane,anchors,placement,address,clients:drop.clients,geometry:natural};
+    }).filter(snapshot=>snapshot.anchors.every(Boolean));
+  }
+  const snapshots=[...drawingSnapshots,...commentSnapshots];
   snapshots.forEach(snapshot=>{
     snapshot.item.layoutTarget=snapshot.target;snapshot.item.layoutRow=snapshot.target==="page"?0:snapshot.row;snapshot.item.layoutAnchors=snapshot.anchors;snapshot.item.layoutAnchorVersion=3;if(snapshot.placement){snapshot.item.layoutPlacement=snapshot.placement;snapshot.item.layoutBoundaryKey=snapshot.placement.boundaryKey;snapshot.item.layoutBoundary=snapshot.placement.lane;snapshot.item.layoutPreviousElement=snapshot.placement.previous;snapshot.item.layoutNextElement=snapshot.placement.next}if(snapshot.item.type==="text"&&snapshot.target!=="page"){snapshot.item.layoutVisibilityTarget=snapshot.item.layoutVisibilityTarget||"staff";snapshot.item.layoutSide=snapshot.side;snapshot.item.layoutLane=snapshot.lane;snapshot.item.layoutFlowVersion=1}delete snapshot.item.layoutPoints;delete snapshot.item.layoutAnchorY;delete snapshot.item.layoutOffsetY;
-    const clients=snapshot.anchors.map(anchor=>annotationClientFromAnchor(anchor,natural,snapshot.target,snapshot.row));if(clients.some(point=>!point))return;
-    setAnnotationSourcePoints(snapshot.item,clients.map(point=>clientPointToSvg(point,natural)));
+    /* 描画部品の保存用x/yは操作終了時の表示位置と一致させるだけにする。
+       コメントは従来の自然配置アンカー再投影を維持する。 */
+    const clients=snapshot.item.type==="text"?snapshot.anchors.map(anchor=>annotationClientFromAnchor(anchor,snapshot.geometry,snapshot.target,snapshot.row)):snapshot.clients;if(clients.some(point=>!point))return;
+    setAnnotationSourcePoints(snapshot.item,clients.map(point=>clientPointToSvg(point,snapshot.geometry)));
   });
 }
 function resizeAnnotationItem(item,handle,dx,dy){let left=Math.min(item.x1,item.x2),right=Math.max(item.x1,item.x2),top=Math.min(item.y1,item.y2),bottom=Math.max(item.y1,item.y2);const minimum=10;if(handle.includes("w"))left=clamp(left+dx,0,right-minimum);if(handle.includes("e"))right=Math.max(left+minimum,right+dx);if(handle.includes("n"))top=clamp(top+dy,0,bottom-minimum);if(handle.includes("s"))bottom=Math.max(top+minimum,bottom+dy);item.x1=left;item.x2=right;item.y1=top;item.y2=bottom}
 function moveDraw(event){
   if(pendingDrag){if(Math.hypot(event.clientX-pendingDrag.clientX,event.clientY-pendingDrag.clientY)<DRAG_START_PX)return;event.preventDefault();const p=pointFromEvent(event),{item,start}=pendingDrag;snap();materializeAnnotationItem(item);const context=annotationMoveContext(item);pendingDrag=null;translateItem(item,p.x-start.x,p.y-start.y,false);dragging={item,last:p,context};renderLayers();return}
-  if(resizing){event.preventDefault();const p=pointFromEvent(event);resizeAnnotationItem(resizing.item,resizing.handle,p.x-resizing.last.x,p.y-resizing.last.y);resizing.last=p;renderLayers();return}
+  if(resizing){
+    const p=pointFromEvent(event);
+    if(!resizing.started){if(Math.hypot(event.clientX-resizing.clientX,event.clientY-resizing.clientY)<DRAG_START_PX)return;event.preventDefault();snap();materializeAnnotationItem(resizing.item);resizing.context=annotationMoveContext(resizing.item);resizing.started=true;resizing.last=resizing.start}
+    event.preventDefault();resizeAnnotationItem(resizing.item,resizing.handle,p.x-resizing.last.x,p.y-resizing.last.y);resizing.last=p;renderLayers();return
+  }
   if(dragging){event.preventDefault();const p=pointFromEvent(event);translateItem(dragging.item,p.x-dragging.last.x,p.y-dragging.last.y,false);dragging.last=p;renderLayers();return}
   if(!draft)return;event.preventDefault();const p=pointFromEvent(event);if(draft.type==="pen")draft.points.push(p);else draft.end=p
 }
 function endDraw(event){
   if(pendingDrag){pendingDrag=null;renderLayers();return}
-  if(resizing){const{item,context}=resizing;resizing=null;reattachMovedAnnotations([item],new Map([[item.id,context]]));save();renderLayers();return}
+  if(resizing){const{item,context,started}=resizing;resizing=null;if(started){reattachMovedAnnotations([item],new Map([[item.id,context]]));save()}renderLayers();return}
   if(dragging){const{item,context}=dragging;dragging=null;reattachMovedAnnotations([item],new Map([[item.id,context]]));save();renderLayers();return}
   if(!draft)return;const layer=activeLayer(),end=draft.end||pointFromEvent(event);snap();
   if(draft.type==="pen"&&draft.points.length>1){const item={id:uid(),type:"pen",points:draft.points,color:state.drawColor,lineStyle:state.lineStyle};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id}
