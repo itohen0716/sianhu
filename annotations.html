@@ -30,7 +30,7 @@
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.staff.has-hanma .score{padding-bottom:28px}.labels{display:grid;grid-template-rows:repeat(3,18px);font:12px/18px serif;text-align:right;padding-right:7px}
     .score-scroll{min-width:0;overflow:visible}
     .bar-symbol.end-bar{left:auto;right:0;transform:none}
-    .score{position:relative;display:flex;width:100%;min-width:0}.measure{--row-height:18px;--note-size:14px;--note-scale-x:1;--rhythm-width:14px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:var(--measure-grow,1) 1 0;width:auto;min-width:0;border-left:0;position:relative}.measure.hanma{min-width:0}.hanma-label{position:absolute;z-index:6;left:0;right:0;top:calc(100% + 6px);height:18px;color:var(--ink);font:12px/18px serif;text-align:center;white-space:nowrap;pointer-events:none;overflow:visible}
+    .score{position:relative;display:flex;width:100%;min-width:0}.measure{--row-height:18px;--note-size:14px;--note-scale-x:1;--rhythm-width:14px;--hanma-gap:6px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:var(--measure-grow,1) 1 0;width:auto;min-width:0;border-left:0;position:relative}.measure.hanma{min-width:0}.hanma-label{position:absolute;z-index:6;left:0;right:0;top:calc(var(--row-height) * 2.5 + var(--hanma-gap));height:18px;color:var(--ink);font:12px/18px serif;text-align:center;white-space:nowrap;pointer-events:none;overflow:visible}
     .tuplet-layer{position:absolute;z-index:10;left:0;top:-28px;width:100%;height:82px;overflow:visible;pointer-events:none}.tuplet-item path{fill:none;stroke:#222;stroke-width:1.5;stroke-linecap:round}.tuplet-item text{fill:#222;font:700 13px/1 Arial;text-anchor:middle;paint-order:stroke fill;stroke:var(--paper);stroke-width:4px}
     .measure::before,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure::before{left:0}.measure:last-child::after{right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));position:relative}
     .string::before{content:"";position:absolute;z-index:0;left:0;right:0;top:50%;border-top:1px solid var(--ink);pointer-events:none}
@@ -147,7 +147,7 @@
   <input id="scoreFileInput" type="file" hidden>
   <div class="workspace-shell">
   <div class="score-viewport" aria-label="文化譜表示領域">
-  <div class="actions score-toolbar"><a class="page-link" href="./index.html">♪ 写譜ページ</a><button id="playScore" aria-label="入力中の文化譜を演奏">▶ 演奏</button><button id="saveScoreFile" disabled title="保存は写譜ページで行ってください">保存</button><button id="loadScoreFile" disabled title="読込は写譜ページで行ってください">読込</button><button id="printPreview">印刷プレビュー</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div>
+  <div class="actions score-toolbar"><a class="page-link" href="./index.html">♪ 写譜へ戻る</a><button id="playScore" aria-label="入力中の文化譜を演奏">▶ 演奏</button><button id="saveScoreFile" disabled title="保存は写譜ページで行ってください">保存</button><button id="loadScoreFile" disabled title="読込は写譜ページで行ってください">読込</button><button id="printPreview">印刷プレビュー</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button></div>
   <section class="paper">
     <svg id="annotationUnderlay" class="annotation-underlay-svg" aria-hidden="true"></svg>
     <div class="meta"><div class="score-meta"><span>〈</span><select id="tuning" aria-label="調弦"><option>本調子</option><option selected>二上り</option><option>三下り</option></select><span>〉</span><input id="meter" value="四分ノ二拍子" aria-label="拍子"></div><input id="title" value="曲名入力" aria-label="曲名"><span id="summary"></span></div>
@@ -288,16 +288,16 @@ function parseMeter(value){const raw=toAscii(value).replace(/\s+/g,"");let match
 function kanjiNumber(value){const digits=["","一","二","三","四","五","六","七","八","九"];if(value<10)return digits[value];if(value===10)return"十";if(value<20)return`十${digits[value-10]}`;const tens=Math.floor(value/10),ones=value%10;return`${digits[tens]}十${digits[ones]}`}
 function meterLabel(value=state.meter){const meter=parseMeter(value)||parseMeter(defaults.meter);return`${kanjiNumber(meter.denominator)}分ノ${kanjiNumber(meter.numerator)}拍子`}
 function measureCapacity(){return(parseMeter(state.meter)||parseMeter(defaults.meter)).capacity}
-function measureUsedDuration(m){
-  const events=new Map();
-  state.notes.filter(note=>note.m===m).forEach(note=>events.set(note.p,Math.max(events.get(note.p)||0,[1,2,4].includes(note.d)?note.d:1)));
-  return[...events.values()].reduce((sum,duration)=>sum+duration,0);
+function noteDuration(note){return[1,2,4].includes(Number(note?.d))?Number(note.d):4}
+function measureHasRepeat(m){return(state.scoreParts||[]).some(part=>Number(part.m)===Number(m)&&(part.kind==="same1"||part.kind==="same2"||part.type==="measureRepeat"))}
+function intervalsOverlap(startA,durationA,startB,durationB){return startA<startB+durationB&&startB<startA+durationA}
+function measureUsedDuration(m){return state.notes.filter(note=>Number(note.m)===Number(m)).reduce((end,note)=>Math.max(end,(Number(note.p)||0)+noteDuration(note)),0)}
+function canInsertAt(m,p,duration,{rest=false,stringNumber=state.s,chord=false}={}){
+  const capacity=measureCapacityFor(m);if(measureHasRepeat(m)||p<0||p+duration>capacity)return false;
+  return !state.notes.some(note=>{if(Number(note.m)!==Number(m)||!intervalsOverlap(p,duration,Number(note.p)||0,noteDuration(note)))return false;if(rest||note.rest)return true;if(!chord)return true;return Number(note.s)===Number(stringNumber)||Number(note.p)!==Number(p)||noteDuration(note)!==duration});
 }
-function nextMusicalPosition(m,duration){
-  for(let target=m;target<totalMeasures();target++){
-    const capacity=measureCapacityFor(target),used=measureUsedDuration(target);
-    if(used+duration<=capacity)return{m:target,p:used};
-  }
+function nextMusicalPosition(m,duration,options={}){
+  for(let target=m;target<totalMeasures();target++){if(measureHasRepeat(target))continue;const capacity=measureCapacityFor(target),start=target===m?clamp(Number(state.p)||0,0,capacity-1):0;for(let p=start;p+duration<=capacity;p++)if(canInsertAt(target,p,duration,options))return{m:target,p};for(let p=0;p<start&&p+duration<=capacity;p++)if(canInsertAt(target,p,duration,options))return{m:target,p}}
   return null;
 }
 function barlineKey(row,boundary){return`${row}:${boundary}`}
@@ -314,8 +314,8 @@ function measureLocation(m){let start=0;for(let row=0;row<state.rows;row++){cons
 function tupletAnchor(value){const m=Number(value?.m),p=Number(value?.p),savedString=Number(value?.s);if(!Number.isInteger(m)||!Number.isInteger(p))return null;if(value&&Object.prototype.hasOwnProperty.call(value,"s"))return[1,2,3].includes(savedString)&&state.notes.some(note=>!note.rest&&note.m===m&&note.s===savedString&&note.p===p)?{m,s:savedString,p}:null;const legacyNote=state.notes.filter(note=>!note.rest&&note.m===m&&note.p===p).sort((a,b)=>Number(b.s)-Number(a.s))[0];return legacyNote?{m,s:Number(legacyNote.s),p}:null}
 function compareAnchors(a,b){return a.m-b.m||a.p-b.p}
 function normalizeTuplets(){state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).flatMap(entry=>{const start=tupletAnchor(entry?.start),end=tupletAnchor(entry?.end),targetBeats=Number(entry?.targetBeats),exists=anchor=>anchor&&state.notes.some(note=>!note.rest&&note.m===anchor.m&&note.s===anchor.s&&note.p===anchor.p);if(entry?.type!=="triplet"||!exists(start)||!exists(end)||compareAnchors(start,end)>=0||measureLocation(start.m).row!==measureLocation(end.m).row||!Number.isFinite(targetBeats)||targetBeats<=0||targetBeats>16)return[];return[{id:String(entry.id||uid()),type:"triplet",start,end,targetBeats}]})}
-function normalizeScoreParts(){const total=totalMeasures(),capacity=measureCapacity();state.scoreParts=(Array.isArray(state.scoreParts)?state.scoreParts:[]).flatMap(part=>{const kind=part?.kind==="same2"||Number(part?.repeatCount)===2?"same2":part?.kind==="same1"||Number(part?.repeatCount)===1?"same1":null,m=Number(part?.m);if(!kind||!Number.isInteger(m)||m<0||m>=total)return[];const repeatCount=kind==="same2"?2:1;return[{...part,id:String(part.id||uid()),type:"measureRepeat",kind,repeatCount,sourceMeasureOffset:-1,displayMeasureSpan:1,playbackMeasureSpan:repeatCount,alignment:"measureCenter",m,p:Math.floor(capacity/2),x:0}]})}
-function migrateState(){const rawMeter=state.meter,parsed=parseMeter(rawMeter)||parseMeter(defaults.meter),legacy=String(rawMeter||"").includes("拍子"),oldRows=state.rows;state.notes=state.notes.map(note=>!note.rest&&isOpenValue(note.v)?{...note,v:"0"}:note);if(legacy&&parsed.capacity<16&&state.notes.some(note=>note.p>=parsed.capacity)){const remap=(m,p)=>{const absolute=m*16+p;return{m:Math.floor(absolute/parsed.capacity),p:absolute%parsed.capacity}};state.notes=state.notes.map(note=>({...note,...remap(note.m,note.p)}));state.vocalNotes=(state.vocalNotes||[]).map(note=>({...note,...remap(note.m,note.p)}));state.scoreParts=(state.scoreParts||[]).map(part=>({...part,...remap(part.m,part.p)}));state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).map(tuplet=>({...tuplet,start:{...tuplet.start,...remap(tuplet.start?.m,tuplet.start?.p)},end:{...tuplet.end,...remap(tuplet.end?.m,tuplet.end?.p)}}));state.layers=(state.layers||[]).map(layer=>({...layer,items:(layer.items||[]).map(item=>item.anchor?{...item,anchor:{...item.anchor,...remap(item.anchor.m,item.anchor.p)},...(item.endAnchor?{endAnchor:{...item.endAnchor,...remap(item.endAnchor.m,item.endAnchor.p)}}:{})}:item)}));const needed=Math.max(1,...state.notes.map(note=>note.m+1),...state.vocalNotes.map(note=>note.m+1),...state.scoreParts.map(part=>part.m+1));state.rows=clamp(Math.ceil(needed/state.measuresPerRow),state.rows,20);state.measureOffsets=[];const cursor=remap(state.m,state.p);state.m=cursor.m;state.p=cursor.p}state.meter=parsed.signature;normalizeRowMeasureCounts();normalizeMeasureSpecials();normalizeVocalNotes();normalizeTuplets();normalizeScoreParts();const old=state.barlineKinds&&typeof state.barlineKinds==="object"?state.barlineKinds:{};if(Object.keys(old).some(key=>!key.includes(":"))){const migrated={};for(let row=0;row<oldRows;row++){for(let boundary=0;boundary<=state.measuresPerRow;boundary++){const global=row*state.measuresPerRow+boundary;if(old[global])migrated[barlineKey(row,boundary)]=old[global]}}state.barlineKinds=migrated}}
+function normalizeScoreParts(){const total=totalMeasures(),capacity=measureCapacity(),occupied=new Set();state.scoreParts=(Array.isArray(state.scoreParts)?state.scoreParts:[]).flatMap(part=>{const kind=part?.kind==="same2"||Number(part?.repeatCount)===2?"same2":part?.kind==="same1"||Number(part?.repeatCount)===1?"same1":null,m=Number(part?.m);if(!kind||!Number.isInteger(m)||m<0||m>=total||occupied.has(m))return[];occupied.add(m);const repeatCount=kind==="same2"?2:1;return[{...part,id:String(part.id||uid()),type:"measureRepeat",kind,repeatCount,sourceMeasureOffset:-1,displayMeasureSpan:1,playbackMeasureSpan:repeatCount,alignment:"measureCenter",m,p:Math.floor(capacity/2),x:0}]})}
+function migrateState(){const rawMeter=state.meter,parsed=parseMeter(rawMeter)||parseMeter(defaults.meter),legacy=String(rawMeter||"").includes("拍子"),oldRows=state.rows;state.notes=(Array.isArray(state.notes)?state.notes:[]).map(note=>{const d=noteDuration(note);if(note.rest)return{...note,s:2,d,rest:true};return isOpenValue(note.v)?{...note,d,v:"0"}:{...note,d}});if(legacy&&parsed.capacity<16&&state.notes.some(note=>note.p>=parsed.capacity)){const remap=(m,p)=>{const absolute=m*16+p;return{m:Math.floor(absolute/parsed.capacity),p:absolute%parsed.capacity}};state.notes=state.notes.map(note=>({...note,...remap(note.m,note.p)}));state.vocalNotes=(state.vocalNotes||[]).map(note=>({...note,...remap(note.m,note.p)}));state.scoreParts=(state.scoreParts||[]).map(part=>({...part,...remap(part.m,part.p)}));state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).map(tuplet=>({...tuplet,start:{...tuplet.start,...remap(tuplet.start?.m,tuplet.start?.p)},end:{...tuplet.end,...remap(tuplet.end?.m,tuplet.end?.p)}}));state.layers=(state.layers||[]).map(layer=>({...layer,items:(layer.items||[]).map(item=>item.anchor?{...item,anchor:{...item.anchor,...remap(item.anchor.m,item.anchor.p)},...(item.endAnchor?{endAnchor:{...item.endAnchor,...remap(item.endAnchor.m,item.endAnchor.p)}}:{})}:item)}));const needed=Math.max(1,...state.notes.map(note=>note.m+1),...state.vocalNotes.map(note=>note.m+1),...state.scoreParts.map(part=>part.m+1));state.rows=clamp(Math.ceil(needed/state.measuresPerRow),state.rows,20);state.measureOffsets=[];const cursor=remap(state.m,state.p);state.m=cursor.m;state.p=cursor.p}state.meter=parsed.signature;normalizeRowMeasureCounts();normalizeMeasureSpecials();normalizeVocalNotes();normalizeTuplets();normalizeScoreParts();const old=state.barlineKinds&&typeof state.barlineKinds==="object"?state.barlineKinds:{};if(Object.keys(old).some(key=>!key.includes(":"))){const migrated={};for(let row=0;row<oldRows;row++){for(let boundary=0;boundary<=state.measuresPerRow;boundary++){const global=row*state.measuresPerRow+boundary;if(old[global])migrated[barlineKey(row,boundary)]=old[global]}}state.barlineKinds=migrated}}
 function load(){
   try{
     const current=JSON.parse(localStorage.getItem(KEY));
@@ -711,6 +711,10 @@ function resizeControlsHtml(item,x,y,width,height){
   const points={nw:[x,y],n:[x+width/2,y],ne:[x+width,y],e:[x+width,y+height/2],se:[x+width,y+height],s:[x+width/2,y+height],sw:[x,y+height],w:[x,y+height/2]},hit=44,knob=7;
   return `<g class="resize-ui"><rect class="resize-outline" x="${x}" y="${y}" width="${width}" height="${height}"/>${Object.entries(points).map(([handle,[cx,cy]])=>`<rect class="resize-hit" data-item="${item.id}" data-resize-handle="${handle}" x="${cx-hit/2}" y="${cy-hit/2}" width="${hit}" height="${hit}" fill="transparent" stroke="none"/><rect class="resize-knob" x="${cx-knob/2}" y="${cy-knob/2}" width="${knob}" height="${knob}" rx="1.5"/>`).join("")}</g>`;
 }
+function arrowEndpointControlsHtml(item){
+  if(item.id!==selectedItemId)return"";const hit=44,knob=8;
+  return `<g class="resize-ui">${[["start",item.x1,item.y1],["end",item.x2,item.y2]].map(([handle,cx,cy])=>`<rect class="resize-hit" data-item="${item.id}" data-resize-handle="${handle}" x="${cx-hit/2}" y="${cy-hit/2}" width="${hit}" height="${hit}" fill="transparent" stroke="none"/><circle class="resize-knob" cx="${cx}" cy="${cy}" r="${knob/2}"/>`).join("")}</g>`;
+}
 function itemHtml(item){
   const selected=item.id===selectedItemId?" selected":rangeItemIds.has(item.id)?" range-selected":"";
   const dash=(item.lineStyle||"solid")==="dashed"?' stroke-dasharray="8 7"':"";
@@ -725,9 +729,9 @@ function itemHtml(item){
   if(item.type==="line")return `<line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/>`;
   if(item.type==="rect"){const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);return `<g><rect ${common} x="${x}" y="${y}" width="${width}" height="${height}" rx="5"/><rect class="annotation-item rect-hit${selected}" data-item="${item.id}" x="${x}" y="${y}" width="${width}" height="${height}" rx="5" fill="transparent" stroke="none" pointer-events="all"/>${resizeControlsHtml(item,x,y,width,height)}</g>`}
   if(item.type==="arrow"){
-    const dx=item.x2-item.x1,dy=item.y2-item.y1,a=Math.atan2(dy,dx),size=16;
+    const dx=item.x2-item.x1,dy=item.y2-item.y1,length=Math.hypot(dx,dy),a=Math.atan2(dy,dx),size=Math.min(screenAnnotationLength(10),Math.max(screenAnnotationLength(4),length*.18),length*.35);
     const p1={x:item.x2-size*Math.cos(a-.55),y:item.y2-size*Math.sin(a-.55)},p2={x:item.x2-size*Math.cos(a+.55),y:item.y2-size*Math.sin(a+.55)};
-    return `<g class="annotation-item${selected}" data-item="${item.id}"><line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/><polyline ${common} points="${p1.x},${p1.y} ${item.x2},${item.y2} ${p2.x},${p2.y}"/></g>`;
+    return `<g class="annotation-item${selected}" data-item="${item.id}"><line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/><polyline ${common} points="${p1.x},${p1.y} ${item.x2},${item.y2} ${p2.x},${p2.y}"/>${arrowEndpointControlsHtml(item)}</g>`;
   }
   if(item.type==="symbol"){
     const size=screenAnnotationLength(14);
@@ -1020,7 +1024,7 @@ async function startDraw(event){
   const p=pointFromEvent(event);
   if(state.drawTool==="select"){
     const resizeTarget=event.target.closest("[data-resize-handle]"),resizeRecord=resizeTarget?annotationItemRecord(resizeTarget.dataset.item):null;
-    if(resizeRecord&&["rect","marker"].includes(resizeRecord.item.type)){clearWritingRange();state.activeLayerId=resizeRecord.layer.id;selectedItemId=resizeRecord.item.id;event.preventDefault();event.stopPropagation();resizing={item:resizeRecord.item,handle:resizeTarget.dataset.resizeHandle,start:p,last:p,clientX:event.clientX,clientY:event.clientY,started:false,context:null};q("#annotations").setPointerCapture(event.pointerId);return}
+    if(resizeRecord&&["rect","marker","arrow"].includes(resizeRecord.item.type)){clearWritingRange();state.activeLayerId=resizeRecord.layer.id;selectedItemId=resizeRecord.item.id;event.preventDefault();event.stopPropagation();resizing={item:resizeRecord.item,handle:resizeTarget.dataset.resizeHandle,start:p,last:p,clientX:event.clientX,clientY:event.clientY,started:false,context:null};q("#annotations").setPointerCapture(event.pointerId);return}
     const target=event.target.closest("[data-item]"),id=target?.dataset.item;
     if(!id){clearWritingRange();selectedItemId=null;renderLayers();return}
     const record=annotationItemRecord(id);if(!record)return;clearWritingRange();state.activeLayerId=record.layer.id;selectedItemId=id;const item=record.item;
@@ -1091,7 +1095,10 @@ function reattachMovedAnnotations(items,contexts=new Map()){
     setAnnotationSourcePoints(snapshot.item,clients.map(point=>clientPointToSvg(point,snapshot.geometry)));
   });
 }
-function resizeAnnotationItem(item,handle,dx,dy){let left=Math.min(item.x1,item.x2),right=Math.max(item.x1,item.x2),top=Math.min(item.y1,item.y2),bottom=Math.max(item.y1,item.y2);const minimum=10;if(handle.includes("w"))left=clamp(left+dx,0,right-minimum);if(handle.includes("e"))right=Math.max(left+minimum,right+dx);if(handle.includes("n"))top=clamp(top+dy,0,bottom-minimum);if(handle.includes("s"))bottom=Math.max(top+minimum,bottom+dy);item.x1=left;item.x2=right;item.y1=top;item.y2=bottom}
+function resizeAnnotationItem(item,handle,dx,dy){
+  if(item.type==="arrow"){if(handle==="start"){item.x1+=dx;item.y1+=dy}else if(handle==="end"){item.x2+=dx;item.y2+=dy}return}
+  let left=Math.min(item.x1,item.x2),right=Math.max(item.x1,item.x2),top=Math.min(item.y1,item.y2),bottom=Math.max(item.y1,item.y2);const minimum=10;if(handle.includes("w"))left=clamp(left+dx,0,right-minimum);if(handle.includes("e"))right=Math.max(left+minimum,right+dx);if(handle.includes("n"))top=clamp(top+dy,0,bottom-minimum);if(handle.includes("s"))bottom=Math.max(top+minimum,bottom+dy);item.x1=left;item.x2=right;item.y1=top;item.y2=bottom
+}
 function moveDraw(event){
   if(pendingDrag){if(Math.hypot(event.clientX-pendingDrag.clientX,event.clientY-pendingDrag.clientY)<DRAG_START_PX)return;event.preventDefault();const p=pointFromEvent(event),{item,start}=pendingDrag;snap();materializeAnnotationItem(item);const context=annotationMoveContext(item);pendingDrag=null;translateItem(item,p.x-start.x,p.y-start.y,false);dragging={item,last:p,context};renderLayers();return}
   if(resizing){
@@ -1124,20 +1131,21 @@ function changeLayout(rows,measures){
   snap();state.notes=state.notes.flatMap(note=>{const m=keepPosition(note.m);return m===null?[]:[{...note,m}]});state.tuplets=(state.tuplets||[]).flatMap(tuplet=>{const startM=keepPosition(tuplet.start?.m),endM=keepPosition(tuplet.end?.m);return startM===null||endM===null?[]:[{...tuplet,start:{...tuplet.start,m:startM},end:{...tuplet.end,m:endM}}]});state.scoreParts=(state.scoreParts||[]).flatMap(part=>{const m=keepPosition(part.m);return m===null?[]:[{...part,m}]});state.layers=(state.layers||[]).map(layer=>({...layer,items:(layer.items||[]).flatMap(item=>{if(!item.anchor)return[item];const m=keepPosition(item.anchor.m);return m===null?[]:[{...item,anchor:{...item.anchor,m}}]})}));state.measureSpecials=Object.fromEntries(Object.entries(state.measureSpecials||{}).flatMap(([m,special])=>{const next=keepPosition(Number(m));return next===null?[]:[[String(next),special]]}));const current=keepPosition(state.m);state.rows=rows;state.rowMeasureCounts=newCounts;state.measuresPerRow=newCounts[0];state.lyricsGlyphAnchors=[];state.m=current===null?clamp(state.m,0,newTotal-1):current;render();return true;
 }
 function insert(value,isRest=false,duration=state.d){
-  const d=duration,capacity=measureCapacityFor(state.m);
+  const d=duration;
   if(![1,2,4].includes(d))return false;
-  const continuesChord=lastInserted&&lastInserted.d===d&&lastInserted.s!==state.s&&!state.notes.some(n=>n.m===lastInserted.m&&n.s===state.s&&n.p===lastInserted.p);
+  if(measureHasRepeat(state.m)){alert("『同じ1』『同じ2』がある小節には、音数字や休符を入力できません。");return false}
+  const continuesChord=!isRest&&lastInserted&&!lastInserted.rest&&lastInserted.d===d&&lastInserted.s!==state.s&&canInsertAt(lastInserted.m,lastInserted.p,d,{stringNumber:state.s,chord:true});
   if(continuesChord){state.m=lastInserted.m;state.p=lastInserted.p}
   else{
-    const target=nextMusicalPosition(state.m,d);
+    const target=nextMusicalPosition(state.m,d,{rest:isRest,stringNumber:isRest?2:state.s,chord:false});
     if(!target){alert("この音価を入れられる小節がありません。段または小節を追加してください。");return false}
     if(target.m!==state.m)lastInserted=null;
     state.m=target.m;state.p=target.p;
   }
   snap();
-  state.notes=state.notes.filter(n=>!(n.m===state.m&&n.s===state.s&&n.p===state.p));
-  state.notes.push(isRest?{m:state.m,s:state.s,p:state.p,d,rest:true}:{m:state.m,s:state.s,p:state.p,d,v:isOpenValue(value)?"0":value,color:isOpenValue(value)?state.openColor:state.numberColor});
-  lastInserted={m:state.m,s:state.s,p:state.p,d};
+  const insertionString=isRest?2:state.s;
+  state.notes.push(isRest?{m:state.m,s:2,p:state.p,d,rest:true}:{m:state.m,s:state.s,p:state.p,d,v:isOpenValue(value)?"0":value,color:isOpenValue(value)?state.openColor:state.numberColor});
+  lastInserted={m:state.m,s:insertionString,p:state.p,d,rest:isRest};
   const currentCapacity=measureCapacityFor(state.m),np=state.p+d;if(np<currentCapacity)state.p=np;else if(state.m<totalMeasures()-1){state.m++;state.p=Math.min(measureUsedDuration(state.m),measureCapacityFor(state.m)-1)}
   return true;
 }
