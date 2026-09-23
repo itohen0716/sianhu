@@ -362,6 +362,7 @@
   </div>
 </dialog>
 <script src="./annotation-layout.js?v=189"></script>
+<script src="./note-position.js?v=200"></script>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1)),vocalVals=["0",...vals];
@@ -741,6 +742,7 @@ function noteMoveBounds(m,p,originX=columnX(m,p)){
   if(!measure||!selected)return{min:-120,max:120};
   const measureRect=measure.getBoundingClientRect(),noteRect=selected.getBoundingClientRect();
   let min=originX+(measureRect.left+5-noteRect.left),max=originX+(measureRect.right-5-noteRect.right);
+  const cellBounds=window.ShianNotePosition.displayOffsetBounds(measureRect.width,measureCapacityFor(m));min=Math.max(min,cellBounds.min);max=Math.min(max,cellBounds.max);
   const columns=[...new Set(state.notes.filter(note=>note.m===m&&note.p!==p).map(note=>note.p))].sort((a,b)=>a-b);
   const previous=[...columns].reverse().find(value=>value<p),next=columns.find(value=>value>p);
   if(previous!==undefined){const el=q(`[data-note^="${m},"][data-note$=",${previous}"]`);if(el)min=Math.max(min,originX+(el.getBoundingClientRect().right+6-noteRect.left))}
@@ -753,6 +755,7 @@ function rangeNoteMoveBounds(m,p,originX=columnX(m,p)){
   if(!measure||!selected)return{min:-120,max:120};
   const measureRect=measure.getBoundingClientRect(),noteRect=selected.getBoundingClientRect();
   let min=originX+(measureRect.left+5-noteRect.left),max=originX+(measureRect.right-5-noteRect.right);
+  const cellBounds=window.ShianNotePosition.displayOffsetBounds(measureRect.width,measureCapacityFor(m));min=Math.max(min,cellBounds.min);max=Math.min(max,cellBounds.max);
   const selectedColumns=new Set([...rangeNoteKeys].map(key=>key.split(",").map(Number)).filter(([measureNumber])=>measureNumber===m).map(([, ,position])=>position));
   const columns=[...new Set(state.notes.filter(note=>note.m===m&&note.p!==p&&!selectedColumns.has(note.p)).map(note=>note.p))].sort((a,b)=>a-b);
   const previous=[...columns].reverse().find(value=>value<p),next=columns.find(value=>value>p);
@@ -1228,7 +1231,7 @@ function changeLayout(rows,measures){
   const discard=[...state.notes,...state.vocalNotes].some(n=>{const pos=oldLocation(n.m);return!pos||pos.row>=rows||pos.local>=newCounts[pos.row]});
   if(discard&&!confirm("減らした範囲に入力済みの音があります。その音を削除して変更しますか？"))return false;
   snap();const keepPosition=m=>{const pos=oldLocation(m);return pos&&pos.row<rows&&pos.local<newCounts[pos.row]?newIndex(pos.row,pos.local):null},removed=state.notes.filter(n=>keepPosition(n.m)===null).map(n=>anchorKey(n.m,n.s,n.p));removeLinkedSymbols(removed);
-  state.notes=state.notes.flatMap(note=>{const m=keepPosition(note.m);return m===null?[]:[{...note,m}]});
+  state.notes=state.notes.flatMap(note=>{const pos=oldLocation(note.m),m=keepPosition(note.m);if(m===null||!pos)return[];const next={...note,m};if(Object.prototype.hasOwnProperty.call(note,"x")&&oldCounts[pos.row]!==newCounts[pos.row])next.x=window.ShianNotePosition.rescaleDisplayOffset(note.x,oldCounts[pos.row],newCounts[pos.row]);return[next]});
   state.tuplets=(state.tuplets||[]).flatMap(tuplet=>{const startM=keepPosition(tuplet.start?.m),endM=keepPosition(tuplet.end?.m);return startM===null||endM===null?[]:[{...tuplet,start:{...tuplet.start,m:startM},end:{...tuplet.end,m:endM}}]});
   state.vocalNotes=state.vocalNotes.flatMap(note=>{const m=keepPosition(note.m);if(m===null)return[];const anchor=note.anchor?(()=>{const mapped=keepPosition(Number(note.anchor.m));return mapped===null?null:{m:mapped,p:Number(note.anchor.p)}})():null;return[{...note,m,anchor}]});
   state.layers=(state.layers||[]).map(layer=>({...layer,items:(layer.items||[]).flatMap(item=>{if(!item.anchor)return[item];const startM=keepPosition(Number(item.anchor.m)),endM=item.endAnchor?keepPosition(Number(item.endAnchor.m)):null;if(startM===null||item.endAnchor&&endM===null)return[];return[{...item,anchor:{...item.anchor,m:startM},...(item.endAnchor?{endAnchor:{...item.endAnchor,m:endM}}:{})}]})}));
