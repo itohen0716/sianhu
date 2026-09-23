@@ -1287,6 +1287,7 @@ function ensurePrintLayout(){
   /* 印刷ダイアログからは通常画面の座標で既に生成済み。
      beforeprint 時に印刷CSS適用後の座標で再生成すると、書き込みだけがずれる。 */
   if(!q("#printRootV2").childElementCount)applyPrintLayout();
+  ShianPrintV2.audit("#printRootV2");
 }
 window.addEventListener("beforeprint",ensurePrintLayout);
 window.addEventListener("afterprint",()=>{
@@ -1302,7 +1303,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=190"></script>
+  <script src="./print-v2.js?v=192"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
