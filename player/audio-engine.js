@@ -12,9 +12,24 @@
 
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const active = new Set();
+  const playbackTrace = [];
+  const TRACE_LIMIT = 5000;
   let context;
   let teacherBuffer;
   let loadPromise;
+
+  function addTrace(entry) {
+    playbackTrace.push(Object.freeze({ ...entry }));
+    if (playbackTrace.length > TRACE_LIMIT) playbackTrace.splice(0, playbackTrace.length - TRACE_LIMIT);
+  }
+
+  function clearTrace() {
+    playbackTrace.length = 0;
+  }
+
+  function getTrace() {
+    return playbackTrace.map((entry) => ({ ...entry, score: entry.score ? { ...entry.score } : null }));
+  }
 
   function getContext() {
     if (!AudioContextClass) throw new Error("このブラウザーはWeb Audio APIに対応していません。");
@@ -103,8 +118,13 @@
       ? Math.min(requestedDuration, sourceDuration / averageRate)
       : sourceDuration / rate;
     const startDelay = Math.max(0, Number(options.delay) || 0);
-    const startAt = ctx.currentTime + startDelay;
-    const fade = Math.min(0.018, outputDuration / 5);
+    const absoluteWhen = Number(options.when);
+    const startAt = Number.isFinite(absoluteWhen) ? absoluteWhen : ctx.currentTime + startDelay;
+    const scheduledAt = ctx.currentTime;
+    const fadeIn = Math.min(0.018, outputDuration / 5);
+    const fadeOut = options.tightStop ? Math.min(0.04, outputDuration * 0.16) : fadeIn;
+    const gainEndAt = startAt + outputDuration;
+    const sourceStopAt = requestedDuration ? gainEndAt + 0.01 : null;
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
     const voice = { source, gain, context: ctx, stopped: false };
@@ -120,10 +140,15 @@
       ? options.destination
       : ctx.destination;
     source.connect(gain).connect(destination);
+    const volume = Number(options.volume) || 0.9;
     gain.gain.setValueAtTime(0.0001, startAt);
-    gain.gain.linearRampToValueAtTime(Number(options.volume) || 0.9, startAt + fade);
-    gain.gain.setValueAtTime(Number(options.volume) || 0.9, startAt + Math.max(fade, outputDuration - fade));
-    gain.gain.linearRampToValueAtTime(0.0001, startAt + outputDuration);
+    gain.gain.linearRampToValueAtTime(volume, startAt + fadeIn);
+    gain.gain.setValueAtTime(volume, startAt + Math.max(fadeIn, outputDuration - fadeOut));
+    if (options.tightStop && typeof gain.gain.exponentialRampToValueAtTime === "function") {
+      gain.gain.exponentialRampToValueAtTime(0.0001, gainEndAt);
+    } else {
+      gain.gain.linearRampToValueAtTime(0.0001, gainEndAt);
+    }
     source.addEventListener("ended", () => {
       active.delete(voice);
       try { source.disconnect(); gain.disconnect(); } catch (_) {}
@@ -131,8 +156,29 @@
     active.add(voice);
     source.start(startAt, offset, sourceDuration);
     if (requestedDuration) {
-      try { source.stop(startAt + outputDuration + 0.01); } catch (_) {}
+      try { source.stop(sourceStopAt); } catch (_) {}
     }
+    addTrace({
+      id: String(options.trace?.id || `${Date.now()}-${playbackTrace.length}`),
+      score: options.trace && typeof options.trace === "object" ? { ...options.trace } : null,
+      scheduledAt,
+      requestedStartAt: Number.isFinite(absoluteWhen) ? absoluteWhen : null,
+      sourceStartAt: startAt,
+      sourceStopAt,
+      gainStartAt: startAt,
+      gainEndAt,
+      lateBy: Math.max(0, scheduledAt - startAt),
+      requestedDuration,
+      outputDuration,
+      sourceOffset: offset,
+      sourceDuration,
+      playbackRateStart: rate,
+      playbackRateEnd: endRate,
+      playbackRateEndAt: endRate !== rate ? startAt + Math.min(outputDuration, requestedGlideDuration || outputDuration) : startAt,
+      simultaneousVoices: Math.max(1, Number(options.trace?.simultaneousVoices) || 1),
+      audioNodeCount: 2,
+      tightStop: Boolean(options.tightStop)
+    });
 
     return Object.freeze({
       duration: outputDuration,
@@ -188,7 +234,7 @@
     });
   }
 
-  const api = Object.freeze({ getContext, resume, load, play, playSegment, playFrequency, playFrequencyGlide, stop: stopAll, stopAll });
+  const api = Object.freeze({ getContext, resume, load, play, playSegment, playFrequency, playFrequencyGlide, clearTrace, getTrace, stop: stopAll, stopAll });
   root.ShianAudioEngine = api;
   window.ShianAudioEngine = api;
 })();
