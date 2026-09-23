@@ -84,6 +84,9 @@
     @media(max-width:899px){.app{width:auto;max-width:1100px}.workspace-shell{width:auto;grid-template-columns:1fr}.score-viewport,.tool-rail{grid-column:auto;grid-row:auto}.score-viewport{width:auto;overflow:visible;padding-bottom:0}.score-toolbar{width:auto;min-width:0}.score-viewport>.paper{width:auto;min-width:0}.tool-rail{position:static;max-height:none;overflow:visible;padding-left:0}.tool-rail .layer-card{grid-template-columns:minmax(110px,1fr) auto}.tool-rail .color-settings{flex-direction:row}}
     @media print{.workspace-shell{display:block;margin:0}.score-viewport{display:block;width:auto;overflow:visible;padding:0}.score-toolbar,.tool-rail,.resize-ui{display:none!important}.annotation-page #scoreArea .annotation-boundary-space{--annotation-boundary-gap:0px!important;height:0!important;display:none!important}}
     .player-modal[hidden]{display:none}.player-modal{position:fixed;z-index:10000;inset:0;display:grid;place-items:start;padding:6px;background:rgba(49,40,31,.34)}.player-dialog{position:relative;width:min(390px,calc(100vw - 12px));height:min(370px,calc(100vh - 12px));overflow:hidden;border:1px solid #bcae9e;border-radius:15px;background:#fffdf8;box-shadow:0 14px 42px rgba(42,32,22,.3)}.player-dialog iframe{display:block;width:100%;height:100%;border:0}.player-close{position:absolute;z-index:2;top:7px;right:8px;width:34px;height:34px;border:1px solid #ad9984;border-radius:50%;background:#fff;color:#4f4034;font-size:21px;line-height:1;cursor:pointer}body.player-modal-open{overflow:hidden;width:var(--player-layout-width,auto)}
+    .floating-history-controls{position:fixed;z-index:9000;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:6px;padding:6px;border:1px solid rgba(139,121,101,.45);border-radius:12px;background:rgba(255,253,248,.94);box-shadow:0 5px 18px rgba(51,44,37,.2);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);pointer-events:none}.floating-history-controls button{pointer-events:auto;min-height:44px;min-width:78px;padding:8px 11px;border:1px solid #ad9984;border-radius:9px;background:#fff;color:#4f4034;font-weight:700;white-space:nowrap;box-shadow:0 1px 3px rgba(51,44,37,.12)}.floating-history-controls button:disabled{opacity:.42;box-shadow:none}.floating-history-controls button:focus-visible{outline:3px solid rgba(71,125,145,.4);outline-offset:2px}body.player-modal-open .floating-history-controls{display:none}
+    @media(max-width:650px){.floating-history-controls{right:max(7px,env(safe-area-inset-right));bottom:max(7px,env(safe-area-inset-bottom));gap:4px;padding:4px;border-radius:10px}.floating-history-controls button{min-width:66px;min-height:44px;padding:7px 8px;font-size:12px}}
+    @media print{.floating-history-controls{display:none!important}}
     @media(max-width:650px){.app{padding:9px}.head{align-items:start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.paper{padding:17px 8px 24px}.meta{grid-template-columns:1fr;gap:5px;text-align:center}.meta span:last-child{text-align:center}.meta input{font-size:24px}.staff{margin-top:22px}.score-wrap{grid-template-columns:42px minmax(0,1fr)}.staff-head{margin-left:42px}.labels{padding-right:4px;font-size:11px}.panel{padding:12px}.layout-bar,.status{align-items:stretch;flex-direction:column}.layout-controls{justify-content:center}.controls{grid-template-columns:1fr}.tool-rail .nums{grid-template-columns:repeat(5,minmax(0,1fr))}.tool-rail .nums button{min-width:0;min-height:54px}.tool-rail .rests{grid-template-columns:repeat(2,minmax(0,1fr))}.tool-rail .rests button{min-width:0}.bottom{align-items:stretch;flex-direction:column;gap:8px}.form-grid{grid-template-columns:1fr}.colors{margin-left:0}.draw-tools button{flex:1 0 28%}.layer-card{grid-template-columns:1fr}.score-viewport{width:100%;overflow:visible}.score-viewport>.paper{width:100%;min-width:0;max-width:none;zoom:1}.score-toolbar{width:auto;min-width:0}}
     @page{size:A4 portrait;margin:7mm}
     @media print{html,body{width:210mm}body{background:#fff}.app{max-width:none;padding:0}.head,.panel,.layer-panel,.note-color-panel,dialog{display:none!important}.paper{border:0;box-shadow:none;margin:0;padding:0;overflow:visible}.score-scroll{overflow:visible}.score{width:100%}.measure{--row-height:var(--print-row-height,34px);min-width:0!important;width:auto;flex:var(--print-measure-grow,1) 1 0}.labels{grid-template-rows:repeat(3,var(--print-row-height,34px));line-height:var(--print-row-height,34px)}.staff{margin-top:var(--print-staff-gap,28px);break-inside:avoid}.staff.print-page-start{break-before:page;padding-top:0}.note{height:calc(var(--print-row-height,34px) * .94)}.note b{font-size:var(--print-note-size,25px);line-height:calc(var(--print-note-size,25px) * 1.2)}.cell:nth-child(4n){border-right:0!important}.cell.cursor{background:none!important;box-shadow:none!important}.measure.on{background:transparent!important}.measure.on .note b{background:var(--paper)!important}.annotation-item.selected{filter:none!important}.meta{grid-template-columns:1fr 2fr 1fr}#tuning{-webkit-appearance:none;appearance:none;background-image:none;padding-right:4px}}
@@ -142,6 +145,7 @@
 <body class="annotation-page">
 <div id="printRootV2" class="shian-print-v2" aria-hidden="true"></div>
 <div id="playerModal" class="player-modal" hidden role="dialog" aria-modal="true" aria-label="文化譜プレーヤー"><div class="player-dialog"><button id="closePlayer" class="player-close" type="button" aria-label="プレーヤーを閉じる">×</button><iframe id="scorePlayerFrame" title="文化譜プレーヤー" loading="eager"></iframe></div></div>
+<nav class="floating-history-controls" aria-label="常時表示の編集履歴操作"><button id="floatingUndo" type="button" data-history-action="undo">↶ 戻す</button><button id="floatingRedo" type="button" data-history-action="redo">↷ やり直す</button></nav>
 <main class="app">
   <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>書き込み</h1><p class="base-layer-note">写譜は最下層の表示専用レイヤーです。</p></div></header>
   <input id="scoreFileInput" type="file" hidden>
@@ -250,7 +254,7 @@
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1));
 const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
-const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
+const colors=["#FF0000","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const markerColors=[
   {value:"#f4df59",label:"蛍光黄"},{value:"#8fd3e2",label:"蛍光水色"},{value:"#a8d8a0",label:"蛍光黄緑"},
   {value:"#f2a9a0",label:"蛍光桃"},{value:"#c6b3e6",label:"蛍光藤"},{value:"#f5be6b",label:"蛍光橙"}
@@ -559,7 +563,7 @@ function render(){
   applyContentAwareMeasureWidths();
   q(".paper").classList.toggle("lyrics-mode",state.lyricsMode);q("#lyricsMode").checked=state.lyricsMode;
   q(".paper").classList.toggle("preview-mode",state.preview);
-  q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;
+  q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;q("#floatingUndo").disabled=!past.length;q("#floatingRedo").disabled=!future.length;
   q("#numberColor").value=state.numberColor;q("#openColor").value=state.openColor;
   const currentNote=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);
   q("#selectedNoteColor").value=currentNote&&!currentNote.rest?(currentNote.color||(isOpenValue(currentNote.v)?state.openColor:state.numberColor)):"#222222";
@@ -1167,6 +1171,7 @@ function openPrintSettings(){
 }
 load();startAnnotationMode();
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;
+  if(b.dataset.historyAction){const scrollX=window.scrollX,scrollY=window.scrollY,source=q(b.dataset.historyAction==="undo"?"#undo":"#redo");if(source&&!source.disabled)source.click();requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY));return}
   if(b.dataset.s){const nextString=+b.dataset.s;if(lastInserted&&lastInserted.s!==nextString&&!state.notes.some(n=>n.m===lastInserted.m&&n.s===nextString&&n.p===lastInserted.p)){state.m=lastInserted.m;state.p=lastInserted.p}state.s=nextString}
   else if(b.dataset.d)state.d=+b.dataset.d;
   else if(b.dataset.pos){[state.m,state.s,state.p]=b.dataset.pos.split(",").map(Number);lastInserted=null}

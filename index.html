@@ -153,6 +153,9 @@
     /* v74: 編集DOMを印刷しない。保存データから生成した独立した印刷面だけを出力する。 */
     .print-root{display:none}
     .player-modal[hidden]{display:none}.player-modal{position:fixed;z-index:10000;inset:0;display:grid;place-items:start;padding:6px;background:rgba(49,40,31,.34)}.player-dialog{position:relative;width:min(390px,calc(100vw - 12px));height:min(370px,calc(100vh - 12px));overflow:hidden;border:1px solid #bcae9e;border-radius:15px;background:#fffdf8;box-shadow:0 14px 42px rgba(42,32,22,.3)}.player-dialog iframe{display:block;width:100%;height:100%;border:0}.player-close{position:absolute;z-index:2;top:7px;right:8px;width:34px;height:34px;border:1px solid #ad9984;border-radius:50%;background:#fff;color:#4f4034;font-size:21px;line-height:1;cursor:pointer}body.player-modal-open{overflow:hidden;width:var(--player-layout-width,auto)}
+    .floating-history-controls{position:fixed;z-index:9000;right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:6px;padding:6px;border:1px solid rgba(139,121,101,.45);border-radius:12px;background:rgba(255,253,248,.94);box-shadow:0 5px 18px rgba(51,44,37,.2);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);pointer-events:none}.floating-history-controls button{pointer-events:auto;min-height:44px;min-width:78px;padding:8px 11px;border:1px solid #ad9984;border-radius:9px;background:#fff;color:#4f4034;font-weight:700;white-space:nowrap;box-shadow:0 1px 3px rgba(51,44,37,.12)}.floating-history-controls button:disabled{opacity:.42;box-shadow:none}.floating-history-controls button:focus-visible{outline:3px solid rgba(71,125,145,.4);outline-offset:2px}body.player-modal-open .floating-history-controls{display:none}
+    @media(max-width:650px){.floating-history-controls{right:max(7px,env(safe-area-inset-right));bottom:max(7px,env(safe-area-inset-bottom));gap:4px;padding:4px;border-radius:10px}.floating-history-controls button{min-width:66px;min-height:44px;padding:7px 8px;font-size:12px}}
+    @media print{.floating-history-controls{display:none!important}}
     @media print{
       body>main.app{display:none!important}
       .print-root{display:none!important}
@@ -201,6 +204,7 @@
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
 <div id="printRootV2" class="shian-print-v2" aria-hidden="true"></div>
 <div id="playerModal" class="player-modal" hidden role="dialog" aria-modal="true" aria-label="文化譜プレーヤー"><div class="player-dialog"><button id="closePlayer" class="player-close" type="button" aria-label="プレーヤーを閉じる">×</button><iframe id="scorePlayerFrame" title="文化譜プレーヤー" loading="eager"></iframe></div></div>
+<nav class="floating-history-controls" aria-label="常時表示の編集履歴操作"><button id="floatingUndo" type="button" data-history-action="undo">↶ 戻す</button><button id="floatingRedo" type="button" data-history-action="redo">↷ やり直す</button></nav>
 <main class="app">
   <header class="head"><div><p class="brand">絲庵 ─ Shian ─</p><h1>写譜</h1></div></header>
   <input id="scoreFileInput" type="file" hidden>
@@ -363,7 +367,7 @@
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1)),vocalVals=["0",...vals];
 const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
-const colors=["#d63c32","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
+const colors=["#FF0000","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const TECHNIQUE_LAYER_ID="technique-layer";
 const defaults={notes:[],tuplets:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalDotted:false,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},measureSpecials:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],lyricsGlyphAnchors:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#f4df59",markerStyleVersion:2,numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",annotationTarget:"staff",preview:true,annotationCoordVersion:2,annotationLayout:{version:2,unit:"staff-line",boundaries:{}},printMode:"auto",manualPageRows:""};
 defaults.vocalSlurs=[];
@@ -905,7 +909,7 @@ function render(){
   applyContentAwareMeasureWidths();
   q(".paper").classList.toggle("lyrics-mode",state.lyricsMode);q("#vocalVisible").checked=state.vocalVisible;q("#lyricsVisible").checked=state.lyricsVisible;
   q(".paper").classList.toggle("preview-mode",state.preview);
-  q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;
+  q("#undo").disabled=!past.length;q("#redo").disabled=!future.length;q("#floatingUndo").disabled=!past.length;q("#floatingRedo").disabled=!future.length;
   q("#numberColor").value=state.numberColor;q("#openColor").value=state.openColor;
   const currentNote=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);
   q("#selectedNoteColor").value=currentNote&&!currentNote.rest?(currentNote.color||(isOpenValue(currentNote.v)?state.openColor:state.numberColor)):"#222222";
@@ -1283,6 +1287,7 @@ function openPrintSettings(){
 }
 load();state.scoreEditLayer="notes";drawing=false;
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.historyAction){const scrollX=window.scrollX,scrollY=window.scrollY,source=q(b.dataset.historyAction==="undo"?"#undo":"#redo");if(source&&!source.disabled)source.click();requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY));return}
   if(b.id==="tripletTool"){tripletMode=!tripletMode;tripletStartAnchor=null;slurStartAnchor=null;selectedScoreTarget=null;selectedItemId=null;state.selectedSymbol=null;state.drawTool="select";drawing=false;state.scoreEditLayer="technique";cursorVisible=false}
   else if(tripletMode&&b.dataset.note){const [m,s,p]=b.dataset.note.split(",").map(Number),anchor={m,s,p};if(!tripletStartAnchor){tripletStartAnchor=anchor;selectedScoreTarget=null}else if(createTriplet(tripletStartAnchor,anchor)){tripletStartAnchor=null;selectedScoreTarget=null}}
   else if(b.id==="vocalSlur"){vocalTool=vocalTool==="slur"?"note":"slur";vocalSlurStartId=null;selectedScoreTarget=null;cursorVisible=false}
