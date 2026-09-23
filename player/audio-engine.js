@@ -28,7 +28,18 @@
   }
 
   function getTrace() {
-    return playbackTrace.map((entry) => ({ ...entry, score: entry.score ? { ...entry.score } : null }));
+    return playbackTrace.map((entry) => {
+      const activeVoiceCountAtStart = playbackTrace.filter((other) =>
+        other.sourceStartAt <= entry.sourceStartAt &&
+        (!Number.isFinite(other.sourceStopAt) || other.sourceStopAt > entry.sourceStartAt)
+      ).length;
+      return {
+        ...entry,
+        score: entry.score ? { ...entry.score } : null,
+        activeVoiceCountAtStart,
+        residualVoiceCountAtStart: Math.max(0, activeVoiceCountAtStart - entry.simultaneousVoices)
+      };
+    });
   }
 
   function getContext() {
@@ -104,11 +115,13 @@
     const baseSourceDuration = Math.max(0.05, Math.min(segment.end, audioBuffer.duration) - offset);
     const availableSourceDuration = Math.max(baseSourceDuration, Math.min(Number(segment.tailEnd) || segment.end, audioBuffer.duration) - offset);
     const requestedDuration = Math.max(0, Number(options.duration) || 0);
-    const requestedGlideDuration = endRate !== rate
-      ? Math.min(requestedDuration || Infinity, Math.max(0.01, Number(options.glideDuration) || requestedDuration || 0.01))
+    const measuredAttackHold = Math.max(0, Number(options.glideAttackHold) || Number(segment.attackHold) / rate || 0);
+    const requestedAttackHold = endRate !== rate && requestedDuration
+      ? Math.min(measuredAttackHold, Math.max(0, requestedDuration - 0.04))
       : 0;
-    const averageRate = requestedDuration && requestedGlideDuration
-      ? (((rate + endRate) / 2) * requestedGlideDuration + endRate * (requestedDuration - requestedGlideDuration)) / requestedDuration
+    const requestedSlideDuration = Math.max(0, requestedDuration - requestedAttackHold);
+    const averageRate = requestedDuration && endRate !== rate
+      ? (rate * requestedAttackHold + ((rate + endRate) / 2) * requestedSlideDuration) / requestedDuration
       : rate;
     const minimumOutputDuration = Math.max(0, Number(options.minimumDuration) || 0);
     const sourceDuration = requestedDuration
@@ -121,10 +134,15 @@
     const absoluteWhen = Number(options.when);
     const startAt = Number.isFinite(absoluteWhen) ? absoluteWhen : ctx.currentTime + startDelay;
     const scheduledAt = ctx.currentTime;
-    const fadeIn = Math.min(0.018, outputDuration / 5);
-    const fadeOut = options.tightStop ? Math.min(0.04, outputDuration * 0.16) : fadeIn;
+    const attackHold = endRate !== rate
+      ? Math.min(requestedAttackHold, Math.max(0, outputDuration - 0.04))
+      : 0;
+    const pitchChangeStartAt = startAt + attackHold;
+    const fadeIn = Math.min(0.003, outputDuration / 10);
+    const fadeOut = options.tightStop ? Math.min(0.04, outputDuration * 0.16) : Math.min(0.004, outputDuration / 10);
+    const gainFadeOutStartAt = startAt + Math.max(fadeIn, outputDuration - fadeOut);
     const gainEndAt = startAt + outputDuration;
-    const sourceStopAt = requestedDuration ? gainEndAt + 0.01 : null;
+    const sourceStopAt = requestedDuration ? gainEndAt : null;
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
     const voice = { source, gain, context: ctx, stopped: false };
@@ -132,9 +150,8 @@
     source.buffer = audioBuffer;
     source.playbackRate.setValueAtTime(rate, startAt);
     if (endRate !== rate) {
-      const glideDuration = Math.min(outputDuration, requestedGlideDuration || outputDuration);
-      source.playbackRate.linearRampToValueAtTime(endRate, startAt + glideDuration);
-      source.playbackRate.setValueAtTime(endRate, startAt + outputDuration);
+      source.playbackRate.setValueAtTime(rate, pitchChangeStartAt);
+      source.playbackRate.linearRampToValueAtTime(endRate, gainEndAt);
     }
     const destination = options.destination && typeof options.destination.connect === "function"
       ? options.destination
@@ -143,7 +160,7 @@
     const volume = Number(options.volume) || 0.9;
     gain.gain.setValueAtTime(0.0001, startAt);
     gain.gain.linearRampToValueAtTime(volume, startAt + fadeIn);
-    gain.gain.setValueAtTime(volume, startAt + Math.max(fadeIn, outputDuration - fadeOut));
+    gain.gain.setValueAtTime(volume, gainFadeOutStartAt);
     if (options.tightStop && typeof gain.gain.exponentialRampToValueAtTime === "function") {
       gain.gain.exponentialRampToValueAtTime(0.0001, gainEndAt);
     } else {
@@ -166,6 +183,8 @@
       sourceStartAt: startAt,
       sourceStopAt,
       gainStartAt: startAt,
+      gainAttackEndAt: startAt + fadeIn,
+      gainFadeOutStartAt,
       gainEndAt,
       lateBy: Math.max(0, scheduledAt - startAt),
       requestedDuration,
@@ -174,7 +193,8 @@
       sourceDuration,
       playbackRateStart: rate,
       playbackRateEnd: endRate,
-      playbackRateEndAt: endRate !== rate ? startAt + Math.min(outputDuration, requestedGlideDuration || outputDuration) : startAt,
+      playbackRateChangeStartAt: pitchChangeStartAt,
+      playbackRateEndAt: endRate !== rate ? gainEndAt : startAt,
       simultaneousVoices: Math.max(1, Number(options.trace?.simultaneousVoices) || 1),
       audioNodeCount: 2,
       tightStop: Boolean(options.tightStop)
