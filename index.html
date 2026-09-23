@@ -30,7 +30,7 @@
     .score-scroll{min-width:0;overflow:visible}
     .score{position:relative;display:flex;width:100%;min-width:0}.measure{--row-height:18px;--note-size:14px;--note-scale-x:1;--rhythm-width:14px;--hanma-gap:6px;display:grid;grid-template-rows:repeat(3,var(--row-height));flex:var(--measure-grow,1) 1 0;width:auto;min-width:0;border-left:0;position:relative}.measure.hanma{min-width:0}.measure-selector{position:absolute;z-index:1;inset:0;border:0;background:transparent;padding:0}.hanma-label{position:absolute;z-index:6;left:0;right:0;top:calc(var(--row-height) * 2.5 + var(--hanma-gap));height:18px;color:var(--ink);font:12px/18px serif;text-align:center;white-space:nowrap;pointer-events:none;overflow:visible}
     .tuplet-layer{position:absolute;z-index:10;left:0;top:-28px;width:100%;height:82px;overflow:visible;pointer-events:none}.tuplet-item{pointer-events:all;cursor:pointer}.tuplet-item path{fill:none;stroke:#222;stroke-width:1.5;stroke-linecap:round}.tuplet-item text{fill:#222;font:700 13px/1 Arial;text-anchor:middle;paint-order:stroke fill;stroke:var(--paper);stroke-width:4px}.tuplet-item.selected path{stroke:var(--blue);stroke-width:2.5}.tuplet-item.selected text{fill:var(--blue)}.note.tuplet-start b,.note.slur-start b{outline:2px solid #477d91;outline-offset:3px}
-    .measure:last-child{border-right:0}.measure.on{background:#fff9dd}.string{display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));position:relative}
+    .measure:last-child{border-right:0}.measure.on{background:#fff9dd}.measure.playback-active{box-shadow:inset 0 0 0 3px rgba(201,169,39,.72);background:#fff9dd}.string{display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));position:relative}
     .barline-handle{position:absolute;z-index:7;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);left:-18px;width:36px;border:0;background:transparent;touch-action:none;cursor:ew-resize}.barline-handle::after{content:"";position:absolute;left:17px;top:0;bottom:0;border-left:1.5px solid var(--ink)}.barline-handle:hover::after,.barline-handle:focus-visible::after,.barline-handle.selected::after{border-left:4px solid #c9a927}.measure:first-child>.barline-handle,.measure:last-child::after{content:"";position:absolute;z-index:6;top:calc(var(--row-height)/2);bottom:calc(var(--row-height)/2);border-left:1.5px solid var(--ink)}.measure:first-child>.barline-handle{cursor:pointer}.measure:last-child::after{right:0}
     /* 段末記号はSVG外枠ではなく、実際に見える外側線を譜線終端へ合わせる。 */
     .barline-handle.endline-handle{left:auto;right:-3px;cursor:pointer}
@@ -193,7 +193,7 @@
       .barline-handle{top:calc(var(--row-height)/2);bottom:auto;height:calc(var(--row-height)*2)}
       .barline-handle::after{top:0;bottom:auto;height:100%}
       .measure:first-child>.barline-handle{left:-17px;border-left:0}
-      .measure:last-child::after{display:none}
+      .measure:last-child::after{display:none}.measure.playback-active{box-shadow:none!important;background:transparent!important}
       .barline-handle.endline-handle{right:0}
       .barline-handle .bar-symbol{top:0;bottom:auto;height:100%;overflow:visible}
     }
@@ -586,9 +586,10 @@ function openScorePlayer(){
   try{sessionStorage.setItem("shian-live-player-score",JSON.stringify(payload))}catch(error){console.warn("演奏データを一時保存できませんでした。",error)}
   const modal=q("#playerModal"),frame=q("#scorePlayerFrame");document.body.style.setProperty("--player-layout-width",`${document.body.getBoundingClientRect().width}px`);modal.hidden=false;document.body.classList.add("player-modal-open");
   const send=()=>{try{frame.contentWindow?.postMessage({type:"SHIAN_SCORE_UPDATE",payload},location.origin)}catch(error){console.warn("プレーヤーへ譜面を送れませんでした。",error)}};
-  frame.onload=()=>{send();setTimeout(send,150)};if(!frame.getAttribute("src"))frame.src="./player/index.html?v=196";else send();q("#closePlayer").focus();
+  frame.onload=()=>{send();setTimeout(send,150)};if(!frame.getAttribute("src"))frame.src="./player/index.html?v=197";else send();q("#closePlayer").focus();
 }
-function closeScorePlayer(){const modal=q("#playerModal"),frame=q("#scorePlayerFrame");try{frame.contentWindow?.postMessage({type:"SHIAN_PLAYER_STOP"},location.origin)}catch(error){console.warn("プレーヤーを停止できませんでした。",error)}modal.hidden=true;document.body.classList.remove("player-modal-open");document.body.style.removeProperty("--player-layout-width");q("#playScore")?.focus()}
+function closeScorePlayer(){const modal=q("#playerModal"),frame=q("#scorePlayerFrame");try{frame.contentWindow?.postMessage({type:"SHIAN_PLAYER_STOP"},location.origin)}catch(error){console.warn("プレーヤーを停止できませんでした。",error)}q(".measure.playback-active")?.classList.remove("playback-active");modal.hidden=true;document.body.classList.remove("player-modal-open");document.body.style.removeProperty("--player-layout-width");q("#playScore")?.focus()}
+window.addEventListener("message",event=>{const frame=q("#scorePlayerFrame");if(event.origin!==location.origin||event.source!==frame?.contentWindow||event.data?.type!=="SHIAN_PLAYER_POSITION")return;q(".measure.playback-active")?.classList.remove("playback-active");const displayM=Number(event.data.displayM);if(!Number.isInteger(displayM))return;const measure=q(`.measure[data-measure="${displayM}"]`);if(!measure)return;measure.classList.add("playback-active");measure.scrollIntoView({block:"center",inline:"nearest",behavior:"auto"})});
 function safeFileName(value){const name=String(value||"文化譜").trim().replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g," ");return(name&&name!=="曲名入力"?name:"文化譜").slice(0,80)}
 function updateTitleWidth(){const el=q("#title");if(!el)return;const length=Math.max(1,Array.from(el.value||"").length);el.style.width=`min(100%, ${length+2}em)`}
 function downloadScoreBlob(blob,fileName){
