@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>絲庵 文化譜書き込み</title>
   <link rel="preload" href="./fonts/BIZUDPMincho-Regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./print-v2.css?v=189">
+  <link rel="stylesheet" href="./print-v2.css?v=201">
   <style>
     @font-face{font-family:"Shian Score BIZ UDPMincho";src:url("./fonts/BIZUDPMincho-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
@@ -266,6 +266,7 @@ defaults.vocalSlurs=[];
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,pendingDrag=null,dragging=null,resizing=null,printing=false,lastInserted=null,commentDialogResolve=null;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;
+let writingClipboard=[],writingPasteSequence=0;
 const DRAG_START_PX=4;
 const rangeItemIds=new Set();
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
@@ -338,8 +339,9 @@ function ensureTechniqueLayer(){
   }
   let layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
   if(!layer){layer={id:TECHNIQUE_LAYER_ID,name:"奏法",visible:true,fixed:true,items:[]};state.layers.unshift(layer)}
-  layer.items.forEach(item=>{if(item.type==="symbol"&&(item.text==="[スリ]"||item.text==="スリ")){item.text="スリ";item.slurWidth=clamp(Number(item.slurWidth)||34,22,90)}});normalizeTechniqueSlurs(layer);
+  layer.items.forEach(item=>{if(item.type!=="symbol")return;if(item.text==="[スリ]"||item.text==="スリ"){item.text="スリ";item.slurWidth=clamp(Number(item.slurWidth)||34,22,90)}if(item.text==="「"||item.technique==="oshi-bachi"){item.text="押しバチ";item.technique="oshi-bachi";item.techniqueVersion=1;item.side="above"}});normalizeTechniqueSlurs(layer);
   if(state.selectedSymbol==="[スリ]")state.selectedSymbol="スリ";
+  if(state.selectedSymbol==="「")state.selectedSymbol="押しバチ";
   layer.name="奏法";layer.fixed=true;
   if(!state.layers.some(item=>item.id===state.activeLayerId&&item.id!==TECHNIQUE_LAYER_ID))state.activeLayerId=state.layers.find(item=>item.id!==TECHNIQUE_LAYER_ID)?.id||null;
 }
@@ -508,6 +510,7 @@ function printTechniqueHtml(n){
       const width=clamp(Number(item.slurWidth)||34,22,90),viewWidth=Math.max(42,width+8),center=viewWidth/2,left=center-width/2,right=center+width/2;
       return `<svg class="print-technique ${side}" style="--tech-width:${viewWidth}px;--tech-height:28px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 ${viewWidth} 28" aria-hidden="true"><text x="${center}" y="9">スリ</text><path d="M ${left} 22 Q ${center} 14 ${right} 22"/></svg>`;
     }
+    if(item.technique==="oshi-bachi"||item.text==="押しバチ")return `<svg class="print-technique ${side}" style="--tech-width:42px;--tech-height:24px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 42 24" aria-label="押しバチ"><path d="M 14 7 H 27 V 19"/></svg>`;
     if(["Ⅰ","Ⅱ","Ⅲ"].includes(item.text))return `<span class="print-technique finger ${side}" style="--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" aria-hidden="true">${esc(item.text)}</span>`;
     return `<svg class="print-technique ${side}" style="--tech-width:42px;--tech-height:24px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 42 24" aria-hidden="true"><text x="21" y="16">${esc(item.text)}</text></svg>`;
   }).join("");
@@ -587,6 +590,7 @@ function activeLayer(){return state.layers.find(layer=>layer.id===state.activeLa
 function selectedItem(){return activeLayer()?.items.find(item=>item.id===selectedItemId)||null}
 function annotationItemRecord(id){for(const layer of state.layers||[]){const item=(layer.items||[]).find(entry=>entry.id===id);if(item)return{layer,item}}return null}
 function uid(){return globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function"?globalThis.crypto.randomUUID():`item-${Date.now()}-${Math.random().toString(36).slice(2)}`}
+function isTextEditingTarget(target){return target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target?.isContentEditable}
 function anchorKey(m,s,p){return`${m},${s},${p}`}
 function noteAnchorPoint(anchor,side="above",symbolText=""){
   const svg=q("#annotations"),note=q(`[data-note="${anchorKey(anchor.m,anchor.s,anchor.p)}"]`);
@@ -756,6 +760,7 @@ function itemHtml(item){
       const width=clamp(Number(item.slurWidth)||34,22,90),left=item.x-width/2,right=item.x+width/2,slurY=item.y;
       return `<g class="annotation-item symbol-item anchored-symbol slur-symbol${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y-9}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text><path d="M ${left} ${slurY+4} Q ${item.x} ${slurY-4} ${right} ${slurY+4}" fill="none" stroke="${item.color}" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>`;
     }
+    if(item.technique==="oshi-bachi"||item.text==="押しバチ"){const half=screenAnnotationLength(7),drop=screenAnnotationLength(12);return `<g class="annotation-item symbol-item anchored-symbol oshi-bachi-symbol${selected}" data-item="${item.id}" aria-label="押しバチ"><path d="M ${item.x-half} ${item.y-half*.55} H ${item.x+half} V ${item.y+drop}" fill="none" stroke="${item.color}" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" vector-effect="non-scaling-stroke"/></g>`}
     const fingerClass=["Ⅰ","Ⅱ","Ⅲ"].includes(item.text)?" finger-symbol":"";
     return `<g class="annotation-item symbol-item anchored-symbol${fingerClass} text-item${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text></g>`;
   }
@@ -1205,8 +1210,8 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||
       save(true);
     }
   }
-  else if(b.id==="undo"&&past.length){future.unshift(JSON.stringify(serializable()));Object.assign(state,JSON.parse(past.pop()));selectedItemId=null}
-  else if(b.id==="redo"&&future.length){past.push(JSON.stringify(serializable()));Object.assign(state,JSON.parse(future.shift()));selectedItemId=null}
+  else if(b.id==="undo"&&past.length){future.unshift(JSON.stringify(serializable()));Object.assign(state,JSON.parse(past.pop()));clearWritingRange();selectedItemId=null}
+  else if(b.id==="redo"&&future.length){past.push(JSON.stringify(serializable()));Object.assign(state,JSON.parse(future.shift()));clearWritingRange();selectedItemId=null}
   else if(b.id==="addRow"){changeLayout(state.rows+1,measuresInRow(measureLocation(state.m).row));return}
   else if(b.id==="removeRow"){changeLayout(state.rows-1,measuresInRow(measureLocation(state.m).row));return}
   else if(b.id==="addMeasure"){changeLayout(state.rows,measuresInRow(measureLocation(state.m).row)+1);return}
@@ -1237,6 +1242,23 @@ function selectableWritingItems(){
   return(state.layers||[]).filter(layer=>layer.id!==TECHNIQUE_LAYER_ID&&layer.visible!==false).flatMap(layer=>layer.items||[]);
 }
 function selectedWritingItems(){const ids=rangeItemIds;return selectableWritingItems().filter(item=>ids.has(item.id))}
+function selectedWritingRecords(){
+  if(rangeItemIds.size)return(state.layers||[]).filter(layer=>layer.id!==TECHNIQUE_LAYER_ID&&layer.visible!==false).flatMap(layer=>(layer.items||[]).filter(item=>rangeItemIds.has(item.id)).map(item=>({layer,item})));
+  const record=selectedItemId?annotationItemRecord(selectedItemId):null;return record&&record.layer.id!==TECHNIQUE_LAYER_ID?[record]:[];
+}
+function copyWritingSelection(){
+  const geometry=annotationGeometry(),records=selectedWritingRecords();if(!records.length)return false;
+  writingClipboard=records.map(({layer,item})=>({layerId:layer.id,item:structuredClone(visualAnnotationItem(item,geometry)||item)}));writingPasteSequence=0;return true;
+}
+function pasteOffsetCss(sequence){const index=Math.max(0,sequence-1)%16;return{x:12*((index%4)+1),y:12*(Math.floor(index/4)+1)}}
+function pasteWritingSelection(){
+  if(!writingClipboard.length)return false;snap();writingPasteSequence+=1;const offset=pasteOffsetCss(writingPasteSequence),units=svgUnitsPerCssPx(),created=[];
+  writingClipboard.forEach(entry=>{
+    let layer=(state.layers||[]).find(item=>item.id===entry.layerId&&item.id!==TECHNIQUE_LAYER_ID);if(!layer)layer=ensureWritableLayer();
+    const item=structuredClone(entry.item);item.id=uid();delete item.selected;delete item.dragging;delete item.resizing;delete item.dom;translateItem(item,offset.x*units,offset.y*units,false);attachAnnotationTarget(item,item.layoutTarget||state.annotationTarget);layer.items.push(item);created.push({layer,item});
+  });
+  clearWritingRange();created.forEach(({item})=>rangeItemIds.add(item.id));if(created.length===1){selectedItemId=created[0].item.id;rangeItemIds.clear()}else selectedItemId=null;state.activeLayerId=created[0]?.layer.id||state.activeLayerId;save();render();return true;
+}
 function clearWritingRange(){rangeItemIds.clear();rangeMove=null;q(".paper")?.classList.remove("range-moving");qAll("#annotations .range-selected").forEach(element=>element.classList.remove("range-selected"))}
 function writingSelectionRect(startX,startY,endX,endY){return{left:Math.min(startX,endX),top:Math.min(startY,endY),right:Math.max(startX,endX),bottom:Math.max(startY,endY)}}
 function writingIntersects(a,b){return a.left<=b.right&&a.right>=b.left&&a.top<=b.bottom&&a.bottom>=b.top}
@@ -1310,8 +1332,10 @@ q("#scoreArea").addEventListener("input",event=>{const input=event.target.closes
 q("#closePlayer").addEventListener("click",closeScorePlayer);q("#playerModal").addEventListener("click",event=>{if(event.target===q("#playerModal"))closeScorePlayer()});document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!q("#playerModal").hidden)closeScorePlayer()});
 document.addEventListener("keydown",event=>{
   if(event.key==="Shift"){shiftHeld=true;q(".paper")?.classList.add("range-select-mode");return}
+  const target=event.target;if(isTextEditingTarget(target))return;
+  if((event.ctrlKey||event.metaKey)&&!event.altKey&&String(event.key).toLowerCase()==="c"){if(copyWritingSelection())event.preventDefault();return}
+  if((event.ctrlKey||event.metaKey)&&!event.altKey&&String(event.key).toLowerCase()==="v"){if(pasteWritingSelection())event.preventDefault();return}
   if(event.ctrlKey||event.metaKey||event.altKey)return;
-  const target=event.target;if(target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target?.isContentEditable)return;
   if(event.key==="Delete"&&rangeItemIds.size){
     event.preventDefault();snap();state.layers=(state.layers||[]).map(layer=>layer.id===TECHNIQUE_LAYER_ID?layer:{...layer,items:(layer.items||[]).filter(item=>!rangeItemIds.has(item.id))});clearWritingRange();selectedItemId=null;save();render();return;
   }
@@ -1345,7 +1369,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=192"></script>
+  <script src="./print-v2.js?v=201"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>

@@ -198,7 +198,7 @@
       .barline-handle .bar-symbol{top:0;bottom:auto;height:100%;overflow:visible}
     }
   </style>
-  <link rel="stylesheet" href="./print-v2.css?v=189">
+  <link rel="stylesheet" href="./print-v2.css?v=201">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
@@ -229,7 +229,7 @@
       <button data-tool="select">選択・移動</button>
       <div id="colors" class="colors"></div>
       <div id="symbolTools" class="symbol-tools">
-        <button data-symbol="ス" title="スクイ">スクイ<br>ス</button><button data-symbol="ハ" title="ハジキ">ハジキ<br>ハ</button><button data-symbol="スリ" title="スリ（下側に山形スラー）">スリ<br>⌒</button><button data-symbol="ウ" title="ウチ">ウチ<br>ウ</button><button data-symbol="「" title="押し撥">押し撥<br>「</button><button data-symbol="ケ" title="消し">消し<br>ケ</button>
+        <button data-symbol="ス" title="スクイ">スクイ<br>ス</button><button data-symbol="ハ" title="ハジキ">ハジキ<br>ハ</button><button data-symbol="スリ" title="スリ（下側に山形スラー）">スリ<br>⌒</button><button data-symbol="ウ" title="ウチ">ウチ<br>ウ</button><button data-symbol="押しバチ" title="対象音へ付ける押しバチ奏法">押しバチ<br>┐</button><button data-symbol="ケ" title="消し">消し<br>ケ</button>
         <button class="roman" data-symbol="Ⅰ">Ⅰ</button><button class="roman" data-symbol="Ⅱ">Ⅱ</button><button class="roman" data-symbol="Ⅲ">Ⅲ</button><button id="tripletTool" title="開始音と終了音を選んで三連符を設定">三連符<br><small>⌒ 3</small></button>
       </div>
     </div>
@@ -259,7 +259,7 @@
     <div class="staff-only part-tools" id="barlineParts"><button data-bar-kind="single"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>通常線</button><button data-bar-kind="double"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="11" y1="2" x2="11" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="17" y1="2" x2="17" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>2本線</button><button data-bar-kind="repeat-start"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="13" y1="2" x2="13" y2="26" stroke="currentColor" stroke-width="1.5"/><circle cx="21" cy="10" r="2" fill="currentColor"/><circle cx="21" cy="18" r="2" fill="currentColor"/></svg>くり返しA</button><button data-bar-kind="repeat-end"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><circle cx="7" cy="10" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/><line x1="15" y1="2" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="2" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>くり返しB</button><button data-bar-kind="final"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="10" y1="2" x2="10" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="18" y1="2" x2="18" y2="26" stroke="currentColor" stroke-width="4"/></svg>終止符</button></div>
     <button type="button" id="openKeyboardHelp" class="keyboard-help-label notes-only">キーボードで入力する方法</button>
     <div class="bottom notes-only"><span>入力内容はこの端末に自動保存されます。</span><button id="clear" class="clear">譜面を空にする</button></div>
-    <div class="status status-bottom"><div class="notes-only"><small>現在の入力位置</small><strong id="status"></strong><small id="keyboardStatus">キーボード：糸*音価*数字（例 3*16*19）</small></div><div class="staff-only"><small>小節線の編集</small><strong>動かす小節線を選択してください</strong><small>数字には反応しません。</small></div><div class="move"><button id="prev" class="notes-only" aria-label="前の入力位置">←</button><button id="next" class="notes-only" aria-label="次の入力位置">→</button><button id="moveSelectedLeft">選択を左へ</button><button id="moveSelectedRight">選択を右へ</button><button id="clearScoreSelection" class="notes-only">選択解除</button><button id="resetPositions">位置を標準に戻す</button><button id="delete" class="del notes-only">選択した音を削除</button></div></div>
+    <div class="status status-bottom"><div class="notes-only"><small>現在の入力位置</small><strong id="status"></strong><small id="keyboardStatus">キーボード：糸*音価*数字（例 3*16*19）</small></div><div class="staff-only"><small>小節線の編集</small><strong>動かす小節線を選択してください</strong><small>数字には反応しません。</small></div><div class="move"><button id="prev" class="notes-only" aria-label="前の入力位置">←</button><button id="next" class="notes-only" aria-label="次の入力位置">→</button><button id="moveSelectedLeft">選択を左へ</button><button id="moveSelectedRight">選択を右へ</button><button id="applyOshiBachi" class="notes-only" title="選択した1音へ押しバチを付ける">押しバチを付ける</button><button id="clearScoreSelection" class="notes-only">選択解除</button><button id="resetPositions">位置を標準に戻す</button><button id="delete" class="del notes-only">選択した音を削除</button></div></div>
   </section>
   <section class="note-color-panel editor-panel" data-editor-panel="notes">
     <h2>数字・開放弦の色</h2>
@@ -505,8 +505,9 @@ function ensureTechniqueLayer(){
   }
   let layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
   if(!layer){layer={id:TECHNIQUE_LAYER_ID,name:"奏法",visible:true,fixed:true,items:[]};state.layers.unshift(layer)}
-  layer.items.forEach(item=>{if(item.type==="symbol"&&(item.text==="[スリ]"||item.text==="スリ")){item.text="スリ";item.slurWidth=clamp(Number(item.slurWidth)||34,22,90)}});normalizeTechniqueSlurs(layer);
+  layer.items.forEach(item=>{if(item.type!=="symbol")return;if(item.text==="[スリ]"||item.text==="スリ"){item.text="スリ";item.slurWidth=clamp(Number(item.slurWidth)||34,22,90)}if(item.text==="「"||item.technique==="oshi-bachi"){item.text="押しバチ";item.technique="oshi-bachi";item.techniqueVersion=1;item.side="above"}});normalizeTechniqueSlurs(layer);
   if(state.selectedSymbol==="[スリ]")state.selectedSymbol="スリ";
+  if(state.selectedSymbol==="「")state.selectedSymbol="押しバチ";
   layer.name="奏法";layer.fixed=true;state.activeLayerId=TECHNIQUE_LAYER_ID;
 }
 function validTechniqueAnchor(value){const m=Number(value?.m),s=Number(value?.s),p=Number(value?.p);return Number.isInteger(m)&&[1,2,3].includes(s)&&Number.isInteger(p)&&state.notes.some(note=>!note.rest&&note.m===m&&note.s===s&&note.p===p)?{m,s,p}:null}
@@ -814,6 +815,7 @@ function printTechniqueHtml(n){
       const width=clamp(Number(item.slurWidth)||34,22,90),viewWidth=Math.max(42,width+8),center=viewWidth/2,left=center-width/2,right=center+width/2;
       return `<svg class="print-technique ${side}" style="--tech-width:${viewWidth}px;--tech-height:28px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 ${viewWidth} 28" aria-hidden="true"><text x="${center}" y="9">スリ</text><path d="M ${left} 22 Q ${center} 14 ${right} 22"/></svg>`;
     }
+    if(item.technique==="oshi-bachi"||item.text==="押しバチ")return `<svg class="print-technique ${side}" style="--tech-width:42px;--tech-height:24px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 42 24" aria-label="押しバチ"><path d="M 14 7 H 27 V 19"/></svg>`;
     if(["Ⅰ","Ⅱ","Ⅲ"].includes(item.text))return `<span class="print-technique finger ${side}" style="--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" aria-hidden="true">${esc(item.text)}</span>`;
     return `<svg class="print-technique ${side}" style="--tech-width:42px;--tech-height:24px;--tech-x:${offsetX}px;--tech-y:${offsetY}px;--tech-color:${color}" viewBox="0 0 42 24" aria-hidden="true"><text x="21" y="16">${esc(item.text)}</text></svg>`;
   }).join("");
@@ -997,6 +999,11 @@ function nearestPlayableNote(point){
   });
   return best<=85?nearest:null;
 }
+function addOshiBachi(anchor){
+  const valid=validTechniqueAnchor(anchor),layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);if(!valid||!layer)return false;
+  const existing=(layer.items||[]).find(item=>item.type==="symbol"&&(item.technique==="oshi-bachi"||item.text==="押しバチ")&&anchorKey(item.anchor?.m,item.anchor?.s,item.anchor?.p)===anchorKey(valid.m,valid.s,valid.p));if(existing){selectedItemId=existing.id;selectedScoreTarget=null;state.scoreEditLayer="technique";return true}
+  snap();const item={id:uid(),type:"symbol",text:"押しバチ",technique:"oshi-bachi",techniqueVersion:1,color:state.drawColor,size:14,anchor:{...valid},side:"above",offsetXPx:0,offsetYPx:0,offsetUnit:"css-px"};layer.items.push(item);selectedItemId=item.id;selectedScoreTarget=null;state.scoreEditLayer="technique";drawing=true;state.drawTool="select";state.selectedSymbol=null;return true;
+}
 function esc(value){return String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]))}
 function pointsAttr(points){return points.map(point=>`${point.x},${point.y}`).join(" ")}
 function commentWrapColumns(size){const width=q("#annotations")?.getBoundingClientRect().width;if(!width)return 28;return Math.round(clamp(width/45*20/Math.max(12,size),6,28))}
@@ -1061,6 +1068,7 @@ function itemHtml(item){
       const width=clamp(Number(item.slurWidth)||34,22,90),left=item.x-width/2,right=item.x+width/2,slurY=item.y;
       return `<g class="annotation-item symbol-item anchored-symbol slur-symbol${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y-9}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text><path d="M ${left} ${slurY+4} Q ${item.x} ${slurY-4} ${right} ${slurY+4}" fill="none" stroke="${item.color}" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>`;
     }
+    if(item.technique==="oshi-bachi"||item.text==="押しバチ"){const half=screenAnnotationLength(7),drop=screenAnnotationLength(12);return `<g class="annotation-item symbol-item anchored-symbol oshi-bachi-symbol${selected}" data-item="${item.id}" aria-label="押しバチ"><path d="M ${item.x-half} ${item.y-half*.55} H ${item.x+half} V ${item.y+drop}" fill="none" stroke="${item.color}" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" vector-effect="non-scaling-stroke"/></g>`}
     const fingerClass=["Ⅰ","Ⅱ","Ⅲ"].includes(item.text)?" finger-symbol":"";
     return `<g class="annotation-item symbol-item anchored-symbol${fingerClass} text-item${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text></g>`;
   }
@@ -1188,6 +1196,7 @@ function startDraw(event){
       let start=slurStartAnchor,end=anchor;if(compareAnchors(start,end)>0)[start,end]=[end,start];if(compareAnchors(start,end)===0){alert("スリの終了数字には開始数字とは別の数字を選んでください。");return}if(measureLocation(start.m).row!==measureLocation(end.m).row){alert("スリの開始数字と終了数字は同じ段から選んでください。");return}
       snap();const side=state.symbolSide||"above",item={id:uid(),type:"symbol",x:p.x,y:p.y,text:"スリ",color:state.drawColor,size:14,anchor:{...start},endAnchor:{...end},side,offsetXPx:0,offsetYPx:0,offsetUnit:"css-px",slurWidth:28};activeLayer().items.push(item);selectedItemId=item.id;slurStartAnchor=null;cursorVisible=false;render();return
     }
+    if(state.selectedSymbol==="押しバチ"){if(addOshiBachi({m:note.m,s:note.s,p:note.p})){cursorVisible=false;render()}return}
     snap();const side=state.symbolSide||"above",anchor={m:note.m,s:note.s,p:note.p};
     const item={id:uid(),type:"symbol",x:p.x,y:p.y,text:state.selectedSymbol,color:state.drawColor,size:14,anchor,side,offsetXPx:0,offsetYPx:0,offsetUnit:"css-px",...(state.selectedSymbol==="スリ"?{slurWidth:28}:{})};
     layer.items.push(item);selectedItemId=item.id;cursorVisible=false;render();return;
@@ -1303,6 +1312,7 @@ load();state.scoreEditLayer="notes";drawing=false;
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.historyAction){const scrollX=window.scrollX,scrollY=window.scrollY,source=q(b.dataset.historyAction==="undo"?"#undo":"#redo");if(source&&!source.disabled)source.click();requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY));return}
   if(b.id==="tripletTool"){tripletMode=!tripletMode;tripletStartAnchor=null;slurStartAnchor=null;selectedScoreTarget=null;selectedItemId=null;state.selectedSymbol=null;state.drawTool="select";drawing=false;state.scoreEditLayer="technique";cursorVisible=false}
+  else if(b.id==="applyOshiBachi"){if(selectedScoreTarget?.type!=="note"){alert("押しバチを付ける数字または開放弦を1音選択してください。");return}const [m,s,p]=String(selectedScoreTarget.key||"").split(",").map(Number);if(addOshiBachi({m,s,p})){cursorVisible=false;render()}return}
   else if(tripletMode&&b.dataset.note){const [m,s,p]=b.dataset.note.split(",").map(Number),anchor={m,s,p};if(!tripletStartAnchor){tripletStartAnchor=anchor;selectedScoreTarget=null}else if(createTriplet(tripletStartAnchor,anchor)){tripletStartAnchor=null;selectedScoreTarget=null}}
   else if(b.id==="vocalSlur"){vocalTool=vocalTool==="slur"?"note":"slur";vocalSlurStartId=null;selectedScoreTarget=null;cursorVisible=false}
   else if(b.id==="vocalDot"){const note=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(item=>item.id===selectedScoreTarget.id):null;if(note&&note.kind==="pitch"){snap();note.dotted=!note.dotted;state.vocalDotted=note.dotted}}
@@ -1411,7 +1421,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   }
   else if(b.dataset.layer){state.activeLayerId=b.dataset.layer;selectedItemId=null;renderLayers();return}
   else if(b.dataset.tool){state.drawTool=b.dataset.tool;renderLayers();return}
-  else if(b.dataset.symbol){const turningOff=state.drawTool==="symbol"&&state.selectedSymbol===b.dataset.symbol;state.drawTool=turningOff?"select":"symbol";state.selectedSymbol=turningOff?null:b.dataset.symbol;slurStartAnchor=null;selectedItemId=null;drawing=!turningOff;renderLayers();return}
+  else if(b.dataset.symbol){if(b.dataset.symbol==="押しバチ"&&selectedScoreTarget?.type==="note"){const [m,s,p]=String(selectedScoreTarget.key||"").split(",").map(Number);if(addOshiBachi({m,s,p})){cursorVisible=false;render()}return}const turningOff=state.drawTool==="symbol"&&state.selectedSymbol===b.dataset.symbol;state.drawTool=turningOff?"select":"symbol";state.selectedSymbol=turningOff?null:b.dataset.symbol;slurStartAnchor=null;selectedItemId=null;drawing=!turningOff;renderLayers();return}
   else if(b.dataset.symbolSide){
     const side=b.dataset.symbolSide,item=selectedItem();snap();state.symbolSide=side;
     if(item?.type==="symbol"){item.side=side;ensureTechniquePixelOffset(item);item.offsetYPx=0;item.offsetY=0}
@@ -1637,7 +1647,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=192"></script>
+  <script src="./print-v2.js?v=201"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
