@@ -85,11 +85,23 @@
 
     const offset = Math.max(0, segment.start);
     const rate = Math.max(0.25, Math.min(4, Number(options.playbackRate) || 1));
+    const endRate = Math.max(0.25, Math.min(4, Number(options.playbackRateEnd) || rate));
     const baseSourceDuration = Math.max(0.05, Math.min(segment.end, audioBuffer.duration) - offset);
     const availableSourceDuration = Math.max(baseSourceDuration, Math.min(Number(segment.tailEnd) || segment.end, audioBuffer.duration) - offset);
+    const requestedDuration = Math.max(0, Number(options.duration) || 0);
+    const requestedGlideDuration = endRate !== rate
+      ? Math.min(requestedDuration || Infinity, Math.max(0.01, Number(options.glideDuration) || requestedDuration || 0.01))
+      : 0;
+    const averageRate = requestedDuration && requestedGlideDuration
+      ? (((rate + endRate) / 2) * requestedGlideDuration + endRate * (requestedDuration - requestedGlideDuration)) / requestedDuration
+      : rate;
     const minimumOutputDuration = Math.max(0, Number(options.minimumDuration) || 0);
-    const sourceDuration = Math.min(availableSourceDuration, Math.max(baseSourceDuration, minimumOutputDuration * rate));
-    const outputDuration = sourceDuration / rate;
+    const sourceDuration = requestedDuration
+      ? Math.min(availableSourceDuration, Math.max(0.05, requestedDuration * averageRate))
+      : Math.min(availableSourceDuration, Math.max(baseSourceDuration, minimumOutputDuration * rate));
+    const outputDuration = requestedDuration
+      ? Math.min(requestedDuration, sourceDuration / averageRate)
+      : sourceDuration / rate;
     const startDelay = Math.max(0, Number(options.delay) || 0);
     const startAt = ctx.currentTime + startDelay;
     const fade = Math.min(0.018, outputDuration / 5);
@@ -98,7 +110,12 @@
     const voice = { source, gain, context: ctx, stopped: false };
 
     source.buffer = audioBuffer;
-    source.playbackRate.value = rate;
+    source.playbackRate.setValueAtTime(rate, startAt);
+    if (endRate !== rate) {
+      const glideDuration = Math.min(outputDuration, requestedGlideDuration || outputDuration);
+      source.playbackRate.linearRampToValueAtTime(endRate, startAt + glideDuration);
+      source.playbackRate.setValueAtTime(endRate, startAt + outputDuration);
+    }
     const destination = options.destination && typeof options.destination.connect === "function"
       ? options.destination
       : ctx.destination;
@@ -113,6 +130,9 @@
     }, { once: true });
     active.add(voice);
     source.start(startAt, offset, sourceDuration);
+    if (requestedDuration) {
+      try { source.stop(startAt + outputDuration + 0.01); } catch (_) {}
+    }
 
     return Object.freeze({
       duration: outputDuration,
@@ -148,7 +168,27 @@
     });
   }
 
-  const api = Object.freeze({ getContext, resume, load, play, playSegment, playFrequency, stop: stopAll, stopAll });
+  async function playFrequencyGlide(startFrequency, endFrequency, options = {}) {
+    const start = Number(startFrequency), end = Number(endFrequency), master = window.ShianTuningMaster;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || !master) throw new Error("スリの音高を取得できませんでした。");
+    const sources = master.entries
+      .filter((entry) => entry.mode === "hon")
+      .flatMap((entry) => [
+        { noteNumber: entry.count, frequency: entry.frequencies[0] },
+        { noteNumber: entry.count + 12, frequency: entry.frequencies[0] * 2 }
+      ]);
+    if (!sources.length) throw new Error("先生音源に対応する調弦データがありません。");
+    const source = sources.reduce((best, candidate) =>
+      Math.abs(Math.log2(start / candidate.frequency)) < Math.abs(Math.log2(start / best.frequency)) ? candidate : best
+    );
+    return playSegment(source.noteNumber, {
+      ...options,
+      playbackRate: start / source.frequency,
+      playbackRateEnd: end / source.frequency
+    });
+  }
+
+  const api = Object.freeze({ getContext, resume, load, play, playSegment, playFrequency, playFrequencyGlide, stop: stopAll, stopAll });
   root.ShianAudioEngine = api;
   window.ShianAudioEngine = api;
 })();
