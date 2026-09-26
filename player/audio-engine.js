@@ -15,8 +15,13 @@
   const playbackTrace = [];
   const TRACE_LIMIT = 5000;
   let context;
-  let teacherBuffer;
-  let loadPromise;
+  const audioSources = Object.freeze({
+    normal: "./audio/teacher-1to12-octave.wav",
+    sukui: "./audio/shamisen-sukui.wav",
+    hajiki: "./audio/shamisen-hajiki.wav"
+  });
+  const audioBuffers = new Map();
+  const loadPromises = new Map();
 
   function addTrace(entry) {
     playbackTrace.push(Object.freeze({ ...entry }));
@@ -54,31 +59,44 @@
     return ctx;
   }
 
-  function load() {
-    if (teacherBuffer) return Promise.resolve(teacherBuffer);
-    if (loadPromise) return loadPromise;
-    loadPromise = (async () => {
+  function normalizeSourceKind(value) {
+    return Object.prototype.hasOwnProperty.call(audioSources, value) ? value : "normal";
+  }
+
+  function load(sourceKind = "normal") {
+    const kind = normalizeSourceKind(sourceKind);
+    const cached = audioBuffers.get(kind);
+    if (cached) return Promise.resolve(cached);
+    const pending = loadPromises.get(kind);
+    if (pending) return pending;
+    const promise = (async () => {
       const ctx = await resume();
       let response;
       try {
-        response = await fetch("./audio/teacher-1to12-octave.wav", { cache: "force-cache" });
+        response = await fetch(audioSources[kind], { cache: "force-cache" });
       } catch (_) {
-        throw new Error("三味線音源を読み込めませんでした。通信状態を確認してください。");
+        throw new Error(`${kind === "normal" ? "三味線" : kind === "sukui" ? "スクイ" : "ハジキ"}音源を読み込めませんでした。通信状態を確認してください。`);
       }
-      if (!response.ok) throw new Error(`三味線音源を読み込めませんでした（${response.status}）。`);
+      if (!response.ok) throw new Error(`${kind === "normal" ? "三味線" : kind === "sukui" ? "スクイ" : "ハジキ"}音源を読み込めませんでした（${response.status}）。`);
       const audioData = await response.arrayBuffer();
       if (!audioData.byteLength) throw new Error("三味線音源のデータが空です。");
       try {
-        teacherBuffer = await ctx.decodeAudioData(audioData);
+        const buffer = await ctx.decodeAudioData(audioData);
+        audioBuffers.set(kind, buffer);
+        return buffer;
       } catch (_) {
         throw new Error("三味線音源を再生用に変換できませんでした。");
       }
-      return teacherBuffer;
     })().catch((error) => {
-      loadPromise = null;
+      loadPromises.delete(kind);
       throw error;
     });
-    return loadPromise;
+    loadPromises.set(kind, promise);
+    return promise;
+  }
+
+  function loadMany(sourceKinds = ["normal"]) {
+    return Promise.all([...new Set(sourceKinds.map(normalizeSourceKind))].map(load));
   }
 
   function stopVoice(voice, fadeSeconds = 0.02) {
@@ -106,7 +124,8 @@
     }
 
     const ctx = await resume();
-    const audioBuffer = await load();
+    const sourceKind = normalizeSourceKind(options.sourceKind);
+    const audioBuffer = await load(sourceKind);
     if (options.exclusive !== false) stopAll(0.01);
 
     const offset = Math.max(0, segment.start);
@@ -197,7 +216,8 @@
       playbackRateEndAt: endRate !== rate ? gainEndAt : startAt,
       simultaneousVoices: Math.max(1, Number(options.trace?.simultaneousVoices) || 1),
       audioNodeCount: 2,
-      tightStop: Boolean(options.tightStop)
+      tightStop: Boolean(options.tightStop),
+      sourceKind
     });
 
     return Object.freeze({
@@ -254,7 +274,7 @@
     });
   }
 
-  const api = Object.freeze({ getContext, resume, load, play, playSegment, playFrequency, playFrequencyGlide, clearTrace, getTrace, stop: stopAll, stopAll });
+  const api = Object.freeze({ getContext, resume, load, loadMany, play, playSegment, playFrequency, playFrequencyGlide, clearTrace, getTrace, stop: stopAll, stopAll });
   root.ShianAudioEngine = api;
   window.ShianAudioEngine = api;
 })();
