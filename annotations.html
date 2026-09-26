@@ -6,13 +6,13 @@
   <title>絲庵 文化譜書き込み</title>
   <link rel="preload" href="./fonts/BIZUDPMincho-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="preload" href="./fonts/851MkPOP_101.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./print-v2.css?v=208">
+  <link rel="stylesheet" href="./print-v2.css?v=209">
   <style>
     @font-face{font-family:"Shian Score BIZ UDPMincho";src:url("./fonts/BIZUDPMincho-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     @font-face{font-family:"Shian 851 MkPOP";src:url("./fonts/851MkPOP_101.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
-    .annotation-item.text-item text{font-family:"Shian 851 MkPOP","Yu Gothic","Noto Sans JP",sans-serif}
-    body .lyrics-input,body .lyrics-display{font-family:"Shian 851 MkPOP","Yu Gothic",sans-serif}
-    .note:not(.rest) b{font-family:"Shian 851 MkPOP","Shian Score BIZ UDPMincho","BIZ UDPMincho",serif}
+    .annotation-item.text-item:not(.symbol-item) text{font-family:"Shian 851 MkPOP","Yu Gothic","Noto Sans JP",sans-serif}
+    body .lyrics-input,body .lyrics-display{font-family:"Shian 851 MkPOP","Yu Gothic",sans-serif;font-size:17px}
+    .note:not(.rest) b{font-family:"Shian 851 MkPOP","Shian Score BIZ UDPMincho","BIZ UDPMincho",serif;font-size:calc(var(--note-size) + 1px)}
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
     *{box-sizing:border-box}body{margin:0;background:#e5ded3;color:var(--ink);font-family:"Yu Gothic",sans-serif}
     button,input{font:inherit}button{cursor:pointer}.app{max-width:1100px;margin:auto;padding:14px}main.app{display:flex;flex-direction:column}
@@ -775,7 +775,7 @@ function itemHtml(item){
     return `<g class="annotation-item symbol-item anchored-symbol${fingerClass} text-item${selected}" data-item="${item.id}"><text x="${item.x}" y="${item.y}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text></g>`;
   }
   const background=item.background||"white",bg=background==="none"?"none":background==="translucent"?"rgba(255,255,255,.72)":"#fff",layout=commentLayout(item);
-  return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${layout.top}" width="${layout.width+14}" height="${layout.height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${layout.baseline}" fill="${item.color}" stroke="none" font-size="${layout.size}" font-weight="600">${commentTextSvg(item,layout)}</text></g>`;
+  return `<g class="annotation-item text-item${selected}" data-item="${item.id}"><rect x="${item.x-7}" y="${layout.top}" width="${layout.width+14}" height="${layout.height}" rx="7" fill="${bg}" stroke="none"/><text x="${item.x}" y="${layout.baseline}" fill="${item.color}" stroke="none" font-size="${layout.size+1}" font-weight="600">${commentTextSvg(item,layout)}</text></g>`;
 }
 function annotationItemBottom(item){
   if(item.type==="pen"){const values=(item.points||[]).map(point=>Number(point.y)||0);return(values.length?Math.max(...values):0)+4}
@@ -1381,7 +1381,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=208"></script>
+  <script src="./print-v2.js?v=209"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
