@@ -1,8 +1,9 @@
 "use strict";
 
-const SCORE_FONT_CACHE="shian-score-font-v169";
+const SCORE_FONT_CACHE="shian-score-font-v208";
 const SCORE_FONT_FILES=[
-  "./fonts/BIZUDPMincho-Regular.ttf"
+  "./fonts/BIZUDPMincho-Regular.ttf",
+  "./fonts/851MkPOP_101.ttf"
 ];
 
 self.addEventListener("install",event=>{
@@ -16,7 +17,7 @@ self.addEventListener("activate",event=>{
 });
 
 self.addEventListener("fetch",event=>{
-  if(event.request.method!=="GET"||!event.request.url.endsWith("/fonts/BIZUDPMincho-Regular.ttf"))return;
+  if(event.request.method!=="GET"||!SCORE_FONT_FILES.some(path=>event.request.url.endsWith(path.slice(1))))return;
   event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{
     if(response.ok)caches.open(SCORE_FONT_CACHE).then(cache=>cache.put(event.request,response.clone()));
     return response;

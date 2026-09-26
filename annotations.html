@@ -5,9 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>絲庵 文化譜書き込み</title>
   <link rel="preload" href="./fonts/BIZUDPMincho-Regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./print-v2.css?v=202">
+  <link rel="preload" href="./fonts/851MkPOP_101.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="./print-v2.css?v=208">
   <style>
     @font-face{font-family:"Shian Score BIZ UDPMincho";src:url("./fonts/BIZUDPMincho-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
+    @font-face{font-family:"Shian 851 MkPOP";src:url("./fonts/851MkPOP_101.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
+    .annotation-item.text-item text{font-family:"Shian 851 MkPOP","Yu Gothic","Noto Sans JP",sans-serif}
+    body .lyrics-input,body .lyrics-display{font-family:"Shian 851 MkPOP","Yu Gothic",sans-serif}
+    .note:not(.rest) b{font-family:"Shian 851 MkPOP","Shian Score BIZ UDPMincho","BIZ UDPMincho",serif}
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
     *{box-sizing:border-box}body{margin:0;background:#e5ded3;color:var(--ink);font-family:"Yu Gothic",sans-serif}
     button,input{font:inherit}button{cursor:pointer}.app{max-width:1100px;margin:auto;padding:14px}main.app{display:flex;flex-direction:column}
@@ -1327,10 +1332,12 @@ q("#newForm").addEventListener("submit",e=>{e.preventDefault();
 });
 qAll('input[name="printMode"]').forEach(input=>input.addEventListener("change",event=>{state.printMode=event.target.value;updatePrintDialog()}));
 q("#manualPageRows").addEventListener("input",event=>{state.manualPageRows=event.target.value;updatePrintDialog()});
-q("#printForm").addEventListener("submit",event=>{
+q("#printForm").addEventListener("submit",async event=>{
   event.preventDefault();
   if(state.printMode==="manual"){const parsed=parseManualPageRows();if(!parsed.valid){q("#printError").textContent=parsed.message;return}}
-  save();q("#printDialog").close();applyPrintLayout();requestAnimationFrame(()=>window.print());
+  save();q("#printDialog").close();
+  if(document.fonts)try{await document.fonts.load('16px "Shian 851 MkPOP"');await document.fonts.ready}catch(error){console.warn("851マカポップの読込に失敗したため、代替フォントで印刷します。",error)}
+  applyPrintLayout();requestAnimationFrame(()=>window.print());
 });
 q("#lyricsMode").addEventListener("change",event=>{snap();state.lyricsMode=event.target.checked;render()});
 q("#scoreArea").addEventListener("input",event=>{const input=event.target.closest("[data-lyrics-row]");if(!input)return;const row=Number(input.dataset.lyricsRow);if(Number.isInteger(row)&&row>=0&&row<state.rows){state.lyrics[row]=input.value;state.lyricsGlyphAnchors=Array.isArray(state.lyricsGlyphAnchors)?state.lyricsGlyphAnchors:[];state.lyricsGlyphAnchors[row]=null;syncLyricsToScore();save()}});
@@ -1374,7 +1381,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=202"></script>
+  <script src="./print-v2.js?v=208"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
