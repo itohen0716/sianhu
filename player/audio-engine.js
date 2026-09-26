@@ -143,10 +143,13 @@
       ? (rate * requestedAttackHold + ((rate + endRate) / 2) * requestedSlideDuration) / requestedDuration
       : rate;
     const minimumOutputDuration = Math.max(0, Number(options.minimumDuration) || 0);
+    const preserveSampleTail = Boolean(options.preserveSampleTail && endRate === rate && sourceKind === "normal");
     const sourceDuration = requestedDuration
-      ? Math.min(availableSourceDuration, Math.max(0.05, requestedDuration * averageRate))
+      ? preserveSampleTail
+        ? availableSourceDuration
+        : Math.min(availableSourceDuration, Math.max(0.05, requestedDuration * averageRate))
       : Math.min(availableSourceDuration, Math.max(baseSourceDuration, minimumOutputDuration * rate));
-    const outputDuration = requestedDuration
+    const outputDuration = requestedDuration && !preserveSampleTail
       ? Math.min(requestedDuration, sourceDuration / averageRate)
       : sourceDuration / rate;
     const startDelay = Math.max(0, Number(options.delay) || 0);
@@ -161,7 +164,7 @@
     const fadeOut = options.tightStop ? Math.min(0.04, outputDuration * 0.16) : Math.min(0.004, outputDuration / 10);
     const gainFadeOutStartAt = startAt + Math.max(fadeIn, outputDuration - fadeOut);
     const gainEndAt = startAt + outputDuration;
-    const sourceStopAt = requestedDuration ? gainEndAt : null;
+    const sourceStopAt = requestedDuration || preserveSampleTail ? gainEndAt : null;
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
     const voice = { source, gain, context: ctx, stopped: false };
@@ -208,6 +211,11 @@
       lateBy: Math.max(0, scheduledAt - startAt),
       requestedDuration,
       outputDuration,
+      segmentStart: offset,
+      segmentEnd: Math.min(segment.end, audioBuffer.duration),
+      segmentTailEnd: Math.min(Number(segment.tailEnd) || segment.end, audioBuffer.duration),
+      baseSourceDuration,
+      availableSourceDuration,
       sourceOffset: offset,
       sourceDuration,
       playbackRateStart: rate,
@@ -217,6 +225,7 @@
       simultaneousVoices: Math.max(1, Number(options.trace?.simultaneousVoices) || 1),
       audioNodeCount: 2,
       tightStop: Boolean(options.tightStop),
+      preserveSampleTail,
       sourceKind
     });
 
