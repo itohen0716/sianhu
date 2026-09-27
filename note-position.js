@@ -11,8 +11,12 @@
     }
     const cellWidth = width / columns;
     const safetyMargin = Math.min(2, cellWidth * 0.12);
-    const limit = Math.max(0, cellWidth / 2 - safetyMargin);
-    return { min: -limit, max: limit };
+    /* p は論理セルのまま、x は表示微調整だけを担う。
+       左側は前セル寄りまで整えられる余地を持たせる一方、実際の小節端と
+       隣接音との衝突は呼出側の noteMoveBounds で引き続き制限する。 */
+    const rightLimit = Math.max(0, cellWidth / 2 - safetyMargin);
+    const leftLimit = Math.max(rightLimit, cellWidth - safetyMargin);
+    return { min: -leftLimit, max: rightLimit };
   }
 
   function constrainDisplayOffset(offset, measurePixels, capacity) {

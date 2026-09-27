@@ -256,7 +256,7 @@
   </form>
 </dialog>
 <script src="./annotation-layout.js?v=189"></script>
-<script src="./note-position.js?v=200"></script>
+<script src="./note-position.js?v=213"></script>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1));
@@ -272,6 +272,8 @@ const defaults={notes:[],tuplets:[],vocalNotes:[],vocalString:3,vocalDuration:4,
 defaults.vocalSlurs=[];
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,pendingDrag=null,dragging=null,resizing=null,printing=false,lastInserted=null,commentDialogResolve=null;
+/* 非表示ページから復帰した直後やWebフォント確定前の寸法を、段高の正本にしない。 */
+let annotationLayoutReady=false,annotationLayoutPass=0;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;
 let writingClipboard=[],writingPasteSequence=0;
 const DRAG_START_PX=4;
@@ -583,7 +585,7 @@ function applyContentAwareMeasureWidths(){
 const lyricMeasureCanvas=document.createElement("canvas");
 function lyricGraphemes(text){return typeof Intl?.Segmenter==="function"?[...new Intl.Segmenter("ja",{granularity:"grapheme"}).segment(text)].map(item=>item.segment):Array.from(text)}
 function lyricGlyphPositions(text,font,availableWidth,startOffset=8){const glyphs=lyricGraphemes(String(text||"")),context=lyricMeasureCanvas.getContext("2d");context.font=font||'16px "Yu Gothic",sans-serif';const widths=glyphs.map(glyph=>context.measureText(glyph).width),usable=Math.max(1,Number(availableWidth)||1);let advance=Math.max(0,Number(startOffset)||0);return glyphs.map((glyph,index)=>{const width=widths[index],start=advance;advance+=width;return{glyph,x:clamp((start+width/2)/usable,0,1)}}).filter(item=>!/^\s+$/u.test(item.glyph))}
-function syncLyricsToScore(){qAll("#scoreArea .lyrics-row").forEach(row=>{const input=row.querySelector("[data-lyrics-row]"),display=row.querySelector("[data-lyrics-display-row]"),field=row.querySelector(".lyrics-field"),score=row.closest(".staff")?.querySelector(".score");if(!input||!display||!field||!score)return;const scoreRect=score.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();if(!scoreRect.width||!fieldRect.width)return;display.style.left=`${scoreRect.left-fieldRect.left}px`;display.style.width=`${scoreRect.width}px`;display.replaceChildren();const measures=[...row.closest(".staff").querySelectorAll(".score>.measure[data-measure]")].map(element=>({element,m:Number(element.dataset.measure),rect:element.getBoundingClientRect()})),rowIndex=Number(input.dataset.lyricsRow),inputStyle=getComputedStyle(input),paddingLeft=Number.parseFloat(inputStyle.paddingLeft)||0,saved=Number.isInteger(rowIndex)?state.lyricsGlyphAnchors?.[rowIndex]:null,savedGlyphs=Array.isArray(saved?.glyphs)?saved.glyphs:null,expected=lyricGraphemes(input.value).filter(glyph=>/^[^\s\u3000]$/u.test(glyph)),savedIsCurrent=saved?.text===input.value&&savedGlyphs?.length===expected.length&&savedGlyphs.every((item,index)=>item?.text===expected[index]&&Number.isFinite(Number(item.m))&&Number.isFinite(Number(item.measureX))),anchors=savedIsCurrent?savedGlyphs.map(item=>({text:item.text,m:Number(item.m),measureX:clamp(Number(item.measureX),0,1)})):lyricGlyphPositions(input.value,inputStyle.font,scoreRect.width,paddingLeft).map(item=>{const clientX=scoreRect.left+item.x*scoreRect.width,measure=measures.find(entry=>clientX>=entry.rect.left&&clientX<=entry.rect.right)||measures.at(-1);return{text:item.glyph,m:measure?.m??0,measureX:measure?clamp((clientX-measure.rect.left)/Math.max(1,measure.rect.width),0,1):item.x}});if(Number.isInteger(rowIndex)&&!savedIsCurrent){state.lyricsGlyphAnchors=Array.isArray(state.lyricsGlyphAnchors)?state.lyricsGlyphAnchors:[];state.lyricsGlyphAnchors[rowIndex]={text:input.value,glyphs:anchors}}anchors.forEach(item=>{const glyph=document.createElement("span"),measure=measures.find(entry=>entry.m===Number(item.m)),clientX=measure?measure.rect.left+clamp(Number(item.measureX),0,1)*measure.rect.width:scoreRect.left,x=clamp((clientX-scoreRect.left)/scoreRect.width,0,1);glyph.className="lyrics-glyph";glyph.dataset.lyricX=String(x);if(measure){glyph.dataset.lyricMeasure=String(measure.m);glyph.dataset.lyricMeasureX=String(clamp(Number(item.measureX),0,1))}glyph.style.left=`${(x*100).toFixed(5)}%`;glyph.textContent=item.text;display.appendChild(glyph)})})}
+function syncLyricsToScore(){qAll("#scoreArea .lyrics-row").forEach(row=>{const input=row.querySelector("[data-lyrics-row]"),display=row.querySelector("[data-lyrics-display-row]"),field=row.querySelector(".lyrics-field"),score=row.closest(".staff")?.querySelector(".score");if(!input||!display||!field||!score)return;const scoreRect=score.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();if(!scoreRect.width||!fieldRect.width)return;display.style.left=`${scoreRect.left-fieldRect.left}px`;display.style.width=`${scoreRect.width}px`;display.replaceChildren();const measures=[...row.closest(".staff").querySelectorAll(".score>.measure[data-measure]")].map(element=>({element,m:Number(element.dataset.measure),rect:element.getBoundingClientRect()})),rowIndex=Number(input.dataset.lyricsRow),inputStyle=getComputedStyle(input),paddingLeft=Number.parseFloat(inputStyle.paddingLeft)||0,saved=Number.isInteger(rowIndex)?state.lyricsGlyphAnchors?.[rowIndex]:null,savedGlyphs=Array.isArray(saved?.glyphs)?saved.glyphs:null,expected=lyricGraphemes(input.value).filter(glyph=>/^[^\s\u3000]$/u.test(glyph)),savedIsCurrent=saved?.text===input.value&&savedGlyphs?.length===expected.length&&savedGlyphs.every((item,index)=>item?.text===expected[index]&&Number.isFinite(Number(item.m))&&Number.isFinite(Number(item.measureX))),anchors=savedIsCurrent?savedGlyphs.map(item=>({text:item.text,m:Number(item.m),measureX:clamp(Number(item.measureX),0,1)})):lyricGlyphPositions(input.value,inputStyle.font,scoreRect.width,paddingLeft).map(item=>{const clientX=scoreRect.left+item.x*scoreRect.width,measure=measures.find(entry=>clientX>=entry.rect.left&&clientX<=entry.rect.right)||measures.at(-1);return{text:item.glyph,m:measure?.m??0,measureX:measure?clamp((clientX-measure.rect.left)/Math.max(1,measure.rect.width),0,1):item.x}});if(Number.isInteger(rowIndex)&&!savedIsCurrent&&annotationLayoutReady){state.lyricsGlyphAnchors=Array.isArray(state.lyricsGlyphAnchors)?state.lyricsGlyphAnchors:[];state.lyricsGlyphAnchors[rowIndex]={text:input.value,glyphs:anchors}}anchors.forEach(item=>{const glyph=document.createElement("span"),measure=measures.find(entry=>entry.m===Number(item.m)),clientX=measure?measure.rect.left+clamp(Number(item.measureX),0,1)*measure.rect.width:scoreRect.left,x=clamp((clientX-scoreRect.left)/scoreRect.width,0,1);glyph.className="lyrics-glyph";glyph.dataset.lyricX=String(x);if(measure){glyph.dataset.lyricMeasure=String(measure.m);glyph.dataset.lyricMeasureX=String(clamp(Number(item.measureX),0,1))}glyph.style.left=`${(x*100).toFixed(5)}%`;glyph.textContent=item.text;display.appendChild(glyph)})})}
 function render(){
   normalizeLyrics();normalizeVocalNotes();normalizeVocalSlurs();normalizeTuplets();
   const total=totalMeasures();state.m=clamp(state.m,0,total-1);state.p=clamp(state.p,0,measureCapacityFor(state.m)-1);
@@ -911,6 +913,10 @@ function constrainCommentToPlacementLane(item,clients,bounds,row,lane){
   return{...shiftClientAnnotation(clients,bounds,dy),lane:edges.lane};
 }
 function resetAnnotationEditGaps(){qAll("#scoreArea .annotation-boundary-space").forEach(space=>{space.style.removeProperty("--annotation-boundary-gap");delete space.dataset.annotationEditGap;delete space.dataset.annotationRange})}
+function applySavedAnnotationEditGaps(){
+  resetAnnotationEditGaps();const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
+  geometry.rows.forEach(row=>{const gaps=ShianAnnotationLayout.pixelGaps(state.annotationLayout,row.row,{lyricsVisible:state.lyricsVisible,vocalVisible:state.vocalVisible},row.lineSpacing);ShianAnnotationLayout.LANES.forEach(lane=>{const space=row.staff.querySelector(`[data-annotation-boundary="${lane}"]`),gap=Math.max(0,Number(gaps[lane])||0);if(space&&gap>0){space.style.setProperty("--annotation-boundary-gap",`${gap}px`);changed=true}})});return changed;
+}
 function annotationLayoutIsInteracting(){return Boolean(dragging||resizing?.started||rangeMove?.started||draft)}
 function normalizeCommentFlowAnchors(visibleLayers){
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
@@ -985,7 +991,8 @@ function renderLayers(){
   const visibleLayers=state.layers.filter(layer=>printing?layer.printEnabled!==false:layer.visible!==false);
   if(!printing&&!annotationLayoutIsInteracting())normalizeCommentFlowAnchors(visibleLayers);
   if(!printing&&!annotationLayoutIsInteracting())constrainVisibleCommentsToOwnerScores(visibleLayers);
-  if(applyAnnotationEditGaps(visibleLayers)){
+  const gapChanged=annotationLayoutReady?applyAnnotationEditGaps(visibleLayers):applySavedAnnotationEditGaps();
+  if(gapChanged){
     rect=svg.getBoundingClientRect();logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
     [svg,underlay].forEach(element=>element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`));
     restoreMovingAnnotationClients(movingSnapshots,annotationGeometry());
@@ -1038,6 +1045,16 @@ function applyPreview(){
   syncLyricsToScore();
   renderLayers();
 }
+function scheduleStableAnnotationLayout(){
+  const pass=++annotationLayoutPass;
+  const ready=document.fonts?.ready||Promise.resolve();
+  ready.catch(()=>{}).then(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(pass!==annotationLayoutPass)return;
+    const paper=q(".paper"),score=q("#scoreArea");
+    if(!paper||!score||paper.getBoundingClientRect().width<=0||score.getBoundingClientRect().width<=0)return;
+    annotationLayoutReady=true;applyPreview();syncAnnotationVocalPositions();syncAnnotationVocalSlurs();syncTuplets();
+  })));
+}
 function pointFromEvent(event){const rect=q("#annotations").getBoundingClientRect();return{x:(event.clientX-rect.left)*q("#annotations").viewBox.baseVal.width/rect.width,y:(event.clientY-rect.top)*q("#annotations").viewBox.baseVal.height/rect.height}}
 function addLayer(){
   const name=prompt("レイヤーの名前を入力してください","");
@@ -1073,7 +1090,7 @@ async function startDraw(event){
     const record=annotationItemRecord(id);if(!record)return;clearWritingRange();state.activeLayerId=record.layer.id;selectedItemId=id;const item=record.item;
     event.preventDefault();pendingDrag={item,start:p,clientX:event.clientX,clientY:event.clientY};q("#annotations").setPointerCapture(event.pointerId);renderLayers();return;
   }
-  if(state.drawTool==="text"){const text=await requestComment("","譜面に入れるコメント");if(text&&text.trim()){snap();const item={id:uid(),type:"text",x:p.x,y:p.y,text:text.trim(),color:state.drawColor,size:state.textSize,background:state.textBackground,layoutTextAnchorVersion:2,layoutTextAnchorBasis:"comment-top"};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id;render()}return}
+  if(state.drawTool==="text"){const click={x:event.clientX,y:event.clientY},text=await requestComment("","譜面に入れるコメント");if(text&&text.trim()){snap();const natural=resetAnnotationLayoutForDrop(),point=natural?clientPointToSvg(click,natural):p,item={id:uid(),type:"text",x:point.x,y:point.y,text:text.trim(),color:state.drawColor,size:state.textSize,background:state.textBackground,layoutTextAnchorVersion:2,layoutTextAnchorBasis:"comment-top"};attachAnnotationTarget(item);layer.items.push(item);selectedItemId=item.id;render()}return}
   if(state.drawTool==="eraser"){const target=event.target.closest("[data-item]");if(target){snap();layer.items=layer.items.filter(item=>item.id!==target.dataset.item);render()}return}
   event.preventDefault();q("#annotations").setPointerCapture(event.pointerId);draft={type:state.drawTool,start:p,points:[p]};
 }
@@ -1383,17 +1400,17 @@ window.addEventListener("beforeprint",ensurePrintLayout);
 window.addEventListener("afterprint",()=>{
   q("#printRootV2").replaceChildren();
 });
-window.addEventListener("resize",()=>{applyPreview();requestAnimationFrame(()=>{syncAnnotationVocalPositions();syncAnnotationVocalSlurs();syncTuplets()})},{passive:true});
+window.addEventListener("resize",()=>{annotationLayoutReady=false;applyPreview();scheduleStableAnnotationLayout()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();startAnnotationMode();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
 document.querySelector('.page-link[href="./index.html"]')?.addEventListener("click",()=>{stopAnnotationMode();save()});
 window.addEventListener("pagehide",()=>{stopAnnotationMode();save()});
-window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState()}startAnnotationMode();render()}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
+window.addEventListener("pageshow",()=>{try{annotationLayoutReady=false;const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState()}startAnnotationMode();render();scheduleStableAnnotationLayout()}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();
-if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=>{applyPreview();syncAnnotationVocalPositions();syncAnnotationVocalSlurs();syncTuplets()}));
+scheduleStableAnnotationLayout();
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=211"></script>
+  <script src="./print-v2.js?v=213"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>

@@ -369,7 +369,7 @@
   </div>
 </dialog>
 <script src="./annotation-layout.js?v=189"></script>
-<script src="./note-position.js?v=200"></script>
+<script src="./note-position.js?v=213"></script>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1)),vocalVals=["0",...vals];
@@ -380,6 +380,7 @@ const TECHNIQUE_LAYER_ID="technique-layer";
 const defaults={notes:[],tuplets:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalDotted:false,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},measureSpecials:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],lyricsGlyphAnchors:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:TECHNIQUE_LAYER_ID,scoreEditLayer:"notes",drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:"#222222",markerColor:"#f4df59",markerStyleVersion:2,numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"none",annotationTarget:"staff",preview:true,annotationCoordVersion:2,annotationLayout:{version:2,unit:"staff-line",boundaries:{}},printMode:"auto",manualPageRows:""};
 defaults.vocalSlurs=[];
 let state={...defaults},past=[],future=[],hasSaved=false;
+let scoreMetricsReady=false,scoreMetricsPass=0;
 let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="",vocalAnchorSelection=null,vocalAnchorOffset=0,vocalTool="note",vocalSlurStartId=null,tripletMode=false,tripletStartAnchor=null,slurStartAnchor=null;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
@@ -919,7 +920,7 @@ function syncLyricsToScore(){
   qAll("#scoreArea .lyrics-row").forEach(row=>{const input=row.querySelector("[data-lyrics-row]"),display=row.querySelector("[data-lyrics-display-row]"),field=row.querySelector(".lyrics-field"),score=row.closest(".staff")?.querySelector(".score");if(!input||!display||!field||!score)return;
     const scoreRect=score.getBoundingClientRect(),fieldRect=field.getBoundingClientRect();if(!scoreRect.width||!fieldRect.width)return;display.style.left=`${scoreRect.left-fieldRect.left}px`;display.style.width=`${scoreRect.width}px`;display.replaceChildren();
     const measures=[...row.closest(".staff").querySelectorAll(".score>.measure[data-measure]")].map(element=>({element,m:Number(element.dataset.measure),rect:element.getBoundingClientRect()}));
-    const rowIndex=Number(input.dataset.lyricsRow),inputStyle=getComputedStyle(input),paddingLeft=Number.parseFloat(inputStyle.paddingLeft)||0,saved=Number.isInteger(rowIndex)?state.lyricsGlyphAnchors?.[rowIndex]:null,savedGlyphs=Array.isArray(saved?.glyphs)?saved.glyphs:null,expected=lyricGraphemes(input.value).filter(glyph=>!/^[\s\u3000]+$/u.test(glyph)),savedIsCurrent=saved?.text===input.value&&savedGlyphs?.length===expected.length&&savedGlyphs.every((item,index)=>item?.text===expected[index]&&Number.isFinite(Number(item.m))&&Number.isFinite(Number(item.measureX))),anchors=savedIsCurrent?savedGlyphs.map(item=>({text:item.text,m:Number(item.m),measureX:clamp(Number(item.measureX),0,1)})):lyricGlyphPositions(input.value,inputStyle.font,scoreRect.width,paddingLeft).map(item=>{const clientX=scoreRect.left+item.x*scoreRect.width,measure=measures.find(entry=>clientX>=entry.rect.left&&clientX<=entry.rect.right)||measures.at(-1);return{text:item.glyph,m:measure?.m??0,measureX:measure?clamp((clientX-measure.rect.left)/Math.max(1,measure.rect.width),0,1):item.x}});if(Number.isInteger(rowIndex)&&!savedIsCurrent){state.lyricsGlyphAnchors=Array.isArray(state.lyricsGlyphAnchors)?state.lyricsGlyphAnchors:[];state.lyricsGlyphAnchors[rowIndex]={text:input.value,glyphs:anchors}}
+    const rowIndex=Number(input.dataset.lyricsRow),inputStyle=getComputedStyle(input),paddingLeft=Number.parseFloat(inputStyle.paddingLeft)||0,saved=Number.isInteger(rowIndex)?state.lyricsGlyphAnchors?.[rowIndex]:null,savedGlyphs=Array.isArray(saved?.glyphs)?saved.glyphs:null,expected=lyricGraphemes(input.value).filter(glyph=>!/^[\s\u3000]+$/u.test(glyph)),savedIsCurrent=saved?.text===input.value&&savedGlyphs?.length===expected.length&&savedGlyphs.every((item,index)=>item?.text===expected[index]&&Number.isFinite(Number(item.m))&&Number.isFinite(Number(item.measureX))),anchors=savedIsCurrent?savedGlyphs.map(item=>({text:item.text,m:Number(item.m),measureX:clamp(Number(item.measureX),0,1)})):lyricGlyphPositions(input.value,inputStyle.font,scoreRect.width,paddingLeft).map(item=>{const clientX=scoreRect.left+item.x*scoreRect.width,measure=measures.find(entry=>clientX>=entry.rect.left&&clientX<=entry.rect.right)||measures.at(-1);return{text:item.glyph,m:measure?.m??0,measureX:measure?clamp((clientX-measure.rect.left)/Math.max(1,measure.rect.width),0,1):item.x}});if(Number.isInteger(rowIndex)&&!savedIsCurrent&&scoreMetricsReady){state.lyricsGlyphAnchors=Array.isArray(state.lyricsGlyphAnchors)?state.lyricsGlyphAnchors:[];state.lyricsGlyphAnchors[rowIndex]={text:input.value,glyphs:anchors}}
     anchors.forEach(item=>{const glyph=document.createElement("span"),measure=measures.find(entry=>entry.m===Number(item.m)),clientX=measure?measure.rect.left+clamp(Number(item.measureX),0,1)*measure.rect.width:scoreRect.left,x=clamp((clientX-scoreRect.left)/scoreRect.width,0,1);glyph.className="lyrics-glyph";glyph.dataset.lyricX=String(x);if(measure){glyph.dataset.lyricMeasure=String(measure.m);glyph.dataset.lyricMeasureX=String(clamp(Number(item.measureX),0,1))}glyph.style.left=`${(x*100).toFixed(5)}%`;glyph.textContent=item.text;display.appendChild(glyph)});
   });
 }
@@ -1661,17 +1662,18 @@ function ensurePrintLayout(){
 }
 window.addEventListener("beforeprint",ensurePrintLayout);
 window.addEventListener("afterprint",()=>{q("#printRootV2").replaceChildren()});
-window.addEventListener("resize",()=>{applyPreview();requestAnimationFrame(()=>{syncAnchoredVocalPositions();syncVocalSlurs();syncTuplets()})},{passive:true});
+function scheduleStableScoreMetrics(){const pass=++scoreMetricsPass,ready=document.fonts?.ready||Promise.resolve();ready.catch(()=>{}).then(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{if(pass!==scoreMetricsPass)return;const score=q("#scoreArea");if(!score||score.getBoundingClientRect().width<=0)return;scoreMetricsReady=true;applyPreview();syncAnchoredVocalPositions();syncVocalSlurs();syncTuplets()})))}
+window.addEventListener("resize",()=>{scoreMetricsReady=false;applyPreview();scheduleStableScoreMetrics()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
 document.querySelector('.page-link[href="./annotations.html"]')?.addEventListener("click",save);
 window.addEventListener("pagehide",save);
-window.addEventListener("pageshow",()=>{try{const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};migrateState();drawing=false;render()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
+window.addEventListener("pageshow",()=>{try{scoreMetricsReady=false;const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};migrateState();drawing=false;render();scheduleStableScoreMetrics()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();
-if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=>{applyPreview();syncAnchoredVocalPositions();syncVocalSlurs();syncTuplets()}));
+scheduleStableScoreMetrics();
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=211"></script>
+  <script src="./print-v2.js?v=213"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>

@@ -61,19 +61,22 @@
      必要量を復元し、両者の大きい方を使う。画面座標や元データは変更しない。 */
   function buildPrintAnnotationLayout(state,annotationCapture){
     const layoutApi=global.ShianAnnotationLayout,source=layoutApi?layoutApi.normalize(state.annotationLayout):{version:2,boundaries:{}};
-    const boundaries={};
+    const boundaries={},derivedBoundaries=new Set();
     let derivedCount=0;
     (annotationCapture?.items||[]).filter(item=>item.type==="text").forEach(item=>{
       const placement=item.layoutPlacement;if(!placement)return;
       const lane=String(placement.lane||"");if(!["beforeScore","afterScore","afterLyrics","afterVocal"].includes(lane))return;
       const row=Number(placement.row);if(!Number.isInteger(row)||row<0)return;
-      const boundaryKey=String(placement.boundaryKey||`${row}:${lane}`),savedGap=Math.max(0,Number(source?.boundaries?.[boundaryKey]?.gap)||0),current=Math.max(savedGap,Number(boundaries[boundaryKey]?.gap)||0);
+      const boundaryKey=String(placement.boundaryKey||`${row}:${lane}`),current=Math.max(0,Number(boundaries[boundaryKey]?.gap)||0);derivedBoundaries.add(boundaryKey);
       boundaries[boundaryKey]={gap:current};
       const offsetFromNextTop=Number(placement.offsetFromNextTop),heightLines=Number(placement.heightLines),clearanceBottom=Number(placement.clearanceBottom);
       if(!Number.isFinite(offsetFromNextTop)||!Number.isFinite(heightLines))return;
       const requiredGap=Math.max(0,offsetFromNextTop+Math.max(0,heightLines)+(Number.isFinite(clearanceBottom)?Math.max(0,clearanceBottom):0));
       if(requiredGap>current+1e-6){boundaries[boundaryKey]={gap:requiredGap};derivedCount++}
     });
+    /* 現行コメントがある境界は、その実データから毎回再構築する。過去に一時的な
+       非表示DOM寸法から保存された過大gapを印刷へ持ち越さない。 */
+    Object.entries(source?.boundaries||{}).forEach(([key,value])=>{if(!derivedBoundaries.has(key)){const gap=Math.max(0,Number(value?.gap)||0);if(gap>0)boundaries[key]={gap}}});
     return{layout:{version:Number(layoutApi?.VERSION)||Number(source?.version)||2,boundaries},derivedCount};
   }
   function effectivePrintLane(lane,showLyrics,showVocal){
