@@ -4,6 +4,8 @@
   const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
   const key=(m,s,p)=>`${m},${s},${p}`;
   const isOpenValue=value=>value==="0"||value==="○";
+  const densityCanvas=document.createElement("canvas"),densityContext=densityCanvas.getContext("2d");
+  const densityTextWidth=(text,size)=>{densityContext.font=`400 ${size}px "Shian 851 MkPOP","Shian Score BIZ UDPMincho",serif`;return Math.max(12,densityContext.measureText(String(text)).width+2)};
   const line=(x,width=1.5)=>`<line x1="${x}" y1="0" x2="${x}" y2="68" stroke="currentColor" stroke-width="${width}"/>`;
   const dots=x=>`<circle cx="${x}" cy="23" r="2.2" fill="currentColor"/><circle cx="${x}" cy="45" r="2.2" fill="currentColor"/>`;
   function barSvg(kind,edge="middle"){
@@ -142,7 +144,7 @@
       if(item.text==="スリ"&&item.endAnchor){if(noteKeys.has(key(Number(item.endAnchor.m),Number(item.endAnchor.s),Number(item.endAnchor.p))))linkedTechniqueSlurs.push(item);return}
       if(!techMap.has(anchorKey))techMap.set(anchorKey,[]);techMap.get(anchorKey).push(item)
     });
-    const printDensity=m=>{const notes=(state.notes||[]).filter(note=>Number(note.m)===Number(m)&&!note.rest),maxOnString=Math.max(0,...[1,2,3].map(string=>notes.filter(note=>Number(note.s)===string).length)),noteSize=maxOnString>=8?14:15;return{noteSize,techniqueSize:14*noteSize/15}};
+    const printDensity=m=>{const notes=(state.notes||[]).filter(note=>Number(note.m)===Number(m)&&!note.rest),row=Math.max(0,starts.findLastIndex(start=>start<=m)),rowStart=starts[row]||0,rowWidth=Array.from({length:counts[row]||0},(_,local)=>measureWidth(rowStart+local)).reduce((sum,value)=>sum+value,0),measurePixels=(196*96/25.4-55)*measureWidth(m)/Math.max(1,rowWidth),displayCapacity=state.measureSpecials?.[String(m)]?.type==="hanma"?Math.max(1,Math.round(capacity*.5)):capacity,density=global.ShianNoteDensity.select({notes:notes.map(note=>({...note,x:columnX(m,Number(note.p))})),measureWidth:measurePixels,capacity:displayCapacity,measureText:densityTextWidth}),maxOnString=Math.max(0,...[1,2,3].map(string=>notes.filter(note=>Number(note.s)===string).length)),legacyNoteSize=maxOnString>=8?14:15;return{noteSize:density.size,techniqueSize:14*legacyNoteSize/15,noteDensity:density.name}};
     const annotationCapture=captureAnnotations(state),geometry=captureScoreGeometry(),rows=counts.map((count,row)=>({row,measures:Array.from({length:count},(_,local)=>{const m=starts[row]+local,width=measureWidth(m),special=state.measureSpecials?.[String(m)],hanma=special?.type==="hanma"&&Number(special.lengthRatio)===0.5,displayCapacity=hanma?Math.max(1,Math.round(capacity*.5)):capacity,density=printDensity(m);return{m,local,width,hanma,...density,startKind:state.barlineKinds?.[barKey(row,local)]||"single",endKind:local===count-1?(state.barlineKinds?.[barKey(row,count)]||"single"):"single",notes:(state.notes||[]).filter(note=>note.m===m&&Number(note.p)<displayCapacity).map(note=>{const x=note.rest?(Number(note.x)||0):columnX(note.m,note.p),id=key(note.m,note.s,note.p),measured=geometry.noteLeft.get(id);return{...note,left:Number.isFinite(measured)?measured:clamp((Number(note.p)+.5)/displayCapacity+x/width,.005,.995),value:note.rest?"●":(isOpenValue(note.v)?"0":String(note.v||"")),techniques:note.rest?[]:(techMap.get(id)||[])} }),vocalNotes:(state.vocalNotes||[]).filter(note=>Number(note.m)===m&&Number(note.p)<displayCapacity).map(note=>{const anchor=note.anchor&&Number(note.anchor.m)===m&&Number.isInteger(Number(note.anchor.p))?note.anchor:null,position=anchor?Number(anchor.p):Number(note.p),offset=anchor?Math.max(0,Number(note.anchorOffset)||0):0,measured=anchor?geometry.columnLeft.get(`${m},${position}`):null,base=Number.isFinite(measured)?measured:(position+.5)/displayCapacity+(anchor?columnX(m,position)/width:0);return{...note,left:clamp(base+offset/displayCapacity+(Number(note.x)||0)/width,.005,.995)}}),parts:(state.scoreParts||[]).filter(part=>part.m===m).map(part=>({...part,left:.5}))}})}));
     const printScoreWidth=196*96/25.4-55,printLyricsWidth=printScoreWidth;rows.forEach(item=>{const sourceWidth=geometry.lyricsWidth.get(item.row)||1000;item.lyrics=showLyrics?String(state.lyrics?.[item.row]||""):"";item.lyricsGlyphAnchors=showLyrics?(geometry.lyricsGlyphs.get(item.row)||[]):[];item.lyricsGlyphs=[];item.lyricsSourceWidth=sourceWidth;item.lyricsScale=printLyricsWidth/sourceWidth});
     const vocalPositionById=new Map(),shamisenPositionByAnchor=new Map();rows.forEach(row=>{row.totalWidth=row.measures.reduce((sum,measure)=>sum+measure.width,0);row.vocalSlurs=[];row.tuplets=[];row.techniqueSlurs=[];let used=0;const measureStarts=new Map();row.measures.forEach(measure=>{measureStarts.set(measure.m,used);measure.vocalNotes.forEach(note=>vocalPositionById.set(String(note.id),{row:row.row,x:(used+note.left*measure.width)/row.totalWidth*1000}));measure.notes.filter(note=>!note.rest).forEach(note=>{shamisenPositionByAnchor.set(`${measure.m},${Number(note.s)},${Number(note.p)}`,{row:row.row,x:(used+note.left*measure.width)/row.totalWidth*1000,y:23+(3-Number(note.s))*18})});used+=measure.width});row.lyricsGlyphs=(row.lyricsGlyphAnchors||[]).map(glyph=>{const measure=row.measures.find(item=>item.m===glyph.m),start=measureStarts.get(glyph.m);return measure&&Number.isFinite(start)?{text:glyph.text,x:clamp((start+glyph.measureX*measure.width)/row.totalWidth,0,1)}:{text:glyph.text,x:glyph.x}})});
@@ -162,6 +164,18 @@
       rows.forEach(row=>{row.printGaps=global.ShianAnnotationLayout?global.ShianAnnotationLayout.pixelGaps(resolvedPrintLayout,row.row,{lyricsVisible:showLyrics,vocalVisible:showVocal},printStaffLineSpacing):{beforeScore:0,afterScore:0,afterLyrics:0,afterVocal:0};row.printGapTotal=Object.values(row.printGaps).reduce((sum,value)=>sum+(Number(value)||0),0)});
       const maxPageGap=Math.max(0,...pages.map(page=>page.rows.reduce((sum,row)=>sum+row.printGapTotal,0))),nextHeight=Math.max(72,(availableHeight-maxPageGap)/referenceRows);if(Math.abs(nextHeight-sharedStaffHeight)<.001){sharedStaffHeight=nextHeight;break}sharedStaffHeight=nextHeight;
     }
+    /* コメントがない境界でも、唄譜／歌詞下端から次段の奏法・譜線までの
+       最低間隔を確保する。ページ内の未使用高だけを利用し、段高やコメント高を
+       再縮小しないため、追加量が段高計算へ循環して間隔が暴走しない。 */
+    const trailingLane=showVocal?"afterVocal":showLyrics?"afterLyrics":"afterScore",minimumTrailingHeight=printStaffLineSpacing*2;
+    pages.forEach(page=>{
+      const pairs=Math.max(0,page.rows.length-1);if(!pairs)return;
+      let pageSpare=Math.max(0,availableHeight-page.rows.reduce((sum,row)=>sum+sharedStaffHeight+row.printGapTotal,0));
+      page.rows.slice(0,-1).forEach(row=>{
+        const currentGap=Math.max(0,Number(row.printGaps[trailingLane])||0),natural=naturalPrintBoundaryHeight(rows,row.row,trailingLane,{showLyrics,showVocal,baseStaffHeight:sharedStaffHeight}),needed=Math.max(0,minimumTrailingHeight-(natural+currentGap)),addition=Math.min(needed,pageSpare);
+        if(addition>0){row.printGaps[trailingLane]=currentGap+addition;row.printGapTotal+=addition;pageSpare-=addition}
+      });
+    });
     /* A4の基本段高から追加余白を先に差し引く。追加量を段高へ足し続けず、
        各印刷生成時に論理境界情報から一度だけ再構築する。 */
     let printTop=0;

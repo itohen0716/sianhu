@@ -11,7 +11,7 @@
     @font-face{font-family:"Shian 851 MkPOP";src:url("./fonts/851MkPOP_101.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     .annotation-item.text-item:not(.symbol-item) text{font-family:"Shian 851 MkPOP","Yu Gothic","Noto Sans JP",sans-serif}
     body .lyrics-input,body .lyrics-display{font-family:"Shian 851 MkPOP","Yu Gothic",sans-serif;font-size:var(--screen-lyrics-size,17px)}
-    .note:not(.rest) b{font-family:"Shian 851 MkPOP","Shian Score BIZ UDPMincho","BIZ UDPMincho",serif;font-size:calc(var(--note-size) + 1px)}
+    .note:not(.rest) b{font-family:"Shian 851 MkPOP","Shian Score BIZ UDPMincho","BIZ UDPMincho",serif;font-size:var(--digit-size,17px)}
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
     .annotation-boundary-space{display:block;height:var(--annotation-boundary-gap,0px)}
     *{box-sizing:border-box}body{margin:0;background:#e5ded3;color:var(--ink);font-family:"Yu Gothic",sans-serif}
@@ -370,6 +370,7 @@
 </dialog>
 <script src="./annotation-layout.js?v=189"></script>
 <script src="./note-position.js?v=213"></script>
+<script src="./note-density.js?v=215"></script>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1)),vocalVals=["0",...vals];
@@ -896,14 +897,20 @@ function measureHtml(m){
   const location=measureLocation(m),row=location.row,boundary=location.local,rowMeasures=location.count,startKey=barlineKey(row,boundary),endKey=barlineKey(row,rowMeasures),selected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.key===startKey?" selected":"";
   const capacity=measureCapacityFor(m),width=measureWidth(m),grow=screenMeasureGrow(m),hanma=isHanma(m),notes=state.notes.filter(note=>note.m===m&&!note.rest),maxOnString=Math.max(0,...[1,2,3].map(stringNumber=>notes.filter(note=>note.s===stringNumber).length)),noteSize=maxOnString>=8?13:14,kind=state.barlineKinds?.[startKey]||"single",atRowEnd=boundary===rowMeasures-1,endKind=state.barlineKinds?.[endKey]||"single",endSelected=selectedScoreTarget?.type==="barline"&&selectedScoreTarget.key===endKey?" selected":"",endLine=atRowEnd?`<button class="barline-handle endline-handle${endSelected}" data-barline-key="${endKey}" data-boundary="${m+1}" data-end="true" data-kind="${endKind}" aria-label="${row+1}段末の小節線を選択">${barlineSvg(endKind,"end")}</button>`:"";return `<div class="measure ${m===state.m?"on":""}${hanma?" hanma":""}${atRowEnd&&endKind!=="single"?" custom-end":""}" data-measure="${m}" style="--measure-width:${width}px;--measure-grow:${grow};--meter-columns:${capacity};--note-size:${noteSize}px"><button class="measure-selector" data-measure-select="${m}" aria-label="${row+1}段${boundary+1}小節を選択"></button><button class="barline-handle${selected}" data-barline-key="${startKey}" data-boundary="${m}" data-kind="${kind}" aria-label="${row+1}段${boundary+1}小節の開始線を横移動">${barlineSvg(kind,boundary===0?"start":"middle")}</button>${endLine}${scorePartsHtml(m)}${[3,2,1].map(s=>`<div class="string">${Array.from({length:capacity},(_,p)=>`<button class="cell ${state.scoreEditLayer!=="vocal"&&cursorVisible&&m===state.m&&s===state.s&&p===state.p?"cursor":""}" data-pos="${m},${s},${p}" aria-label="${m+1}小節 ${p+1}位置"></button>`).join("")}${state.notes.filter(n=>n.m===m&&n.s===s&&n.p<capacity).map(n=>noteHtml(n,m,s)).join("")}</div>`).join("")}${hanma?'<span class="hanma-label">〔半間〕</span>':""}</div>`;
 }
+const noteDensityCanvas=document.createElement("canvas"),noteDensityContext=noteDensityCanvas.getContext("2d");
+function noteDensityTextWidth(text,size){noteDensityContext.font=`400 ${size}px "Shian 851 MkPOP","Shian Score BIZ UDPMincho",serif`;return Math.max(12,noteDensityContext.measureText(String(text)).width+2)}
+function measureDigitDensity(m,measurePixels,capacity){
+  const notes=state.notes.filter(note=>Number(note.m)===Number(m)&&!note.rest&&Number(note.p)<capacity).map(note=>({...note,x:columnX(m,Number(note.p))}));
+  return window.ShianNoteDensity.select({notes,measureWidth:measurePixels,capacity,measureText:noteDensityTextWidth});
+}
 function applyContentAwareMeasureWidths(){
   qAll("#scoreArea .measure[data-measure]").forEach(measure=>{
     const m=Number(measure.dataset.measure),capacity=measureCapacityFor(m),measurePixels=measure.getBoundingClientRect().width,byString=new Map(),edgeGap=0,columnGap=0;
     measure.style.setProperty("--content-min-width","0px");
+    const density=measureDigitDensity(m,measurePixels,capacity);measure.style.setProperty("--digit-size",`${density.size}px`);measure.dataset.noteDensity=density.name;measure.dataset.noteDensityLoad=density.load.toFixed(4);
     measure.querySelectorAll(".note[data-note]").forEach(element=>{const parts=element.dataset.note.split(",").map(Number),s=parts[1],p=parts[2],glyph=element.querySelector("b")||element,note=state.notes.find(entry=>entry.m===m&&entry.s===s&&entry.p===p);if(!note||p>=capacity)return;const width=Math.max(12,Number(glyph.offsetWidth)||Number(glyph.scrollWidth)||12),x=note.rest?Number(note.x)||0:columnX(m,p),columns=byString.get(s)||new Map(),current=columns.get(p);if(!current||width>current.width)columns.set(p,{p,width,x});byString.set(s,columns)});
     const fitScale=fontRatio=>{let scale=1;byString.forEach(columns=>{const entries=[...columns.values()].sort((a,b)=>a.p-b.p).map(entry=>({...entry,width:entry.width*fontRatio,center:(entry.p+.5)*measurePixels/capacity+entry.x}));entries.forEach(entry=>{const half=entry.width/2;if(half>0)scale=Math.min(scale,(entry.center-edgeGap)/half,(measurePixels-edgeGap-entry.center)/half)});for(let index=1;index<entries.length;index++){const previous=entries[index-1],current=entries[index],room=current.center-previous.center-columnGap,halfWidths=previous.width/2+current.width/2;if(halfWidths>0)scale=Math.min(scale,room/halfWidths)}});return clamp(Number.isFinite(scale)?scale:1,.58,1)};
-    let fontSize=Number.parseFloat(getComputedStyle(measure).getPropertyValue("--note-size"))||14,scale=fitScale(1);
-    if(scale<.999&&fontSize>13){measure.style.setProperty("--note-size","13px");scale=fitScale(13/fontSize);fontSize=13}
+    const scale=fitScale(1);
     measure.style.setProperty("--note-scale-x",String(scale));
     const screenScale=Number.parseFloat(getComputedStyle(q(".paper")).getPropertyValue("--screen-score-scale"))||1;
     measure.style.setProperty("--rhythm-width",`${Math.max(7*screenScale,Math.min(14*screenScale,measurePixels/capacity*.72)).toFixed(2)}px`);
@@ -1673,7 +1680,7 @@ scheduleStableScoreMetrics();
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=213"></script>
+  <script src="./print-v2.js?v=215"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
