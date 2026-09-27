@@ -122,11 +122,9 @@
     /* v50: 音符・音価線の座標指定をここだけに集約 */
     .measure{--row-height:18px;--note-height:14px}
     .note{align-self:stretch;position:relative;height:var(--row-height);line-height:0;appearance:none;-webkit-appearance:none}
-    .note b,.note.open-note b{position:absolute;z-index:2;left:50%;top:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:12px;height:var(--note-height);min-height:0;line-height:var(--note-height);transform:translate(-50%,-50%) scale(var(--note-scale-x,1),1.10);transform-origin:center center}.note.rest b{transform:translate(-50%,-50%) scaleX(var(--note-scale-x,1))}
-    .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{z-index:3;top:calc(50% + 8px);bottom:auto;width:var(--rhythm-width,14px);height:0}
+    .note b,.note.open-note b{position:absolute;z-index:2;left:50%;top:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:12px;height:var(--note-height);min-height:0;line-height:var(--note-height);transform:translate(-50%,-50%) scale(var(--note-scale-x,1),1.20);transform-origin:center center}.note.rest b{transform:translate(-50%,-50%) scaleX(var(--note-scale-x,1))}
+    .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{z-index:3;top:calc(50% + 9px);bottom:auto;width:var(--rhythm-width,14px);height:0}
     .note.d1:not(.rest)::after{height:3px}
-    /* 一の糸は最下段なので、音価線を2px上げて譜線領域内へ収める。 */
-    .string:last-child .note.d2:not(.rest)::after,.string:last-child .note.d1:not(.rest)::after{z-index:5;top:calc(50% + 6px)}
     /* 唄数字の上に、歌詞線と重ならない固定スラー帯を確保する。 */
     .vocal-row{min-height:50px}.vocal-label{padding-top:17px}.vocal-score{position:relative}.vocal-measure{height:50px}.vocal-note{margin-top:16px}.vocal-note.slur-start{outline:2px solid #477d91;border-radius:4px}.vocal-slur-layer{position:absolute;z-index:4;left:0;top:2px;width:100%;height:16px;overflow:visible;pointer-events:none}.vocal-slur-layer path{fill:none;stroke:#222;stroke-width:1.4;stroke-linecap:round}
     @media print{
@@ -139,8 +137,8 @@
       .staff.print-page-start{padding-top:var(--print-technique-clearance)!important}
       .measure{--row-height:18px!important;--note-height:14px!important}
       .note{align-self:stretch!important;height:var(--row-height)!important;line-height:0!important}
-      .note b,.note.open-note b{left:50%!important;top:50%!important;height:var(--note-height)!important;min-height:0!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%) scaleY(1.10)!important;transform-origin:center center!important}.note.rest b{transform:translate(-50%,-50%)!important}
-      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 8px)!important}
+      .note b,.note.open-note b{left:50%!important;top:50%!important;height:var(--note-height)!important;min-height:0!important;line-height:var(--note-height)!important;transform:translate(-50%,-50%) scaleY(1.20)!important;transform-origin:center center!important}.note.rest b{transform:translate(-50%,-50%)!important}
+      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + 9px)!important}
       .note.d1:not(.rest)::after{height:3px!important}
       /* 印刷奏法は四分音符の数字を基準に、全段で同じ位置へ強制配置する。 */
       .print-technique{
@@ -181,8 +179,8 @@
       .print-barline{position:absolute;z-index:4;top:9px;bottom:9px;width:18px;color:var(--ink);transform:translateX(-50%)}
       .print-barline.start{left:0}.print-barline.end{right:0;transform:translateX(50%)}.print-barline svg{display:block;width:18px;height:100%;overflow:visible}
       .print-note{position:absolute;z-index:5;top:2px;left:var(--print-left);width:max-content;height:14px;transform:translateX(-50%);color:var(--note-color,#222)}
-      .print-note-glyph{display:flex;align-items:center;justify-content:center;min-width:12px;height:14px;padding:0 1px;background:#fffef9;font:400 var(--print-note-size,14px)/14px "Shian Score BIZ UDPMincho","BIZ UDPMincho",serif;font-synthesis:none;white-space:nowrap;transform:scaleY(1.10);transform-origin:center center}
-      .print-note.rest .print-note-glyph{font-family:Arial,sans-serif;transform:none}.print-note.d2::after,.print-note.d1::after{content:"";position:absolute;left:50%;top:16px;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor}.print-note.d1::after{height:3px;border-bottom:1.5px solid currentColor}
+      .print-note-glyph{display:flex;align-items:center;justify-content:center;min-width:12px;height:14px;padding:0 1px;background:#fffef9;font:400 var(--print-note-size,14px)/14px "Shian Score BIZ UDPMincho","BIZ UDPMincho",serif;font-synthesis:none;white-space:nowrap;transform:scaleY(1.20);transform-origin:center center}
+      .print-note.rest .print-note-glyph{font-family:Arial,sans-serif;transform:none}.print-note.d2::after,.print-note.d1::after{content:"";position:absolute;left:50%;top:17px;width:14px;transform:translateX(-50%);border-top:1.5px solid currentColor}.print-note.d1::after{height:3px;border-bottom:1.5px solid currentColor}
       .print-techniques{position:absolute;left:50%;top:0;transform:translateX(-50%);pointer-events:none}.print-technique-item{position:absolute;left:0;color:var(--tech-color,#222);white-space:nowrap;transform:translateX(-50%);font-family:"Yu Mincho","Times New Roman",serif;font-weight:700}
       .print-technique-item.above{bottom:18px}.print-technique-item.below{top:18px}.print-technique-item.finger{font-size:24px;line-height:1}.print-technique-item.symbol{font-size:14px}.print-technique-item.slur{width:var(--slur-width,42px);font-size:14px;text-align:center}.print-technique-item.slur::after{content:"";display:block;width:100%;height:8px;border-top:1.5px solid currentColor;border-radius:50%}
       .print-score-part{position:absolute;z-index:3;left:50%;top:50%;width:24px;height:36px;transform:translate(-50%,-50%)}.print-score-part svg{width:100%;height:100%;overflow:visible}
@@ -195,8 +193,7 @@
       .measure{--row-height:var(--screen-row-height,18px);--note-height:var(--screen-note-height,14px)}
       .labels{grid-template-rows:repeat(3,var(--screen-row-height,18px));font-size:var(--screen-label-size,12px);line-height:var(--screen-row-height,18px)}
       .note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-size:calc(var(--note-size) * var(--screen-score-scale,1));line-height:var(--screen-note-height,14px)}
-      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--screen-rhythm-offset,8px))}
-      .string:last-child .note.d2:not(.rest)::after,.string:last-child .note.d1:not(.rest)::after{top:calc(50% + var(--screen-bottom-rhythm-offset,6px))}
+      .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--screen-rhythm-offset,9px))}
       /* 左右端線は操作ボタンの外枠では描かず、専用の疑似要素／SVGだけで描く。 */
       .barline-handle{top:calc(var(--row-height)/2);bottom:auto;height:calc(var(--row-height)*2)}
       .barline-handle::after{top:0;bottom:auto;height:100%}
@@ -398,8 +395,7 @@ function updateScreenScoreScale(){
   paper.style.setProperty("--screen-lyrics-size",`${(17*scale).toFixed(2)}px`);
   paper.style.setProperty("--screen-lyrics-line-height",`${(26*scale).toFixed(2)}px`);
   paper.style.setProperty("--screen-lyrics-height",`${(32*scale).toFixed(2)}px`);
-  paper.style.setProperty("--screen-rhythm-offset",`${(8*scale).toFixed(2)}px`);
-  paper.style.setProperty("--screen-bottom-rhythm-offset",`${(6*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-rhythm-offset",`${(9*scale).toFixed(2)}px`);
   return scale;
 }
 function screenAnnotationLength(cssPixels){
