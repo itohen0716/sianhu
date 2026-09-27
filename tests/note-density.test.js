@@ -19,5 +19,10 @@ assert.equal(unstacked.columns,3,"異なるpは別の横列として数える");
 assert.ok(stacked.size>=unstacked.size,"縦積みだけで過剰縮小しない");
 
 assert.ok(select([0,2,4,6].map(p=>({p,v:"18"})),180).size>=twoDigits.size,"同じ音列でも小節幅が広ければ同等以上のサイズになる");
+const normalScale=density.select({notes:[0,2,4,6].map(p=>({p,v:"3"})),measureWidth:120,capacity:8,measureText,displayScale:1});
+const expandedScale=density.select({notes:[0,2,4,6].map(p=>({p,v:"3"})),measureWidth:138,capacity:8,measureText,displayScale:1.15});
+assert.equal(expandedScale.size,normalScale.size,"縦横が同比率なら密度段階は安定する");
+assert.ok(expandedScale.finalSize>normalScale.finalSize,"拡大時は密度段階を保ったまま最終数字サイズが拡大する");
+assert.equal(select([{p:0,v:"3",x:-20},{p:4,v:"6",x:15}]).size,select([{p:0,v:"3"},{p:4,v:"6"}]).size,"表示微調整xは密度段階を変えない");
 assert.equal(select([{p:0,v:"3"},{p:1,v:"3",rest:true}]).columns,1,"休符は音価数字密度へ含めない");
 console.log("note-density tests: ok");
