@@ -10,7 +10,7 @@
     @font-face{font-family:"Shian Score BIZ UDPMincho";src:url("./fonts/BIZUDPMincho-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     @font-face{font-family:"Shian 851 MkPOP";src:url("./fonts/851MkPOP_101.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     .annotation-item.text-item:not(.symbol-item) text{font-family:"Shian 851 MkPOP","Yu Gothic","Noto Sans JP",sans-serif}
-    body .lyrics-input,body .lyrics-display{font-family:"Shian 851 MkPOP","Yu Gothic",sans-serif;font-size:17px}
+    body .lyrics-input,body .lyrics-display{font-family:"Shian 851 MkPOP","Yu Gothic",sans-serif;font-size:var(--screen-lyrics-size,17px)}
     .note:not(.rest) b{font-family:"Shian 851 MkPOP","Shian Score BIZ UDPMincho","BIZ UDPMincho",serif;font-size:calc(var(--note-size) + 1px)}
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
     .annotation-boundary-space{display:block;height:var(--annotation-boundary-gap,0px)}
@@ -28,7 +28,7 @@
     .annotation-svg text{font-family:"Yu Gothic","Noto Sans JP",sans-serif;font-stretch:normal}.annotation-item{pointer-events:stroke}.annotation-item.text-item{pointer-events:all}.annotation-item.selected,.annotation-item.range-selected{filter:drop-shadow(0 0 4px #f2c500)}
     .meta{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;font:15px serif}.score-meta{display:flex;align-items:flex-end;gap:6px}.score-meta select,.score-meta input{border:0;background:transparent;font:15px serif;padding:4px}.score-meta input{width:9em;text-align:left}.meta span:last-child{text-align:right}
     .meta input{border:0;background:none;text-align:center;font:28px serif;min-width:0}.score-meta #meter{font-size:15px}.meta #title{justify-self:center;width:8em;max-width:100%;box-sizing:border-box;border-bottom:1px solid #333;padding:4px 1em}
-    .staff{margin-top:28px}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:8px}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/32px serif;text-align:right}.lyrics-field{position:relative;min-width:0;height:32px}.lyrics-input{box-sizing:border-box;width:100%;height:32px;padding:3px 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font:16px/26px "Yu Gothic",sans-serif;letter-spacing:normal;text-align:left;white-space:pre}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-display{display:none}.lyrics-glyph{position:absolute;top:0;transform:translateX(-50%);white-space:pre}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
+    .staff{margin-top:28px}.lyrics-mode .staff{margin-top:42px}.lyrics-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:calc(8px * var(--screen-score-scale,1))}.lyrics-label{padding-right:7px;color:#725f4d;font:12px/var(--screen-lyrics-height,32px) serif;text-align:right}.lyrics-field{position:relative;min-width:0;height:var(--screen-lyrics-height,32px)}.lyrics-input{box-sizing:border-box;width:100%;height:var(--screen-lyrics-height,32px);padding:calc(3px * var(--screen-score-scale,1)) 8px;border:0;border-bottom:1px solid #bcae9e;border-radius:0;background:transparent;color:var(--ink);font-family:"Shian 851 MkPOP","Yu Gothic",sans-serif;font-size:var(--screen-lyrics-size,17px);line-height:var(--screen-lyrics-line-height,26px);letter-spacing:normal;text-align:left;white-space:pre}.lyrics-input:focus{outline:2px solid rgba(215,146,65,.28);outline-offset:1px}.lyrics-display{display:none}.lyrics-glyph{position:absolute;top:0;transform:translateX(-50%);white-space:pre}.lyrics-mode-toggle{display:flex;align-items:center;gap:8px}.lyrics-mode-toggle input{width:18px;height:18px}
     .vocal-row{display:grid;grid-template-columns:55px minmax(0,1fr);margin-top:2px;min-height:34px}.vocal-label{padding:2px 7px 0 0;color:#725f4d;font:11px/30px serif;text-align:right}.vocal-score{display:flex;min-width:0}.vocal-measure{position:relative;display:grid;grid-template-columns:repeat(var(--meter-columns,8),minmax(0,1fr));flex:var(--measure-grow,384) 1 0;min-width:0;height:34px;border-left:1px solid transparent}.vocal-cell{min-width:0;border:0;background:transparent;padding:0}.vocal-cell.cursor{background:rgba(71,125,145,.10);box-shadow:inset 0 0 0 1px rgba(71,125,145,.28)}.vocal-note{position:relative;z-index:2;grid-row:1;align-self:start;justify-self:center;display:flex;flex-direction:column;align-items:center;min-width:18px;height:34px;border:0;background:transparent;padding:0;color:var(--vocal-color,var(--ink));font-family:Arial,sans-serif;line-height:1;transform:translateX(var(--vocal-x,0px));touch-action:none;cursor:ew-resize}.vocal-note.selected{outline:2px solid #c9a927;border-radius:4px}.vocal-note-value{position:relative;display:block;min-width:15px;height:18px;font-size:14px;font-weight:600;text-align:center}.vocal-note.d2 .vocal-note-value::after,.vocal-note.d1 .vocal-note-value::after{content:"";position:absolute;left:50%;bottom:0;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.d1 .vocal-note-value::before{content:"";position:absolute;left:50%;bottom:3px;width:14px;transform:translateX(-50%);border-top:1.4px solid currentColor}.vocal-note.kind-rest .vocal-note-value{font-size:19px;font-weight:700}.vocal-note.kind-interjection .vocal-note-value{font-family:"Yu Gothic",sans-serif}.vocal-string-mark{display:block;height:10px;font-size:10px;letter-spacing:1px;line-height:9px}.vocal-controls{display:grid;gap:12px}.vocal-controls .nums{grid-template-columns:repeat(4,minmax(0,1fr))}.vocal-extras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.vocal-extras button{min-height:50px;border:1px solid #cbbfb2;border-radius:9px;background:#fff;font-weight:700}.vocal-extras button:active{background:#fff2ac}.vocal-visibility{display:grid;gap:7px;padding:9px;border-radius:9px;background:var(--pale)}.vocal-visibility label{display:flex;align-items:center;gap:8px;font-size:13px}.vocal-visibility input{width:18px;height:18px}
     .note.vocal-anchor-selected{outline:2px solid #477d91;border-radius:4px;background:rgba(71,125,145,.10)}.vocal-link-guide{position:absolute;z-index:18;height:2px;pointer-events:none;transform-origin:left center;background:repeating-linear-gradient(to right,#477d91 0 4px,transparent 4px 7px);opacity:.75}.vocal-link-guide::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#477d91}
     .score-wrap{display:grid;grid-template-columns:55px minmax(0,1fr)}.staff.has-hanma .score{padding-bottom:28px}.labels{display:grid;grid-template-rows:repeat(3,18px);font:12px/18px serif;text-align:right;padding-right:7px}
@@ -204,7 +204,7 @@
       .barline-handle .bar-symbol{top:0;bottom:auto;height:100%;overflow:visible}
     }
   </style>
-  <link rel="stylesheet" href="./print-v2.css?v=209">
+  <link rel="stylesheet" href="./print-v2.css?v=211">
 </head>
 <body class="score-page">
 <div id="printRoot" class="print-root" aria-hidden="true"></div>
@@ -391,6 +391,9 @@ function updateScreenScoreScale(){
   paper.style.setProperty("--screen-row-height",`${(18*scale).toFixed(2)}px`);
   paper.style.setProperty("--screen-note-height",`${(14*scale).toFixed(2)}px`);
   paper.style.setProperty("--screen-label-size",`${(12*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-lyrics-size",`${(17*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-lyrics-line-height",`${(26*scale).toFixed(2)}px`);
+  paper.style.setProperty("--screen-lyrics-height",`${(32*scale).toFixed(2)}px`);
   paper.style.setProperty("--screen-rhythm-offset",`${(8*scale).toFixed(2)}px`);
   paper.style.setProperty("--screen-bottom-rhythm-offset",`${(6*scale).toFixed(2)}px`);
   return scale;
@@ -399,6 +402,13 @@ function screenAnnotationLength(cssPixels){
   const svg=q("#annotations"),rect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal,paper=q(".paper");
   const scale=Number.parseFloat(getComputedStyle(paper).getPropertyValue("--screen-score-scale"))||1;
   return rect?.width&&view?.width?cssPixels*scale*view.width/rect.width:cssPixels;
+}
+function anchoredSymbolMetrics(anchor,symbolText=""){
+  const note=q(`[data-note="${anchorKey(anchor?.m,anchor?.s,anchor?.p)}"]`),glyph=note?.querySelector("b")||note;
+  const rect=glyph?.getBoundingClientRect(),style=glyph?getComputedStyle(glyph):null,fontSize=Number.parseFloat(style?.fontSize)||15;
+  /* v209の低密度15pxを基準に、奏法も対象数字の実サイズ比だけ追従させる。 */
+  const paper=q(".paper"),screenScale=Number.parseFloat(getComputedStyle(paper).getPropertyValue("--screen-score-scale"))||1,ratio=window.innerWidth>=900?clamp(fontSize/screenScale/15,.72,1.4):1,symbolSize=14*ratio,symbolCssSize=symbolSize*screenScale,glyphHeight=rect?.height||14*ratio*screenScale,isFinger=["Ⅰ","Ⅱ","Ⅲ"].includes(symbolText);
+  return{symbolSize,symbolCssSize,glyphHeight,clearance:isFinger?glyphHeight*.42:Math.max(1,glyphHeight*.08)};
 }
 function toAscii(value){return String(value??"").replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFEE0)).replace(/[／]/g,"/").replace(/[＊×]/g,"*").trim()}
 function isOpenValue(value){return value==="0"||value==="○"}
@@ -958,8 +968,7 @@ function noteAnchorPoint(anchor,side="above",symbolText=""){
   if(!svg||!note)return null;
   const svgRect=svg.getBoundingClientRect(),glyphRect=(note.querySelector("b")||note).getBoundingClientRect(),view=svg.viewBox.baseVal;
   if(!svgRect.width||!svgRect.height)return null;
-  const isFinger=["Ⅰ","Ⅱ","Ⅲ"].includes(symbolText);
-  const firstRow=measureLocation(Number(anchor.m)||0).row===0,gap=isFinger?Math.max(firstRow?22:14,glyphRect.height*(firstRow?1.05:.65)):Math.max(8,glyphRect.height*.28);
+  const metrics=anchoredSymbolMetrics(anchor,symbolText),isFinger=["Ⅰ","Ⅱ","Ⅲ"].includes(symbolText),firstRow=measureLocation(Number(anchor.m)||0).row===0,gap=window.innerWidth>=900?metrics.symbolCssSize/2+metrics.clearance:(isFinger?Math.max(firstRow?22:14,glyphRect.height*(firstRow?1.05:.65)):Math.max(8,glyphRect.height*.28));
   return{
     x:(glyphRect.left+glyphRect.width/2-svgRect.left)*view.width/svgRect.width,
     y:((side==="below"?glyphRect.bottom+gap:glyphRect.top-gap)-svgRect.top)*view.height/svgRect.height
@@ -1071,7 +1080,8 @@ function itemHtml(item){
     return `<g class="annotation-item${selected}" data-item="${item.id}"><line ${common} x1="${item.x1}" y1="${item.y1}" x2="${item.x2}" y2="${item.y2}"/><polyline ${common} points="${p1.x},${p1.y} ${item.x2},${item.y2} ${p2.x},${p2.y}"/></g>`;
   }
   if(item.type==="symbol"){
-    const size=screenAnnotationLength(14);
+    const metrics=item.anchor?anchoredSymbolMetrics(item.anchor,item.text):{symbolSize:14};
+    const size=screenAnnotationLength(metrics.symbolSize);
     if(item.text==="スリ"){
       const slur=techniqueSlurGeometry(item);if(slur)return `<g class="annotation-item symbol-item anchored-symbol slur-symbol${selected}" data-item="${item.id}"><text x="${slur.centerX}" y="${slur.textY}" fill="${item.color}" stroke="none" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${esc(item.text)}</text><path d="M ${slur.x1} ${slur.y1} Q ${slur.centerX} ${slur.controlY} ${slur.x2} ${slur.y2}" fill="none" stroke="${item.color}" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/></g>`;
       const width=clamp(Number(item.slurWidth)||34,22,90),left=item.x-width/2,right=item.x+width/2,slurY=item.y;
@@ -1659,7 +1669,7 @@ if(document.fonts?.ready)document.fonts.ready.then(()=>requestAnimationFrame(()=
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=209"></script>
+  <script src="./print-v2.js?v=211"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>
