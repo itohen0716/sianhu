@@ -20,6 +20,13 @@ for(const page of ["index.html","annotations.html"]){
 const printCss=read("print-v2.css");
 assert(printCss.includes("transform:scaleY(1.30);transform-origin:center center"),"print-v2 digit glyph must use scaleY 1.30 around its center");
 assert(printCss.includes(".pv2-note.rest .pv2-glyph")&&printCss.includes("font-size:14px;transform:none"),"print-v2 rests must not use the vertical scale");
-assert(printCss.includes(".pv2-note.d2::after,.pv2-note.d1::after")&&printCss.includes("top:18px"),"print-v2 rhythm line must leave space below the 130% glyph");
+assert(printCss.includes(".pv2-note.d2::after,.pv2-note.d1::after")&&printCss.includes("top:var(--pv2-rhythm-top)"),"print-v2 rhythm line must use the transformed print glyph size");
+assert(printCss.includes(".pv2-note.open.d2::after,.pv2-note.open.d1::after{top:var(--pv2-open-rhythm-top)}"),"print-v2 open-string line must include the existing 1.07 visual correction");
+
+const printJs=read("print-v2.js");
+assert(printJs.includes("const PRINT_NOTE_SCALE_Y=1.30,PRINT_NOTE_CENTER_Y=7,PRINT_RHYTHM_GAP=2,OPEN_NOTE_SCALE=1.07"),"print-v2 must define one shared 130% glyph/2px-gap geometry");
+assert(printJs.includes("const printRhythmTop=(noteSize,open=false)=>PRINT_NOTE_CENTER_Y+Math.max(14,Number(noteSize)||14)*(open?OPEN_NOTE_SCALE:1)*PRINT_NOTE_SCALE_Y/2+PRINT_RHYTHM_GAP"),"print-v2 line offset must derive from the density-selected note size");
+assert(printJs.includes("--pv2-rhythm-top:${printRhythmTop(measure.noteSize).toFixed(3)}px")&&printJs.includes("--pv2-open-rhythm-top:${printRhythmTop(measure.noteSize,true).toFixed(3)}px"),"each print measure must receive normal/open rhythm offsets");
+assert(!printCss.includes(".pv2-note.d2::after,.pv2-note.d1::after{content:\"\";position:absolute;left:50%;top:18px"),"print-v2 must not retain the fixed 18px line top");
 
 console.log("note vertical scale tests passed");
