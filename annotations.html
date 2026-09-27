@@ -6,13 +6,14 @@
   <title>絲庵 文化譜書き込み</title>
   <link rel="preload" href="./fonts/BIZUDPMincho-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="preload" href="./fonts/851MkPOP_101.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./print-v2.css?v=211">
+  <link rel="stylesheet" href="./print-v2.css?v=216">
   <style>
     @font-face{font-family:"Shian Score BIZ UDPMincho";src:url("./fonts/BIZUDPMincho-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     @font-face{font-family:"Shian 851 MkPOP";src:url("./fonts/851MkPOP_101.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
     .annotation-item.text-item:not(.symbol-item) text{font-family:"Shian 851 MkPOP","Yu Gothic","Noto Sans JP",sans-serif}
     body .lyrics-input,body .lyrics-display{font-family:"Shian 851 MkPOP","Yu Gothic",sans-serif;font-size:var(--screen-lyrics-size,17px)}
-    .note:not(.rest) b{font-family:"Shian 851 MkPOP","Shian Score BIZ UDPMincho","BIZ UDPMincho",serif;font-size:var(--digit-size,17px)}
+    .note:not(.rest) b{font-family:"Shian 851 MkPOP","Shian Score BIZ UDPMincho","BIZ UDPMincho",serif;font-size:calc(var(--digit-size,17px) * var(--screen-score-scale,1))}
+    .note.open-note b{font-size:calc(var(--digit-size,17px) * var(--screen-score-scale,1) * 1.07)}
     :root{--ink:#332c25;--blue:#477d91;--pale:#e9f3f5;--yellow:#f5df84;--paper:#fffef9}
     *{box-sizing:border-box}body{margin:0;background:#e5ded3;color:var(--ink);font-family:"Yu Gothic",sans-serif}
     button,input{font:inherit}button{cursor:pointer}.app{max-width:1100px;margin:auto;padding:14px}main.app{display:flex;flex-direction:column}
@@ -140,7 +141,7 @@
     @media screen{
       .measure{--row-height:var(--screen-row-height,18px);--note-height:var(--screen-note-height,14px)}
       .labels{grid-template-rows:repeat(3,var(--screen-row-height,18px));font-size:var(--screen-label-size,12px);line-height:var(--screen-row-height,18px)}
-      .note b,.note.open-note b,.note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-size:calc(var(--note-size) * var(--screen-score-scale,1));line-height:var(--screen-note-height,14px)}
+      .note.rest b,.note.rest.d4 b,.note.rest.d2 b,.note.rest.d1 b{font-size:calc(var(--note-size) * var(--screen-score-scale,1));line-height:var(--screen-note-height,14px)}
       .note.d2:not(.rest)::after,.note.d1:not(.rest)::after{top:calc(50% + var(--screen-rhythm-offset,8px))}
       .string:last-child .note.d2:not(.rest)::after,.string:last-child .note.d1:not(.rest)::after{top:calc(50% + var(--screen-bottom-rhythm-offset,6px))}
       /* 左右端線の始点・終点を、三の糸と一の糸の中心へ直接合わせる。 */
@@ -257,7 +258,7 @@
 </dialog>
 <script src="./annotation-layout.js?v=189"></script>
 <script src="./note-position.js?v=213"></script>
-<script src="./note-density.js?v=215"></script>
+<script src="./note-density.js?v=216"></script>
 <script>
 (()=>{"use strict";
 const KEY="shian-bunkafu-editor-v2",OLD_KEY="shian-bunkafu-one-line-v1",vals=Array.from({length:20},(_,i)=>String(i+1));
@@ -306,7 +307,7 @@ function anchoredSymbolMetrics(anchor,symbolText=""){
   const note=q(`[data-note="${anchorKey(anchor?.m,anchor?.s,anchor?.p)}"]`),glyph=note?.querySelector("b")||note;
   const rect=glyph?.getBoundingClientRect(),style=glyph?getComputedStyle(glyph):null,fontSize=Number.parseFloat(style?.fontSize)||15,paper=q(".paper"),screenScale=Number.parseFloat(getComputedStyle(paper).getPropertyValue("--screen-score-scale"))||1;
   /* 低密度15pxを基準に、奏法も対象数字の実サイズ比だけ追従させる。 */
-  const ratio=window.innerWidth>=900?clamp(fontSize/screenScale/15,.72,1.4):1,symbolSize=14*ratio,symbolCssSize=symbolSize*screenScale,glyphHeight=rect?.height||14*ratio*screenScale,isFinger=["Ⅰ","Ⅱ","Ⅲ"].includes(symbolText);
+  const anchoredNote=state.notes.find(item=>Number(item.m)===Number(anchor?.m)&&Number(item.s)===Number(anchor?.s)&&Number(item.p)===Number(anchor?.p)),openCorrection=anchoredNote&&isOpenValue(anchoredNote.v)?1.07:1,ratio=window.innerWidth>=900?clamp(fontSize/openCorrection/screenScale/15,.72,1.4):1,symbolSize=14*ratio,symbolCssSize=symbolSize*screenScale,glyphHeight=rect?.height||14*ratio*screenScale,isFinger=["Ⅰ","Ⅱ","Ⅲ"].includes(symbolText);
   return{symbolSize,symbolCssSize,glyphHeight,clearance:isFinger?glyphHeight*.42:Math.max(1,glyphHeight*.08)};
 }
 function isOpenValue(value){return value==="0"||value==="○"}
@@ -582,9 +583,33 @@ function measureHtml(m){
 }
 const noteDensityCanvas=document.createElement("canvas"),noteDensityContext=noteDensityCanvas.getContext("2d");
 function noteDensityTextWidth(text,size){noteDensityContext.font=`400 ${size}px "Shian 851 MkPOP","Shian Score BIZ UDPMincho",serif`;return Math.max(12,noteDensityContext.measureText(String(text)).width+2)}
-function measureDigitDensity(m,measurePixels,capacity){const notes=state.notes.filter(note=>Number(note.m)===Number(m)&&!note.rest&&Number(note.p)<capacity).map(note=>({...note,x:columnX(m,Number(note.p))}));return window.ShianNoteDensity.select({notes,measureWidth:measurePixels,capacity,measureText:noteDensityTextWidth})}
+function measureDigitDensity(m,measurePixels,capacity){const notes=state.notes.filter(note=>Number(note.m)===Number(m)&&!note.rest&&Number(note.p)<capacity).map(note=>({...note,x:columnX(m,Number(note.p))})),screenScale=Number.parseFloat(getComputedStyle(q(".paper")).getPropertyValue("--screen-score-scale"))||1;return window.ShianNoteDensity.select({notes,measureWidth:measurePixels,capacity,measureText:noteDensityTextWidth,displayScale:screenScale})}
 function applyContentAwareMeasureWidths(){
-  qAll("#scoreArea .measure[data-measure]").forEach(measure=>{const m=Number(measure.dataset.measure),capacity=measureCapacityFor(m),measurePixels=measure.getBoundingClientRect().width,byString=new Map(),edgeGap=0,columnGap=0;measure.style.setProperty("--content-min-width","0px");const density=measureDigitDensity(m,measurePixels,capacity);measure.style.setProperty("--digit-size",`${density.size}px`);measure.dataset.noteDensity=density.name;measure.dataset.noteDensityLoad=density.load.toFixed(4);measure.querySelectorAll(".note[data-note]").forEach(element=>{const parts=element.dataset.note.split(",").map(Number),s=parts[1],p=parts[2],glyph=element.querySelector("b")||element,note=state.notes.find(entry=>entry.m===m&&entry.s===s&&entry.p===p);if(!note||p>=capacity)return;const width=Math.max(12,Number(glyph.offsetWidth)||Number(glyph.scrollWidth)||12),x=note.rest?Number(note.x)||0:columnX(m,p),columns=byString.get(s)||new Map(),current=columns.get(p);if(!current||width>current.width)columns.set(p,{p,width,x});byString.set(s,columns)});const fitScale=fontRatio=>{let scale=1;byString.forEach(columns=>{const entries=[...columns.values()].sort((a,b)=>a.p-b.p).map(entry=>({...entry,width:entry.width*fontRatio,center:(entry.p+.5)*measurePixels/capacity+entry.x}));entries.forEach(entry=>{const half=entry.width/2;if(half>0)scale=Math.min(scale,(entry.center-edgeGap)/half,(measurePixels-edgeGap-entry.center)/half)});for(let index=1;index<entries.length;index++){const previous=entries[index-1],current=entries[index],room=current.center-previous.center-columnGap,halfWidths=previous.width/2+current.width/2;if(halfWidths>0)scale=Math.min(scale,room/halfWidths)}});return clamp(Number.isFinite(scale)?scale:1,.58,1)};const scale=fitScale(1);measure.style.setProperty("--note-scale-x",String(scale));const screenScale=Number.parseFloat(getComputedStyle(q(".paper")).getPropertyValue("--screen-score-scale"))||1;measure.style.setProperty("--rhythm-width",`${Math.max(7*screenScale,Math.min(14*screenScale,measurePixels/capacity*.72)).toFixed(2)}px`);const score=measure.closest(".score"),vocalScore=measure.closest(".staff")?.querySelector(".vocal-score"),measureIndex=[...score.children].filter(child=>child.classList.contains("measure")).indexOf(measure),vocalMeasure=vocalScore?.children?.[measureIndex];if(vocalMeasure)vocalMeasure.style.minWidth="0px"})
+  qAll("#scoreArea .measure[data-measure]").forEach(measure=>{
+    const m=Number(measure.dataset.measure),capacity=measureCapacityFor(m),measurePixels=measure.getBoundingClientRect().width,byString=new Map(),columnGap=0;
+    measure.style.setProperty("--content-min-width","0px");
+    const density=measureDigitDensity(m,measurePixels,capacity);
+    measure.style.setProperty("--digit-size",`${density.size}px`);
+    measure.dataset.noteDensity=density.name;
+    measure.dataset.noteDensityLoad=density.load.toFixed(4);
+    measure.dataset.noteDensityColumns=String(density.columns);
+    measure.dataset.noteDensityBaseSize=String(density.size);
+    measure.dataset.noteDensityFinalSize=density.finalSize.toFixed(3);
+    measure.querySelectorAll(".note[data-note]").forEach(element=>{
+      const parts=element.dataset.note.split(",").map(Number),s=parts[1],p=parts[2],glyph=element.querySelector("b")||element,note=state.notes.find(entry=>entry.m===m&&entry.s===s&&entry.p===p);
+      if(!note||p>=capacity)return;
+      const width=Math.max(12,Number(glyph.offsetWidth)||Number(glyph.scrollWidth)||12),x=note.rest?Number(note.x)||0:columnX(m,p),columns=byString.get(s)||new Map(),current=columns.get(p);
+      if(!current||width>current.width)columns.set(p,{p,width,x});
+      byString.set(s,columns);
+    });
+    const fitScale=fontRatio=>{let scale=1;byString.forEach(columns=>{const entries=[...columns.values()].sort((a,b)=>a.p-b.p).map(entry=>({...entry,width:entry.width*fontRatio,center:(entry.p+.5)*measurePixels/capacity+entry.x}));for(let index=1;index<entries.length;index++){const previous=entries[index-1],current=entries[index],room=current.center-previous.center-columnGap,halfWidths=previous.width/2+current.width/2;if(halfWidths>0)scale=Math.min(scale,room/halfWidths)}});return clamp(Number.isFinite(scale)?scale:1,.58,1)};
+    const scale=fitScale(1);
+    measure.style.setProperty("--note-scale-x",String(scale));
+    const screenScale=Number.parseFloat(getComputedStyle(q(".paper")).getPropertyValue("--screen-score-scale"))||1;
+    measure.style.setProperty("--rhythm-width",`${Math.max(7*screenScale,Math.min(14*screenScale,measurePixels/capacity*.72)).toFixed(2)}px`);
+    const score=measure.closest(".score"),vocalScore=measure.closest(".staff")?.querySelector(".vocal-score"),measureIndex=[...score.children].filter(child=>child.classList.contains("measure")).indexOf(measure),vocalMeasure=vocalScore?.children?.[measureIndex];
+    if(vocalMeasure)vocalMeasure.style.minWidth="0px";
+  });
 }
 const lyricMeasureCanvas=document.createElement("canvas");
 function lyricGraphemes(text){return typeof Intl?.Segmenter==="function"?[...new Intl.Segmenter("ja",{granularity:"grapheme"}).segment(text)].map(item=>item.segment):Array.from(text)}
@@ -1414,7 +1439,7 @@ scheduleStableAnnotationLayout();
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
-  <script src="./print-v2.js?v=215"></script>
+  <script src="./print-v2.js?v=216"></script>
   <script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.warn("譜面フォントのオフライン準備に失敗しました。",error)));</script>
 </body>
 </html>

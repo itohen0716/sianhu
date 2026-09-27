@@ -15,7 +15,7 @@
   function groupColumns(notes,size,measureText){
     const groups=new Map();
     (notes||[]).filter(note=>!note?.rest&&Number.isFinite(Number(note?.p))).forEach(note=>{
-      const p=Number(note.p),text=noteText(note),glyphWidth=Math.max(12,Number(measureText(text,size))||0),x=Number(note.x)||0;
+      const p=Number(note.p),text=noteText(note),glyphWidth=Math.max(12,Number(measureText(text,size))||0),x=0;
       const current=groups.get(p)||{p,minX:Infinity,maxX:-Infinity,width:0};
       current.minX=Math.min(current.minX,x-glyphWidth/2);
       current.maxX=Math.max(current.maxX,x+glyphWidth/2);
@@ -32,12 +32,12 @@
     return extents.some((item,index)=>index>0&&item.left-extents[index-1].right<gap);
   }
   function select(options={}){
-    const notes=Array.isArray(options.notes)?options.notes:[],measureWidth=Math.max(1,Number(options.measureWidth)||1),capacity=Math.max(1,Number(options.capacity)||1),measureText=typeof options.measureText==="function"?options.measureText:((text,size)=>String(text).length*size*.62+2);
-    const reference=groupColumns(notes,LEVELS[0].size,measureText),columnLoad=reference.length/capacity,glyphLoad=(reference.reduce((sum,column)=>sum+(column.maxX-column.minX),0)+Math.max(0,reference.length-1)*2)/measureWidth,load=Math.max(columnLoad,glyphLoad*.8);
+    const notes=Array.isArray(options.notes)?options.notes:[],measureWidth=Math.max(1,Number(options.measureWidth)||1),capacity=Math.max(1,Number(options.capacity)||1),measureText=typeof options.measureText==="function"?options.measureText:((text,size)=>String(text).length*size*.62+2),displayScale=clamp(Number(options.displayScale)||1,.5,2);
+    const scaledMeasureText=(text,size)=>measureText(text,size*displayScale),reference=groupColumns(notes,LEVELS[0].size,scaledMeasureText),columnLoad=reference.length/capacity,glyphLoad=(reference.reduce((sum,column)=>sum+(column.maxX-column.minX),0)+Math.max(0,reference.length-1)*2*displayScale)/measureWidth,load=Math.max(columnLoad,glyphLoad*.8);
     let index=LEVELS.findIndex(level=>load<=level.maxLoad);if(index<0)index=LEVELS.length-1;
-    while(index<LEVELS.length-1&&collides(groupColumns(notes,LEVELS[index].size,measureText),measureWidth,capacity,1))index++;
+    while(index<LEVELS.length-1&&collides(groupColumns(notes,LEVELS[index].size,scaledMeasureText),measureWidth,capacity,displayScale))index++;
     const level=LEVELS[index];
-    return{...level,index,load:clamp(load,0,99),columnLoad,glyphLoad,columns:reference.length};
+    return{...level,index,displayScale,finalSize:level.size*displayScale,load:clamp(load,0,99),columnLoad,glyphLoad,columns:reference.length};
   }
   return{LEVELS,select,groupColumns};
 });
