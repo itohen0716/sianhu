@@ -24,9 +24,13 @@ assert(printCss.includes(".pv2-note.d2::after,.pv2-note.d1::after")&&printCss.in
 assert(printCss.includes(".pv2-note.open.d2::after,.pv2-note.open.d1::after{top:var(--pv2-open-rhythm-top)}"),"print-v2 open-string line must include the existing 1.07 visual correction");
 
 const printJs=read("print-v2.js");
-assert(printJs.includes("const PRINT_NOTE_SCALE_Y=1.30,PRINT_NOTE_CENTER_Y=7,PRINT_RHYTHM_GAP=2,OPEN_NOTE_SCALE=1.07"),"print-v2 must define one shared 130% glyph/2px-gap geometry");
+assert(printJs.includes("PRINT_NOTE_SCALE_Y=1.30")&&printJs.includes("PRINT_RHYTHM_GAP=2")&&printJs.includes("OPEN_NOTE_SCALE=1.07"),"print-v2 must define one shared 130% glyph/2px-gap geometry");
 assert(printJs.includes("const printRhythmTop=(noteSize,open=false)=>PRINT_NOTE_CENTER_Y+Math.max(14,Number(noteSize)||14)*(open?OPEN_NOTE_SCALE:1)*PRINT_NOTE_SCALE_Y/2+PRINT_RHYTHM_GAP"),"print-v2 line offset must derive from the density-selected note size");
 assert(printJs.includes("--pv2-rhythm-top:${printRhythmTop(measure.noteSize).toFixed(3)}px")&&printJs.includes("--pv2-open-rhythm-top:${printRhythmTop(measure.noteSize,true).toFixed(3)}px"),"each print measure must receive normal/open rhythm offsets");
 assert(!printCss.includes(".pv2-note.d2::after,.pv2-note.d1::after{content:\"\";position:absolute;left:50%;top:18px"),"print-v2 must not retain the fixed 18px line top");
+assert(printJs.includes("PRINT_FINGER_CLEARANCE_RATIO=.42"),"print-v2 finger clearance must use the same 42% glyph-height relation as the normal screen");
+assert(printJs.includes("const printFingerOffsets=()=>")&&printJs.includes("--pv2-finger-above-bottom:${fingerOffsets.aboveBottom.toFixed(3)}px")&&printJs.includes("--pv2-finger-below-top:${fingerOffsets.belowTop.toFixed(3)}px"),"print-v2 must derive both finger directions from transformed glyph geometry");
+assert(printCss.includes(".pv2-tech.finger.above{bottom:var(--pv2-finger-above-bottom)}.pv2-tech.finger.below{top:var(--pv2-finger-below-top)}"),"print-v2 finger I/II/III must use dedicated geometry without moving other techniques");
+assert(printCss.includes(".pv2-tech.above{bottom:-1px}.pv2-tech.below{top:18px}"),"non-finger print techniques must remain unchanged");
 
 console.log("note vertical scale tests passed");

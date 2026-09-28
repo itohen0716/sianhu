@@ -4,8 +4,9 @@
   const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
   const key=(m,s,p)=>`${m},${s},${p}`;
   const isOpenValue=value=>value==="0"||value==="○";
-  const PRINT_NOTE_SCALE_Y=1.30,PRINT_NOTE_CENTER_Y=7,PRINT_RHYTHM_GAP=2,OPEN_NOTE_SCALE=1.07;
+  const PRINT_NOTE_SCALE_Y=1.30,PRINT_NOTE_CENTER_Y=7,PRINT_NOTE_BOX_HEIGHT=14,PRINT_RHYTHM_GAP=2,OPEN_NOTE_SCALE=1.07,PRINT_FINGER_CLEARANCE_RATIO=.42;
   const printRhythmTop=(noteSize,open=false)=>PRINT_NOTE_CENTER_Y+Math.max(14,Number(noteSize)||14)*(open?OPEN_NOTE_SCALE:1)*PRINT_NOTE_SCALE_Y/2+PRINT_RHYTHM_GAP;
+  const printFingerOffsets=()=>{const glyphHeight=PRINT_NOTE_BOX_HEIGHT*PRINT_NOTE_SCALE_Y,half=glyphHeight/2,clearance=glyphHeight*PRINT_FINGER_CLEARANCE_RATIO;return{aboveBottom:half+clearance-PRINT_NOTE_CENTER_Y,belowTop:PRINT_NOTE_CENTER_Y+half+clearance}};
   const densityCanvas=document.createElement("canvas"),densityContext=densityCanvas.getContext("2d");
   const densityTextWidth=(text,size)=>{densityContext.font=`400 ${size}px "Shian 851 MkPOP","Shian Score BIZ UDPMincho",serif`;return Math.max(12,densityContext.measureText(String(text)).width+2)};
   const line=(x,width=1.5)=>`<line x1="${x}" y1="0" x2="${x}" y2="68" stroke="currentColor" stroke-width="${width}"/>`;
@@ -207,7 +208,8 @@
       return `<span class="pv2-vocal-note d${[1,2,4].includes(Number(note.d))?Number(note.d):4} kind-${kind}${note.dotted?" dotted":""}" style="left:${(note.left*100).toFixed(5)}%;--vocal-print-color:${esc(color)};color:${esc(color)}!important"><span class="pv2-vocal-value">${esc(value)}${note.dotted?'<span class="pv2-vocal-dot">・</span>':""}</span><span class="pv2-vocal-mark">${kind==="pitch"?vocalMark(note.s):""}</span></span>`;
     };
     /* 通常小節線も実要素として必ず描画し、印刷時の疑似要素処理に依存しない。 */
-    const measureHtml=measure=>`<div class="pv2-measure${measure.hanma?" hanma":""}" style="--grow:${measure.width};--pv2-note-size:${measure.noteSize}px;--pv2-tech-size:${measure.techniqueSize.toFixed(3)}px;--pv2-rhythm-top:${printRhythmTop(measure.noteSize).toFixed(3)}px;--pv2-open-rhythm-top:${printRhythmTop(measure.noteSize,true).toFixed(3)}px"><span class="pv2-boundary start${measure.startKind!=="single"?" custom":""}">${measure.startKind==="single"?"":barSvg(measure.startKind,measure.local===0?"start":"middle")}</span>${measure.endKind!=="single"?`<span class="pv2-boundary end custom">${barSvg(measure.endKind,"end")}</span>`:""}${measure.parts.map(part=>`<span class="pv2-part" style="left:${(part.left*100).toFixed(5)}%">${sameSvg(part.kind)}</span>`).join("")}${[3,2,1].map(string=>`<div class="pv2-string">${measure.notes.filter(note=>Number(note.s)===string).map(noteHtml).join("")}</div>`).join("")}${measure.hanma?'<span class="pv2-hanma-label">〔半間〕</span>':""}</div>`;
+    const fingerOffsets=printFingerOffsets();
+    const measureHtml=measure=>`<div class="pv2-measure${measure.hanma?" hanma":""}" style="--grow:${measure.width};--pv2-note-size:${measure.noteSize}px;--pv2-tech-size:${measure.techniqueSize.toFixed(3)}px;--pv2-rhythm-top:${printRhythmTop(measure.noteSize).toFixed(3)}px;--pv2-open-rhythm-top:${printRhythmTop(measure.noteSize,true).toFixed(3)}px;--pv2-finger-above-bottom:${fingerOffsets.aboveBottom.toFixed(3)}px;--pv2-finger-below-top:${fingerOffsets.belowTop.toFixed(3)}px"><span class="pv2-boundary start${measure.startKind!=="single"?" custom":""}">${measure.startKind==="single"?"":barSvg(measure.startKind,measure.local===0?"start":"middle")}</span>${measure.endKind!=="single"?`<span class="pv2-boundary end custom">${barSvg(measure.endKind,"end")}</span>`:""}${measure.parts.map(part=>`<span class="pv2-part" style="left:${(part.left*100).toFixed(5)}%">${sameSvg(part.kind)}</span>`).join("")}${[3,2,1].map(string=>`<div class="pv2-string">${measure.notes.filter(note=>Number(note.s)===string).map(noteHtml).join("")}</div>`).join("")}${measure.hanma?'<span class="pv2-hanma-label">〔半間〕</span>':""}</div>`;
     const vocalMeasureHtml=measure=>`<span class="pv2-vocal-measure" style="--grow:${measure.width}">${measure.vocalNotes.map(vocalNoteHtml).join("")}</span>`;
     /* 曲名・調子・拍子は固定し、譜面と全レイヤーだけを一体で下げる。
        同じラッパーを全ページで使うため、最終ページでも開始位置と段間隔が変わらない。 */
