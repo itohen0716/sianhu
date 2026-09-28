@@ -30,5 +30,6 @@ const loose=horizontalFitScale([{left:.2,w:14},{left:.8,w:14}],180,column=>colum
 assert.equal(loose,1,"low-density measures are not reduced");
 const dense=horizontalFitScale([{left:.40,w:18},{left:.46,w:18}],160,column=>column.w);
 assert.ok(dense<1&&dense>=.68,"only colliding print columns receive a bounded fit correction");
+assert.match(source,/if\(target==="page"\)[\s\S]*return applyPrintPlacement\(mapped,placement\)/,"page-anchored comments must use the same row-relative print Y placement as staff comments");
 
 console.log("print comment/density tests passed");
