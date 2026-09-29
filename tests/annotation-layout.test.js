@@ -2,6 +2,7 @@
 
 const assert=require("assert");
 const fs=require("fs");
+const path=require("path");
 const vm=require("vm");
 
 const context={window:{document:{querySelector:()=>null}}};
@@ -18,5 +19,13 @@ const placement={row:0,lane:"afterScore",boundaryKey:"0:afterScore",offsetTop:-0
 const top=api.placementTopWithClearance(geometry,placement);
 assert.equal(top,69.5,"comment top must remain below the previous score plus its saved clearance");
 assert.equal(api.placementTopWithClearance(geometry,placement),top,"repeated layout must not accumulate a Y shift");
+
+const annotationPage=fs.readFileSync(path.join(__dirname,"..","annotations.html"),"utf8");
+assert.match(annotationPage,/function snap\(\)[^{]*\{[^}]*annotationLayoutDirty=true/,
+  "a real user edit must request an annotation-layout commit");
+assert.match(annotationPage,/if\(annotationLayoutDirty\)\{\s*state\.annotationLayout=nextLayout;/,
+  "stable page rendering must not overwrite shared annotation layout");
+assert.doesNotMatch(annotationPage,/state\.annotationLayout=nextLayout;\s*\/\* ドラッグ中/,
+  "the old unconditional page-open layout write must stay removed");
 
 console.log("annotation layout tests passed");

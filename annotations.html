@@ -274,7 +274,7 @@ defaults.vocalSlurs=[];
 let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,pendingDrag=null,dragging=null,resizing=null,printing=false,lastInserted=null,commentDialogResolve=null;
 /* 非表示ページから復帰した直後やWebフォント確定前の寸法を、段高の正本にしない。 */
-let annotationLayoutReady=false,annotationLayoutPass=0;
+let annotationLayoutReady=false,annotationLayoutPass=0,annotationLayoutDirty=false;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;
 let writingClipboard=[],writingPasteSequence=0;
 const DRAG_START_PX=4;
@@ -469,7 +469,7 @@ async function importScoreFile(file){
     try{parsed=JSON.parse(await file.text())}catch{throw new Error("JSONを解析できません。ファイルが壊れていないか確認してください。")}
     const imported=validatedImportedScore(parsed);
     if((state.notes.length||state.layers.some(layer=>layer.items?.length))&&!confirm("現在の文化譜を、読み込んだ内容に置き換えますか？"))return;
-    state=imported;migrateState();ensureTechniqueLayer();past=[];future=[];selectedItemId=null;startAnnotationMode();save();render();
+    annotationLayoutDirty=false;state=imported;migrateState();ensureTechniqueLayer();past=[];future=[];selectedItemId=null;startAnnotationMode();save();render();
     alert(`「${state.title||"文化譜"}」を読み込みました。`);
   }catch(error){console.error(error);alert(`読み込めませんでした。\n${error instanceof Error?error.message:"ファイルを確認してください。"}`)}
 }
@@ -483,7 +483,7 @@ function save(forceReplace=false){
     localStorage.setItem(KEY,JSON.stringify(merged));Object.assign(state,merged);hasSaved=true;
   }catch(error){console.warn("自動保存できませんでした。",error)}
 }
-function snap(){past.push(JSON.stringify(serializable()));if(past.length>50)past.shift();future=[]}
+function snap(){past.push(JSON.stringify(serializable()));if(past.length>50)past.shift();future=[];annotationLayoutDirty=true}
 function totalMeasures(){return state.rowMeasureCounts.reduce((sum,count)=>sum+count,0)}
 function measureWidth(m){
   const notes=state.notes.filter(n=>n.m===m);
@@ -982,11 +982,13 @@ function applyAnnotationEditGaps(visibleLayers){
     if(gap>0){address.space.style.setProperty("--annotation-boundary-gap",`${gap}px`);address.space.dataset.annotationEditGap=String(gap);address.space.dataset.annotationRange=`${Math.floor(range.top)}:${Math.ceil(range.bottom)}`;changed=true;cumulativeShift+=gap}
     address.currentNextTop=address.baselineNextTop+cumulativeShift;address.currentNextBottom=address.baselineNextBottom+cumulativeShift;
   });
-  const nextLayout=ShianAnnotationLayout.fromPixelGaps(logicalGaps),layoutChanged=!ShianAnnotationLayout.equal(state.annotationLayout,nextLayout);
-  state.annotationLayout=nextLayout;
-  /* ドラッグ中は状態だけを更新し、pointermove ごとの storage 書込はしない。
-     静止時の再計算（削除・表示切替を含む）はここで確定する。 */
-  if(layoutChanged&&!annotationLayoutIsInteracting())save();
+  const nextLayout=ShianAnnotationLayout.fromPixelGaps(logicalGaps),layoutChanged=!ShianAnnotationLayout.equal(state.annotationLayout,nextLayout),interacting=annotationLayoutIsInteracting();
+  /* DOM 実測は表示のため毎回行うが、ページを開いただけでは共有レイアウトを更新しない。
+     snap() を通った実編集だけを state/localStorage へ確定し、書き込み表示による汚染を防ぐ。 */
+  if(annotationLayoutDirty){
+    state.annotationLayout=nextLayout;
+    if(!interacting){annotationLayoutDirty=false;if(layoutChanged)save()}
+  }
   return changed;
 }
 function fitPaperToVisibleAnnotations(paper,items,logicalWidth){
@@ -1278,8 +1280,8 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||
       save(true);
     }
   }
-  else if(b.id==="undo"&&past.length){future.unshift(JSON.stringify(serializable()));Object.assign(state,JSON.parse(past.pop()));clearWritingRange();selectedItemId=null}
-  else if(b.id==="redo"&&future.length){past.push(JSON.stringify(serializable()));Object.assign(state,JSON.parse(future.shift()));clearWritingRange();selectedItemId=null}
+  else if(b.id==="undo"&&past.length){future.unshift(JSON.stringify(serializable()));Object.assign(state,JSON.parse(past.pop()));annotationLayoutDirty=true;clearWritingRange();selectedItemId=null}
+  else if(b.id==="redo"&&future.length){past.push(JSON.stringify(serializable()));Object.assign(state,JSON.parse(future.shift()));annotationLayoutDirty=true;clearWritingRange();selectedItemId=null}
   else if(b.id==="addRow"){changeLayout(state.rows+1,measuresInRow(measureLocation(state.m).row));return}
   else if(b.id==="removeRow"){changeLayout(state.rows-1,measuresInRow(measureLocation(state.m).row));return}
   else if(b.id==="addMeasure"){changeLayout(state.rows,measuresInRow(measureLocation(state.m).row)+1);return}
@@ -1430,10 +1432,10 @@ window.addEventListener("afterprint",()=>{
   q("#printRootV2").replaceChildren();
 });
 window.addEventListener("resize",()=>{annotationLayoutReady=false;applyPreview();scheduleStableAnnotationLayout()},{passive:true});
-window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();startAnnotationMode();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
+window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{annotationLayoutDirty=false;state={...defaults,...JSON.parse(event.newValue)};migrateState();startAnnotationMode();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
 document.querySelector('.page-link[href="./index.html"]')?.addEventListener("click",()=>{stopAnnotationMode();save()});
 window.addEventListener("pagehide",()=>{stopAnnotationMode();save()});
-window.addEventListener("pageshow",()=>{try{annotationLayoutReady=false;const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState()}startAnnotationMode();render();scheduleStableAnnotationLayout()}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
+window.addEventListener("pageshow",()=>{try{annotationLayoutReady=false;annotationLayoutDirty=false;const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState()}startAnnotationMode();render();scheduleStableAnnotationLayout()}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();
 scheduleStableAnnotationLayout();
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
