@@ -39,6 +39,8 @@ assert(indexHtml.includes("const rowContent=ShianRowContent.rows(state)"));
 assert(annotationsHtml.includes("const rowContent=ShianRowContent.rows(state)"));
 assert(printJs.includes("const rowContent=global.ShianRowContent.rows(state)"));
 assert(printJs.includes("row.printHeight=row.basePrintHeight+row.printGapTotal"));
+assert(printJs.includes("row.basePrintHeight=Math.max(intrinsicHeight,sharedStaffHeight)"));
+assert(!printJs.includes("sharedStaffHeight-(maximumSongBand-rowSongBand)"));
 assert(printJs.includes("row.showLyrics?`<div class=\"pv2-lyrics\""));
 assert(printJs.includes("row.showVocal?`<div class=\"pv2-vocal\""));
 

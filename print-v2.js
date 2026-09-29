@@ -222,7 +222,10 @@
        前回値へ加算せず、同じ論理配置から毎回再構築する。 */
     for(let pass=0;pass<12;pass++){
       /* 各回とも画面で確定した同一論理値から再計算し、前回の印刷不足量を累積しない。 */
-      const maximumSongBand=(showLyrics?35:0)+(showVocal?42:0);rows.forEach(row=>{const rowSongBand=(row.showLyrics?35:0)+(row.showVocal?42:0),scoreHeight=54+(row.measures.some(measure=>measure.hanma)?28:0),intrinsicHeight=(rowSongBand?20:24)+scoreHeight+rowSongBand;row.basePrintHeight=Math.max(intrinsicHeight,sharedStaffHeight-(maximumSongBand-rowSongBand))});
+      /* 空の歌詞・唄譜DOMは除外するが、A4上の基本段間は全段で共通に保つ。
+         v225のように空領域の高さを sharedStaffHeight から再度差し引くと、
+         通常画面に残る基本段間まで失われるため、段内容は基本段高を縮めない。 */
+      rows.forEach(row=>{const rowSongBand=(row.showLyrics?35:0)+(row.showVocal?42:0),scoreHeight=54+(row.measures.some(measure=>measure.hanma)?28:0),intrinsicHeight=(rowSongBand?20:24)+scoreHeight+rowSongBand;row.basePrintHeight=Math.max(intrinsicHeight,sharedStaffHeight)});
       resolvedPrintLayout=expandPrintAnnotationLayout(printAnnotationLayout.layout,annotationCapture,rows,{showLyrics,showVocal,lineSpacing:printStaffLineSpacing,baseStaffHeight:sharedStaffHeight});
       rows.forEach(row=>{row.printGaps=global.ShianAnnotationLayout?global.ShianAnnotationLayout.pixelGaps(resolvedPrintLayout,row.row,{lyricsVisible:row.showLyrics,vocalVisible:row.showVocal},printStaffLineSpacing):{beforeScore:0,afterScore:0,afterLyrics:0,afterVocal:0};row.printGapTotal=Object.values(row.printGaps).reduce((sum,value)=>sum+(Number(value)||0),0)});
       const maxPageGap=Math.max(0,...pages.map(page=>page.rows.reduce((sum,row)=>sum+row.printGapTotal,0))),nextHeight=Math.max(72,(availableHeight-maxPageGap)/referenceRows);if(Math.abs(nextHeight-sharedStaffHeight)<.001){sharedStaffHeight=nextHeight;break}sharedStaffHeight=nextHeight;
