@@ -64,6 +64,12 @@
     if(!placement)return null;let found=addresses.find(address=>address.key===placement.boundaryKey);if(found)return found;const row=Math.max(0,Math.trunc(Number(placement.row)||0));for(const lane of placement.lane==="beforeScore"?["beforeScore","afterScore"]:placement.lane==="afterVocal"?["afterVocal","afterLyrics","afterScore"]:placement.lane==="afterLyrics"?["afterLyrics","afterScore"]:["afterScore"]){found=addresses.find(address=>address.row===row&&address.lane===lane);if(found)return found}return null;
   }
   function placementTop(geometry,placement){const address=resolveAddress(domAddresses(geometry),placement);if(!address)return null;const line=Math.max(1,address.lineSpacing||18);return address.lane==="beforeScore"?address.next.rect.top+(Number(placement.offsetFromNextTop)||0)*line:address.previous.rect.bottom+(Number(placement.offsetTop)||0)*line}
+  function placementTopWithClearance(geometry,placement){
+    const address=resolveAddress(domAddresses(geometry),placement),savedTop=placementTop(geometry,placement);
+    if(!address||!Number.isFinite(savedTop)||address.lane==="beforeScore")return savedTop;
+    const line=Math.max(1,Number(address.lineSpacing)||18),clearance=Math.max(0,Number(placement?.clearanceTop)||0)*line;
+    return Math.max(savedTop,address.previous.rect.bottom+clearance);
+  }
   function equal(a,b){return JSON.stringify(normalize(a))===JSON.stringify(normalize(b))}
-  global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,rowRegions,domAddresses,addressForBounds,placementFromBounds,resolveAddress,placementTop,equal};
+  global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,rowRegions,domAddresses,addressForBounds,placementFromBounds,resolveAddress,placementTop,placementTopWithClearance,equal};
 })(window);

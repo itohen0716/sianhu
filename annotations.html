@@ -254,7 +254,7 @@
     <div class="dialog-actions"><button type="button" id="cancelComment">取消</button><button type="submit" class="primary">確定</button></div>
   </form>
 </dialog>
-<script src="./annotation-layout.js?v=189"></script>
+<script src="./annotation-layout.js?v=228"></script>
 <script src="./note-position.js?v=213"></script>
 <script src="./note-density.js?v=216"></script>
 <script src="./row-content.js?v=225"></script>
@@ -752,7 +752,7 @@ function migrateCommentToTopAnchor(item,geometry){
 function annotationItemIsMoving(item){return Boolean(dragging?.item===item||resizing?.started&&resizing.item===item||rangeMove?.started&&rangeItemIds.has(item.id))}
 function projectedAnnotationItem(item,geometry=annotationGeometry()){
   if(!geometry||item.layoutAnchorVersion!==3||!Array.isArray(item.layoutAnchors)||!item.layoutAnchors.length)return legacyVisualAnnotationItem(item,geometry);const target=item.layoutTarget||"staff",visibilityTarget=item.type==="text"?(item.layoutVisibilityTarget||target):target;if(visibilityTarget==="lyrics"&&!state.lyricsVisible||visibilityTarget==="vocal"&&!state.vocalVisible)return null;let clients=item.layoutAnchors.map(anchor=>annotationClientFromAnchor(anchor,geometry,target,item.layoutRow));if(clients.some(point=>!point))return null;const copy=structuredClone(item);setAnnotationSourcePoints(copy,clients.map(point=>clientPointToSvg(point,geometry)));
-  const desiredTop=item.type==="text"?ShianAnnotationLayout.placementTop(geometry,item.layoutPlacement):null;if(Number.isFinite(desiredTop)){const current=annotationClientBounds(copy,geometry),dy=desiredTop-current.top;clients=clients.map(point=>({...point,y:point.y+dy}));setAnnotationSourcePoints(copy,clients.map(point=>clientPointToSvg(point,geometry)))}return copy;
+  const desiredTop=item.type==="text"?ShianAnnotationLayout.placementTopWithClearance(geometry,item.layoutPlacement):null;if(Number.isFinite(desiredTop)){const current=annotationClientBounds(copy,geometry),dy=desiredTop-current.top;clients=clients.map(point=>({...point,y:point.y+dy}));setAnnotationSourcePoints(copy,clients.map(point=>clientPointToSvg(point,geometry)))}return copy;
 }
 function materializeAnnotationItem(item){const geometry=annotationGeometry(),projected=geometry&&projectedAnnotationItem(item,geometry);if(projected)setAnnotationSourcePoints(item,annotationSourcePoints(projected));return geometry}
 /* 表示のために全書き込みの保存用x/yを書き換えない。描画はprojectedAnnotationItemを使い、
