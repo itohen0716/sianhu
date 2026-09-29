@@ -254,7 +254,7 @@
     <div class="dialog-actions"><button type="button" id="cancelComment">取消</button><button type="submit" class="primary">確定</button></div>
   </form>
 </dialog>
-<script src="./annotation-layout.js?v=228"></script>
+<script src="./annotation-layout.js?v=230"></script>
 <script src="./note-position.js?v=213"></script>
 <script src="./note-density.js?v=216"></script>
 <script src="./row-content.js?v=225"></script>
@@ -944,7 +944,8 @@ function constrainCommentToPlacementLane(item,clients,bounds,row,lane){
 function resetAnnotationEditGaps(){qAll("#scoreArea .annotation-boundary-space").forEach(space=>{space.style.removeProperty("--annotation-boundary-gap");delete space.dataset.annotationEditGap;delete space.dataset.annotationRange})}
 function applySavedAnnotationEditGaps(){
   resetAnnotationEditGaps();const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;let changed=false;
-  geometry.rows.forEach(row=>{const gaps=ShianAnnotationLayout.pixelGaps(state.annotationLayout,row.row,{lyricsVisible:Boolean(row.lyrics),vocalVisible:Boolean(row.vocal)},row.lineSpacing);ShianAnnotationLayout.LANES.forEach(lane=>{const space=row.staff.querySelector(`[data-annotation-boundary="${lane}"]`),gap=Math.max(0,Number(gaps[lane])||0);if(space&&gap>0){space.style.setProperty("--annotation-boundary-gap",`${gap}px`);changed=true}})});return changed;
+  const items=state.layers.filter(layer=>layer.visible!==false&&layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]),effective=ShianAnnotationLayout.effectivePixelGaps(geometry,state.annotationLayout,items);
+  effective.addresses.forEach(address=>{const gap=Math.max(0,Number(effective.gaps.get(address.key))||0);if(gap>0){address.space.style.setProperty("--annotation-boundary-gap",`${gap}px`);changed=true}});return changed;
 }
 function annotationLayoutIsInteracting(){return Boolean(dragging||resizing?.started||rangeMove?.started||draft)}
 function normalizeCommentFlowAnchors(visibleLayers){
@@ -963,6 +964,9 @@ function normalizeCommentFlowAnchors(visibleLayers){
 }
 function applyAnnotationEditGaps(visibleLayers){
   if(printing)return false;
+  /* 編集していない表示時は、写譜ページと同じ保存レイアウト＋コメント必要高を使う。
+     書き込み側DOMから別の段高を作らず、ドラッグ開始時の譜面座標系を一致させる。 */
+  if(!annotationLayoutDirty)return applySavedAnnotationEditGaps();
   const paper=q(".paper");if(!paper)return false;
   const geometry=annotationGeometry();if(!geometry?.rows?.length)return false;
   const addresses=annotationBoundaryAddresses(geometry),ranges=new Map(),items=visibleLayers.filter(layer=>layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]).filter(item=>item.type==="text");

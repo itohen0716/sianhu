@@ -366,7 +366,7 @@
     <div class="dialog-actions"><button type="button" id="closeKeyboardHelp" class="primary">閉じる</button></div>
   </div>
 </dialog>
-<script src="./annotation-layout.js?v=228"></script>
+<script src="./annotation-layout.js?v=230"></script>
 <script src="./note-position.js?v=213"></script>
 <script src="./note-density.js?v=216"></script>
 <script src="./row-content.js?v=225"></script>
@@ -1132,16 +1132,8 @@ function applySharedAnnotationLayout(){
   /* 空の歌詞・唄譜を外した後も、写譜ページではコメントの実配置を段間へ反映する。
      保存済みのコメント座標は変更せず、現在存在する境界へ再解決した必要高だけを
      表示時に加える。印刷側の段高計算とは独立している。 */
-  const addresses=ShianAnnotationLayout.domAddresses(geometry),requiredByBoundary=new Map();
-  state.layers.filter(layer=>layer.visible!==false&&layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]).forEach(item=>{
-    const placement=item?.type==="text"?item.layoutPlacement:null,address=ShianAnnotationLayout.resolveAddress(addresses,placement);if(!address||address.lane==="beforeScore")return;
-    const line=Math.max(1,Number(address.lineSpacing)||18),offset=Math.max(Number(placement.offsetTop)||0,Number(placement.clearanceTop)||0),height=Math.max(0,Number(placement.heightLines)||0),bottomClearance=Math.max(0,Number(placement.clearanceBottom)||0),natural=Math.max(0,address.baselineNextTop-address.baselinePreviousBottom),required=Math.max(0,(offset+height+bottomClearance)*line-natural);
-    requiredByBoundary.set(address.key,Math.max(requiredByBoundary.get(address.key)||0,required));
-  });
-  geometry.rows.forEach(row=>{
-    const gaps=ShianAnnotationLayout.pixelGaps(state.annotationLayout,row.row,{lyricsVisible:Boolean(row.lyrics),vocalVisible:Boolean(row.vocal)},row.lineSpacing);
-    ShianAnnotationLayout.LANES.forEach(lane=>{const space=row.staff.querySelector(`[data-annotation-boundary="${lane}"]`);if(!space)return;const address=addresses.find(entry=>entry.space===space),gap=Math.max(gaps[lane]||0,address?requiredByBoundary.get(address.key)||0:0);if(gap>0){space.style.setProperty("--annotation-boundary-gap",`${gap}px`);changed=true}});
-  });
+  const items=state.layers.filter(layer=>layer.visible!==false&&layer.id!==TECHNIQUE_LAYER_ID).flatMap(layer=>layer.items||[]),effective=ShianAnnotationLayout.effectivePixelGaps(geometry,state.annotationLayout,items);
+  effective.addresses.forEach(address=>{const gap=Math.max(0,Number(effective.gaps.get(address.key))||0);if(gap>0){address.space.style.setProperty("--annotation-boundary-gap",`${gap}px`);changed=true}});
   return changed;
 }
 function renderLayers(skipSave=false){

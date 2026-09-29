@@ -20,6 +20,11 @@ const top=api.placementTopWithClearance(geometry,placement);
 assert.equal(top,69.5,"comment top must remain below the previous score plus its saved clearance");
 assert.equal(api.placementTopWithClearance(geometry,placement),top,"repeated layout must not accumulate a Y shift");
 
+const crowdedPlacement={...placement,heightLines:3};
+const effective=api.effectivePixelGaps(geometry,{boundaries:{"0:afterScore":{gap:.25}}},[{type:"text",layoutPlacement:crowdedPlacement}]);
+assert.equal(effective.gaps.get("0:afterScore"),17,"screen pages must share the saved-gap plus comment-clearance calculation");
+assert.equal(api.effectivePixelGaps(geometry,{boundaries:{"0:afterScore":{gap:.25}}},[{type:"text",layoutPlacement:crowdedPlacement}]).gaps.get("0:afterScore"),17,"shared row layout must be stable across repeated page renders");
+
 const annotationPage=fs.readFileSync(path.join(__dirname,"..","annotations.html"),"utf8");
 assert.match(annotationPage,/function snap\(\)[^{]*\{[^}]*annotationLayoutDirty=true/,
   "a real user edit must request an annotation-layout commit");
@@ -27,5 +32,7 @@ assert.match(annotationPage,/if\(annotationLayoutDirty\)\{\s*state\.annotationLa
   "stable page rendering must not overwrite shared annotation layout");
 assert.doesNotMatch(annotationPage,/state\.annotationLayout=nextLayout;\s*\/\* ドラッグ中/,
   "the old unconditional page-open layout write must stay removed");
+assert.match(annotationPage,/if\(!annotationLayoutDirty\)return applySavedAnnotationEditGaps\(\)/,
+  "the writing page must use the same shared score layout before an edit starts");
 
 console.log("annotation layout tests passed");

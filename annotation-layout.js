@@ -70,6 +70,20 @@
     const line=Math.max(1,Number(address.lineSpacing)||18),clearance=Math.max(0,Number(placement?.clearanceTop)||0)*line;
     return Math.max(savedTop,address.previous.rect.bottom+clearance);
   }
+  function effectivePixelGaps(geometry,layout,items){
+    const addresses=domAddresses(geometry),gaps=new Map();
+    (geometry?.rows||[]).forEach(row=>{
+      const saved=pixelGaps(layout,row.row,{lyricsVisible:Boolean(row.lyrics),vocalVisible:Boolean(row.vocal)},row.lineSpacing);
+      LANES.forEach(lane=>gaps.set(key(row.row,lane),Math.max(0,Number(saved[lane])||0)));
+    });
+    (items||[]).forEach(item=>{
+      if(item?.type!=="text"||!item.layoutPlacement)return;
+      const placement=item.layoutPlacement,address=resolveAddress(addresses,placement);if(!address||address.lane==="beforeScore")return;
+      const line=Math.max(1,Number(address.lineSpacing)||18),offset=Math.max(Number(placement.offsetTop)||0,Number(placement.clearanceTop)||0),height=Math.max(0,Number(placement.heightLines)||0),bottomClearance=Math.max(0,Number(placement.clearanceBottom)||0),natural=Math.max(0,address.baselineNextTop-address.baselinePreviousBottom),required=Math.max(0,(offset+height+bottomClearance)*line-natural);
+      gaps.set(address.key,Math.max(gaps.get(address.key)||0,required));
+    });
+    return{addresses,gaps};
+  }
   function equal(a,b){return JSON.stringify(normalize(a))===JSON.stringify(normalize(b))}
-  global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,rowRegions,domAddresses,addressForBounds,placementFromBounds,resolveAddress,placementTop,placementTopWithClearance,equal};
+  global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,rowRegions,domAddresses,addressForBounds,placementFromBounds,resolveAddress,placementTop,placementTopWithClearance,effectivePixelGaps,equal};
 })(window);
