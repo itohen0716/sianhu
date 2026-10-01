@@ -367,6 +367,7 @@
   </div>
 </dialog>
 <script src="./annotation-layout.js?v=230"></script>
+<script src="./annotation-visibility.js?v=234"></script>
 <script src="./note-position.js?v=213"></script>
 <script src="./note-density.js?v=216"></script>
 <script src="./row-content.js?v=225"></script>
@@ -509,7 +510,7 @@ function migrateState(){
 function load(){
   try{
     const current=JSON.parse(localStorage.getItem(KEY));
-    if(current&&Array.isArray(current.notes)){state={...defaults,...current,vocalVisible:typeof current.vocalVisible==="boolean"?current.vocalVisible:Boolean(current.lyricsMode),lyricsVisible:typeof current.lyricsVisible==="boolean"?current.lyricsVisible:Boolean(current.lyricsMode),annotationCoordVersion:current.annotationCoordVersion||1,markerStyleVersion:current.markerStyleVersion||1};migrateState();ensureTechniqueLayer();hasSaved=true;return}
+    if(current&&Array.isArray(current.notes)){state={...defaults,...current,vocalVisible:typeof current.vocalVisible==="boolean"?current.vocalVisible:Boolean(current.lyricsMode),lyricsVisible:typeof current.lyricsVisible==="boolean"?current.lyricsVisible:Boolean(current.lyricsMode),annotationCoordVersion:current.annotationCoordVersion||1,markerStyleVersion:current.markerStyleVersion||1};migrateState();ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers);ensureTechniqueLayer();hasSaved=true;return}
     const old=JSON.parse(localStorage.getItem(OLD_KEY));
     if(old&&Array.isArray(old.notes)){state={...defaults,notes:old.notes,title:old.title||defaults.title};migrateState();ensureTechniqueLayer();hasSaved=true}
   }catch(error){console.warn("保存データを読み込めませんでした。",error)}
@@ -668,7 +669,7 @@ async function importScoreFile(file){
     try{parsed=JSON.parse(await file.text())}catch{throw new Error("JSONを解析できません。ファイルが壊れていないか確認してください。")}
     const imported=validatedImportedScore(parsed);
     if((state.notes.length||state.layers.some(layer=>layer.items?.length))&&!confirm("現在の文化譜を、読み込んだ内容に置き換えますか？"))return;
-    state=imported;migrateState();ensureTechniqueLayer();past=[];future=[];selectedItemId=null;selectedScoreTarget=null;drawing=false;cursorVisible=false;save();render();
+    state=imported;migrateState();ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers);ensureTechniqueLayer();past=[];future=[];selectedItemId=null;selectedScoreTarget=null;drawing=false;cursorVisible=false;save();render();
     alert(`「${state.title||"文化譜"}」を読み込みました。`);
   }catch(error){console.error(error);alert(`読み込めませんでした。\n${error instanceof Error?error.message:"ファイルを確認してください。"}`)}
 }
