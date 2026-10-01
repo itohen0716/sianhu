@@ -760,32 +760,28 @@ function shamisenColumnDuration(anchor){const durations=columnEntries(anchor.m,a
 function shamisenColumns(){return[...new Map(state.notes.sort((a,b)=>a.m-b.m||a.p-b.p).map(note=>[`${note.m},${note.p}`,{m:note.m,p:note.p}])).values()]}
 function nextShamisenColumn(m,p){return shamisenColumns().find(item=>item.m>m||(item.m===m&&item.p>p))||null}
 function previousShamisenColumn(m,p){return[...shamisenColumns()].reverse().find(item=>item.m<m||(item.m===m&&item.p<p))||null}
-function noteMoveBounds(m,p,originX=columnX(m,p)){
-  const measure=q(`[data-note^="${m},"][data-note$=",${p}"]`)?.closest(".measure");
-  const selected=q(`[data-note^="${m},"][data-note$=",${p}"]`);
-  if(!measure||!selected)return{min:-120,max:120};
-  const measureRect=measure.getBoundingClientRect(),noteRect=selected.getBoundingClientRect();
-  let min=originX+(measureRect.left+5-noteRect.left),max=originX+(measureRect.right-5-noteRect.right);
-  const cellBounds=window.ShianNotePosition.displayOffsetBounds(measureRect.width,measureCapacityFor(m));min=Math.max(min,cellBounds.min);max=Math.min(max,cellBounds.max);
-  const columns=[...new Set(state.notes.filter(note=>note.m===m&&note.p!==p).map(note=>note.p))].sort((a,b)=>a-b);
-  const previous=[...columns].reverse().find(value=>value<p),next=columns.find(value=>value>p);
-  if(previous!==undefined){const el=q(`[data-note^="${m},"][data-note$=",${previous}"]`);if(el)min=Math.max(min,originX+(el.getBoundingClientRect().right+6-noteRect.left))}
-  if(next!==undefined){const el=q(`[data-note^="${m},"][data-note$=",${next}"]`);if(el)max=Math.min(max,originX+(el.getBoundingClientRect().left-6-noteRect.right))}
-  if(min>max)return{min:originX,max:originX};
-  return{min,max};
+function noteVisualBounds(elements){
+  const rects=[...elements].map(element=>(element.querySelector("b")||element).getBoundingClientRect()).filter(rect=>rect.width>0);
+  if(!rects.length)return null;
+  return{left:Math.min(...rects.map(rect=>rect.left)),right:Math.max(...rects.map(rect=>rect.right)),width:Math.max(...rects.map(rect=>rect.width))};
 }
-function rangeNoteMoveBounds(m,p,originX=columnX(m,p)){
-  const selected=q(`[data-note^="${m},"][data-note$=",${p}"]`),measure=selected?.closest(".measure");
+function noteMoveBounds(note,originX=note?.rest?(Number(note.x)||0):columnX(note?.m,note?.p),ignoredPositions=new Set()){
+  const m=Number(note?.m),p=Number(note?.p),key=anchorKey(m,Number(note?.s),p),selected=q(`[data-note="${key}"]`),measure=selected?.closest(".measure");
   if(!measure||!selected)return{min:-120,max:120};
-  const measureRect=measure.getBoundingClientRect(),noteRect=selected.getBoundingClientRect();
-  let min=originX+(measureRect.left+5-noteRect.left),max=originX+(measureRect.right-5-noteRect.right);
-  const cellBounds=window.ShianNotePosition.displayOffsetBounds(measureRect.width,measureCapacityFor(m));min=Math.max(min,cellBounds.min);max=Math.min(max,cellBounds.max);
-  const selectedColumns=new Set([...rangeNoteKeys].map(key=>key.split(",").map(Number)).filter(([measureNumber])=>measureNumber===m).map(([, ,position])=>position));
-  const columns=[...new Set(state.notes.filter(note=>note.m===m&&note.p!==p&&!selectedColumns.has(note.p)).map(note=>note.p))].sort((a,b)=>a-b);
-  const previous=[...columns].reverse().find(value=>value<p),next=columns.find(value=>value>p);
-  if(previous!==undefined){const el=q(`[data-note^="${m},"][data-note$=",${previous}"]`);if(el)min=Math.max(min,originX+(el.getBoundingClientRect().right+6-noteRect.left))}
-  if(next!==undefined){const el=q(`[data-note^="${m},"][data-note$=",${next}"]`);if(el)max=Math.min(max,originX+(el.getBoundingClientRect().left-6-noteRect.right))}
+  const measureRect=measure.getBoundingClientRect(),capacity=measureCapacityFor(m),movingElements=note.rest?[selected]:qAll(`[data-note^="${m},"][data-note$=",${p}"]:not(.rest)`),moving=noteVisualBounds(movingElements)||noteVisualBounds([selected]);
+  if(!moving)return{min:originX,max:originX};
+  if(window.innerWidth<900){
+    let min=originX+(measureRect.left+5-moving.left),max=originX+(measureRect.right-5-moving.right),cellBounds=window.ShianNotePosition.displayOffsetBounds(measureRect.width,capacity);min=Math.max(min,cellBounds.min);max=Math.min(max,cellBounds.max);return min>max?{min:originX,max:originX}:{min,max};
+  }
+  const baseCenter=measureRect.left+(p+.5)*measureRect.width/capacity,measureBounds=window.ShianNotePosition.measureDisplayOffsetBounds(measureRect.width,capacity,p,moving.width,5);let min=measureBounds.min,max=measureBounds.max;
+  const columns=[...new Set(state.notes.filter(item=>item.m===m&&item.p!==p&&!ignoredPositions.has(item.p)).map(item=>item.p))].sort((a,b)=>a-b),previous=[...columns].reverse().find(value=>value<p),next=columns.find(value=>value>p);
+  if(previous!==undefined){const bounds=noteVisualBounds(qAll(`[data-note^="${m},"][data-note$=",${previous}"]`));if(bounds)min=Math.max(min,bounds.right+6-baseCenter+moving.width/2)}
+  if(next!==undefined){const bounds=noteVisualBounds(qAll(`[data-note^="${m},"][data-note$=",${next}"]`));if(bounds)max=Math.min(max,bounds.left-6-baseCenter-moving.width/2)}
   return min>max?{min:originX,max:originX}:{min,max};
+}
+function rangeNoteMoveBounds(note,originX=note?.rest?(Number(note.x)||0):columnX(note?.m,note?.p)){
+  const m=Number(note?.m),selectedPositions=new Set([...rangeNoteKeys].map(key=>key.split(",").map(Number)).filter(([measureNumber])=>measureNumber===m).map(([, ,position])=>position));
+  return noteMoveBounds(note,originX,selectedPositions);
 }
 function moveSelectedBarline(amount){
   const m=selectedScoreTarget?.m;
@@ -802,7 +798,7 @@ function nudgeRangeSelection(dx,dy=0){
   if(!(rangeNoteKeys.size||rangeTechniqueIds.size))return false;
   if(dy&& !rangeTechniqueIds.size)return false;
   const selected=state.notes.filter(note=>rangeNoteKeys.has(anchorKey(note.m,note.s,note.p))),groups=new Map();
-  selected.forEach(note=>{const id=note.rest?`r:${anchorKey(note.m,note.s,note.p)}`:`c:${note.m},${note.p}`;if(!groups.has(id)){const origin=note.rest?(Number(note.x)||0):columnX(note.m,note.p),bounds=rangeNoteMoveBounds(note.m,note.p,origin);groups.set(id,{notes:note.rest?[note]:columnNotes(note.m,note.p),origin,bounds})}});
+  selected.forEach(note=>{const id=note.rest?`r:${anchorKey(note.m,note.s,note.p)}`:`c:${note.m},${note.p}`;if(!groups.has(id)){const origin=note.rest?(Number(note.x)||0):columnX(note.m,note.p),bounds=rangeNoteMoveBounds(note,origin);groups.set(id,{notes:note.rest?[note]:columnNotes(note.m,note.p),origin,bounds})}});
   let appliedX=dx;groups.forEach(group=>{appliedX=clamp(appliedX,group.bounds.min-group.origin,group.bounds.max-group.origin)});groups.forEach(group=>group.notes.forEach(note=>{note.x=group.origin+appliedX}));
   const layer=state.layers.find(entry=>entry.id===TECHNIQUE_LAYER_ID);(layer?.items||[]).filter(item=>rangeTechniqueIds.has(item.id)).forEach(item=>{ensureTechniquePixelOffset(item);if(dx&&!(item.anchor&&rangeNoteKeys.has(anchorKey(item.anchor.m,item.anchor.s,item.anchor.p))))item.offsetXPx=(Number(item.offsetXPx)||0)+appliedX;if(dy)item.offsetYPx=(Number(item.offsetYPx)||0)+dy});return true;
 }
@@ -810,7 +806,7 @@ function nudgeCurrentSelection(dx,dy=0){
   if(rangeNoteKeys.size||rangeTechniqueIds.size)return nudgeRangeSelection(dx,dy);
   const item=selectedItem();if(item){translateItem(item,dx,dy);return true}
   if(dy)return false;
-  if(selectedScoreTarget?.type==="note"){const [m,,p]=selectedScoreTarget.key.split(",").map(Number),chosen=state.notes.find(note=>anchorKey(note.m,note.s,note.p)===selectedScoreTarget.key),notes=chosen?.rest?[chosen]:columnNotes(m,p);if(!notes.length)return false;const origin=chosen?.rest?(Number(chosen.x)||0):columnX(m,p),bounds=noteMoveBounds(m,p,origin),x=clamp(origin+dx,bounds.min,bounds.max);notes.forEach(note=>note.x=x);return true}
+  if(selectedScoreTarget?.type==="note"){const [m,,p]=selectedScoreTarget.key.split(",").map(Number),chosen=state.notes.find(note=>anchorKey(note.m,note.s,note.p)===selectedScoreTarget.key),notes=chosen?.rest?[chosen]:columnNotes(m,p);if(!notes.length)return false;const origin=chosen?.rest?(Number(chosen.x)||0):columnX(m,p),bounds=noteMoveBounds(chosen,origin),x=clamp(origin+dx,bounds.min,bounds.max);notes.forEach(note=>note.x=x);return true}
   if(selectedScoreTarget?.type==="barline")return moveSelectedBarline(dx);
   if(selectedScoreTarget?.type==="scorePart")return false;return false;
 }
@@ -1503,10 +1499,10 @@ function updateRangeBox(event){
 }
 function finishRangeSelection(event){
   if(!rangeDrag)return;const layer=rangeDrag.layer,rect=selectionRect(rangeDrag.startX,rangeDrag.startY,event.clientX,event.clientY);clearRangeSelection();
-  if(layer==="notes")qAll("#scoreArea .note[data-note]:not(.rest)").forEach(element=>{const glyph=element.querySelector("b")||element;if(intersects(rect,glyph.getBoundingClientRect())){rangeNoteKeys.add(element.dataset.note);element.classList.add("range-selected")}});
+  if(layer==="notes")qAll(window.innerWidth>=900?"#scoreArea .note[data-note]":"#scoreArea .note[data-note]:not(.rest)").forEach(element=>{const glyph=element.querySelector("b")||element;if(intersects(rect,glyph.getBoundingClientRect())){rangeNoteKeys.add(element.dataset.note);element.classList.add("range-selected")}});
   else if(layer==="technique")qAll("#annotations .annotation-item.symbol-item[data-item]").forEach(element=>{if(intersects(rect,element.getBoundingClientRect())){rangeTechniqueIds.add(element.dataset.item);element.classList.add("range-selected")}});
   rangeBox?.remove();rangeBox=null;rangeDrag=null;selectedScoreTarget=null;selectedItemId=null;lastInserted=null;
-  const count=rangeNoteKeys.size+rangeTechniqueIds.size,targetName=layer==="notes"?"数字・開放弦":"奏法";q("#keyboardStatus").textContent=count?`${targetName} ${count}件を選択中：ドラッグで移動、【Delete】で削除できます。`:`範囲内に選択できる${targetName}がありません。`;
+  const count=rangeNoteKeys.size+rangeTechniqueIds.size,targetName=layer==="notes"?(window.innerWidth>=900?"数字・開放弦・休符":"数字・開放弦"):"奏法";q("#keyboardStatus").textContent=count?`${targetName} ${count}件を選択中：ドラッグで移動、【Delete】で削除できます。`:`範囲内に選択できる${targetName}がありません。`;
 }
 q(".paper").addEventListener("pointerdown",event=>{
   const layer=state.scoreEditLayer,surface=layer==="notes"?q("#scoreArea"):layer==="technique"?q("#annotations"):null;
@@ -1522,7 +1518,7 @@ q(".paper").addEventListener("dragstart",event=>{if(event.shiftKey||shiftHeld)ev
 function beginRangeMove(event){
   if(event.shiftKey||!(rangeNoteKeys.size||rangeTechniqueIds.size))return false;
   const selectedNotes=state.notes.filter(note=>rangeNoteKeys.has(anchorKey(note.m,note.s,note.p))),groups=new Map();
-  selectedNotes.forEach(note=>{const id=note.rest?`rest:${anchorKey(note.m,note.s,note.p)}`:`column:${note.m},${note.p}`;if(!groups.has(id)){const origin=note.rest?(Number(note.x)||0):columnX(note.m,note.p);groups.set(id,{notes:note.rest?[note]:columnNotes(note.m,note.p),m:note.m,p:note.p,origin,bounds:rangeNoteMoveBounds(note.m,note.p,origin)})}});
+  selectedNotes.forEach(note=>{const id=note.rest?`rest:${anchorKey(note.m,note.s,note.p)}`:`column:${note.m},${note.p}`;if(!groups.has(id)){const origin=note.rest?(Number(note.x)||0):columnX(note.m,note.p);groups.set(id,{notes:note.rest?[note]:columnNotes(note.m,note.p),m:note.m,p:note.p,origin,bounds:rangeNoteMoveBounds(note,origin)})}});
   const techniqueLayer=state.layers.find(layer=>layer.id===TECHNIQUE_LAYER_ID),techniques=(techniqueLayer?.items||[]).filter(item=>rangeTechniqueIds.has(item.id)).map(item=>{ensureTechniquePixelOffset(item);return{item,originXPx:Number(item.offsetXPx)||0,originX:Number(item.x)||0,linked:item.anchor&&rangeNoteKeys.has(anchorKey(item.anchor.m,item.anchor.s,item.anchor.p))}});
   const minDx=Math.max(...[...groups.values()].map(group=>group.bounds.min-group.origin)),maxDx=Math.min(...[...groups.values()].map(group=>group.bounds.max-group.origin));
   event.preventDefault();event.stopImmediatePropagation();snap();rangeMove={startX:event.clientX,groups:[...groups.values()],techniques,minDx:Number.isFinite(minDx)?minDx:-Infinity,maxDx:Number.isFinite(maxDx)?maxDx:Infinity,pointerId:event.pointerId};
@@ -1550,7 +1546,7 @@ q("#scoreArea").addEventListener("pointerdown",event=>{
     beginRangeMove(event);noteButton.setPointerCapture(event.pointerId);
   }else if(noteButton&&state.scoreEditLayer==="notes"){
     const [m,s,p]=noteButton.dataset.note.split(",").map(Number),note=state.notes.find(n=>n.m===m&&n.s===s&&n.p===p);
-    if(!note)return;state.m=m;state.s=s;state.p=p;cursorVisible=true;lastInserted=null;selectedScoreTarget={type:"note",key:anchorKey(m,s,p)};selectedItemId=null;event.preventDefault();snap();const originX=note.rest?(note.x||0):columnX(m,p);scoreDrag={type:"note",notes:note.rest?[note]:columnNotes(m,p),m,p,startX:event.clientX,originX,bounds:noteMoveBounds(m,p,originX)};noteButton.classList.add("moving");noteButton.setPointerCapture(event.pointerId);
+    if(!note)return;state.m=m;state.s=s;state.p=p;cursorVisible=true;lastInserted=null;selectedScoreTarget={type:"note",key:anchorKey(m,s,p)};selectedItemId=null;event.preventDefault();snap();const originX=note.rest?(note.x||0):columnX(m,p);scoreDrag={type:"note",notes:note.rest?[note]:columnNotes(m,p),m,p,startX:event.clientX,originX,bounds:noteMoveBounds(note,originX)};noteButton.classList.add("moving");noteButton.setPointerCapture(event.pointerId);
   }else if(barline&&state.scoreEditLayer==="staff"){
     const m=+barline.dataset.boundary,key=barline.dataset.barlineKey,isRowStart=measureLocation(m).local===0&&!barline.dataset.end;selectedScoreTarget={type:"barline",m,key};selectedItemId=null;event.preventDefault();barline.classList.add("selected");if(isRowStart||barline.dataset.end)return;snap();scoreDrag={type:"barline",m,startX:event.clientX,left:m-1,right:m,leftOffset:state.measureOffsets?.[m-1]||0,rightOffset:state.measureOffsets?.[m]||0,leftWidth:measureWidth(m-1),rightWidth:measureWidth(m)};barline.setPointerCapture(event.pointerId);
   }

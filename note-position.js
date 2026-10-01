@@ -25,6 +25,23 @@
     return clamp(Number.isFinite(value) ? value : 0, bounds.min, bounds.max);
   }
 
+  function measureDisplayOffsetBounds(measurePixels, capacity, position, glyphPixels = 12, marginPixels = 5) {
+    const width = Number(measurePixels);
+    const columns = Number(capacity);
+    const column = Number(position);
+    const glyphWidth = Math.max(0, Number(glyphPixels) || 0);
+    const margin = Math.max(0, Number(marginPixels) || 0);
+    if (!Number.isFinite(width) || width <= 0 || !Number.isInteger(columns) || columns < 1 || !Number.isInteger(column) || column < 0 || column >= columns) {
+      return { min: 0, max: 0 };
+    }
+    const baseCenter = (column + 0.5) * width / columns;
+    const halfGlyph = glyphWidth / 2;
+    return {
+      min: margin + halfGlyph - baseCenter,
+      max: width - margin - halfGlyph - baseCenter
+    };
+  }
+
   function rescaleDisplayOffset(offset, oldMeasuresPerRow, newMeasuresPerRow) {
     const value = Number(offset);
     const oldCount = Number(oldMeasuresPerRow);
@@ -37,6 +54,7 @@
   window.ShianNotePosition = Object.freeze({
     displayOffsetBounds,
     constrainDisplayOffset,
+    measureDisplayOffsetBounds,
     rescaleDisplayOffset
   });
 })();
