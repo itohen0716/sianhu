@@ -144,14 +144,21 @@
       : rate;
     const minimumOutputDuration = Math.max(0, Number(options.minimumDuration) || 0);
     const preserveSampleTail = Boolean(options.preserveSampleTail && endRate === rate && sourceKind === "normal");
-    const sourceDuration = requestedDuration
-      ? preserveSampleTail
-        ? availableSourceDuration
-        : Math.min(availableSourceDuration, Math.max(0.05, requestedDuration * averageRate))
+    const requestedTailReleaseSeconds = preserveSampleTail
+      ? Math.max(0, Number(options.tailReleaseSeconds) || 0.004)
+      : 0;
+    const requestedSourceDuration = requestedDuration
+      ? Math.min(availableSourceDuration, Math.max(0.05, requestedDuration * averageRate))
       : Math.min(availableSourceDuration, Math.max(baseSourceDuration, minimumOutputDuration * rate));
-    const outputDuration = requestedDuration && !preserveSampleTail
-      ? Math.min(requestedDuration, sourceDuration / averageRate)
-      : sourceDuration / rate;
+    const logicalOutputDuration = requestedDuration
+      ? Math.min(requestedDuration, requestedSourceDuration / averageRate)
+      : requestedSourceDuration / rate;
+    const availableTailReleaseSeconds = preserveSampleTail
+      ? Math.max(0, availableSourceDuration / rate - logicalOutputDuration)
+      : 0;
+    const tailReleaseSeconds = Math.min(requestedTailReleaseSeconds, availableTailReleaseSeconds);
+    const outputDuration = logicalOutputDuration + tailReleaseSeconds;
+    const sourceDuration = Math.min(availableSourceDuration, Math.max(0.05, outputDuration * averageRate));
     const startDelay = Math.max(0, Number(options.delay) || 0);
     const absoluteWhen = Number(options.when);
     const startAt = Number.isFinite(absoluteWhen) ? absoluteWhen : ctx.currentTime + startDelay;
@@ -160,8 +167,16 @@
       ? Math.min(requestedAttackHold, Math.max(0, outputDuration - 0.04))
       : 0;
     const pitchChangeStartAt = startAt + attackHold;
-    const fadeIn = Math.min(0.003, outputDuration / 10);
-    const fadeOut = options.tightStop ? Math.min(0.04, outputDuration * 0.16) : Math.min(0.004, outputDuration / 10);
+    const requestedFadeIn = Number(options.fadeInSeconds);
+    const requestedFadeOut = Number(options.fadeOutSeconds);
+    const fadeIn = Number.isFinite(requestedFadeIn) && requestedFadeIn > 0
+      ? Math.min(requestedFadeIn, outputDuration / 5)
+      : Math.min(0.003, outputDuration / 10);
+    const fadeOut = Number.isFinite(requestedFadeOut) && requestedFadeOut > 0
+      ? Math.min(requestedFadeOut, outputDuration / 5)
+      : options.tightStop
+        ? Math.min(0.04, outputDuration * 0.16)
+        : Math.min(0.004, outputDuration / 10);
     const gainFadeOutStartAt = startAt + Math.max(fadeIn, outputDuration - fadeOut);
     const gainEndAt = startAt + outputDuration;
     const sourceStopAt = requestedDuration || preserveSampleTail ? gainEndAt : null;
@@ -210,6 +225,9 @@
       gainEndAt,
       lateBy: Math.max(0, scheduledAt - startAt),
       requestedDuration,
+      logicalOutputDuration,
+      requestedTailReleaseSeconds,
+      tailReleaseSeconds,
       outputDuration,
       segmentStart: offset,
       segmentEnd: Math.min(segment.end, audioBuffer.duration),
@@ -284,6 +302,10 @@
   }
 
   const api = Object.freeze({ getContext, resume, load, loadMany, play, playSegment, playFrequency, playFrequencyGlide, clearTrace, getTrace, stop: stopAll, stopAll });
+  window.ShianAudioEnvelopeDiagnostics = Object.freeze({
+    tripletReleaseSeconds: 0.004,
+    referenceFadeSeconds: 0.018
+  });
   root.ShianAudioEngine = api;
   window.ShianAudioEngine = api;
 })();
