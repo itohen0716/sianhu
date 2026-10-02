@@ -254,7 +254,7 @@
     <div class="dialog-actions"><button type="button" id="cancelComment">取消</button><button type="submit" class="primary">確定</button></div>
   </form>
 </dialog>
-<script src="./annotation-layout.js?v=230"></script>
+<script src="./annotation-layout.js?v=235"></script>
 <script src="./annotation-visibility.js?v=234"></script>
 <script src="./note-position.js?v=213"></script>
 <script src="./note-density.js?v=216"></script>
@@ -276,6 +276,7 @@ let state={...defaults},past=[],future=[],hasSaved=false;
 let drawing=false,draft=null,selectedItemId=null,pendingDrag=null,dragging=null,resizing=null,printing=false,lastInserted=null,commentDialogResolve=null;
 /* 非表示ページから復帰した直後やWebフォント確定前の寸法を、段高の正本にしない。 */
 let annotationLayoutReady=false,annotationLayoutPass=0,annotationLayoutDirty=false;
+let annotationPageReferenceSize=null;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;
 let writingClipboard=[],writingPasteSequence=0;
 const DRAG_START_PX=4;
@@ -708,7 +709,7 @@ function annotationCenterY(item){if(item.type==="pen"){const points=item.points|
 function shiftAnnotationY(item,dy){if(!Number.isFinite(dy)||Math.abs(dy)<.001)return;if(item.type==="pen")item.points=(item.points||[]).map(p=>({...p,y:Number(p.y||0)+dy}));else if(item.type==="text"||item.type==="symbol")item.y=Number(item.y||0)+dy;else{item.y1=Number(item.y1||0)+dy;item.y2=Number(item.y2||0)+dy}}
 function annotationGeometry(){
   const svg=q("#annotations"),svgRect=svg?.getBoundingClientRect(),view=svg?.viewBox?.baseVal;if(!svgRect?.width||!svgRect.height||!view?.width||!view.height)return null;
-  const rows=[...qAll("#scoreArea .staff")].map((staff,row)=>{const score=staff.querySelector(".score"),scoreRect=score?.getBoundingClientRect(),measures=[...staff.querySelectorAll(".score>.measure[data-measure]")].map(element=>({m:Number(element.dataset.measure),element,rect:element.getBoundingClientRect()})),strings=[...(measures[0]?.element.querySelectorAll(".string")||[])].map(element=>element.getBoundingClientRect()),lineYs=strings.map(rect=>rect.top+rect.height/2),lineTop=lineYs[0]??scoreRect?.top??0,lineSpacing=lineYs.length>1?(lineYs.at(-1)-lineYs[0])/(lineYs.length-1):18,lineBottom=lineYs.at(-1)??lineTop+2*(lineSpacing||18);return{row,staff,rect:staff.getBoundingClientRect(),score,scoreRect,measures,lineTop,lineBottom,lineSpacing:lineSpacing||18,lyrics:staff.querySelector(".lyrics-row"),vocal:staff.querySelector(".vocal-row")}}),measureMap=new Map();rows.forEach(row=>row.measures.forEach(measure=>measureMap.set(measure.m,{row,measure})));return{svgRect,view,rows,measureMap};
+  const rows=[...qAll("#scoreArea .staff")].map((staff,row)=>{const score=staff.querySelector(".score"),scoreRect=score?.getBoundingClientRect(),measures=[...staff.querySelectorAll(".score>.measure[data-measure]")].map(element=>({m:Number(element.dataset.measure),element,rect:element.getBoundingClientRect()})),strings=[...(measures[0]?.element.querySelectorAll(".string")||[])].map(element=>element.getBoundingClientRect()),lineYs=strings.map(rect=>rect.top+rect.height/2),lineTop=lineYs[0]??scoreRect?.top??0,lineSpacing=lineYs.length>1?(lineYs.at(-1)-lineYs[0])/(lineYs.length-1):18,lineBottom=lineYs.at(-1)??lineTop+2*(lineSpacing||18);return{row,staff,rect:staff.getBoundingClientRect(),score,scoreRect,measures,lineTop,lineBottom,lineSpacing:lineSpacing||18,lyrics:staff.querySelector(".lyrics-row"),vocal:staff.querySelector(".vocal-row")}}),measureMap=new Map();rows.forEach(row=>row.measures.forEach(measure=>measureMap.set(measure.m,{row,measure})));return{svgRect,view,rows,measureMap,pageRect:ShianAnnotationLayout.pageReferenceRect(q(".paper"),annotationPageReferenceSize)};
 }
 function itemClientCenterY(item,geometry){return geometry.svgRect.top+annotationCenterY(item)*geometry.svgRect.height/geometry.view.height}
 function nearestAnnotationRow(rows,clientY){return rows.reduce((best,row)=>Math.abs((row.rect.top+row.rect.bottom)/2-clientY)<Math.abs((best.rect.top+best.rect.bottom)/2-clientY)?row:best,rows[0])}
@@ -721,8 +722,8 @@ function setAnnotationSourcePoints(item,points){if(!points?.length)return;if(ite
 function svgPointToClient(point,geometry){return{x:geometry.svgRect.left+point.x*geometry.svgRect.width/geometry.view.width,y:geometry.svgRect.top+point.y*geometry.svgRect.height/geometry.view.height}}
 function clientPointToSvg(point,geometry){return{x:(point.x-geometry.svgRect.left)*geometry.view.width/geometry.svgRect.width,y:(point.y-geometry.svgRect.top)*geometry.view.height/geometry.svgRect.height}}
 function measureAnchorForClient(row,clientX){if(!row?.measures?.length||!row.scoreRect?.width)return null;const measure=row.measures.find(entry=>clientX>=entry.rect.left&&clientX<=entry.rect.right)||row.measures.reduce((best,entry)=>Math.min(Math.abs(clientX-entry.rect.left),Math.abs(clientX-entry.rect.right))<Math.min(Math.abs(clientX-best.rect.left),Math.abs(clientX-best.rect.right))?entry:best,row.measures[0]);return{m:measure.m,x:(clientX-measure.rect.left)/Math.max(1,measure.rect.width),rowX:(clientX-row.scoreRect.left)/row.scoreRect.width}}
-function annotationAnchorFromClient(point,row,target){if(target==="page"){const rect=q(".paper")?.getBoundingClientRect();return rect?.width&&rect.height?{pageX:(point.x-rect.left)/rect.width,pageY:(point.y-rect.top)/rect.height}:null}const horizontal=measureAnchorForClient(row,point.x),element=targetElement(row,target),rect=element?.getBoundingClientRect();if(!horizontal||!rect?.width||!rect.height)return null;if(target==="staff"){const y=(point.y-row.lineTop)/row.lineSpacing;return{...horizontal,y,staffY:(point.y-row.lineBottom)/row.lineSpacing}}return{...horizontal,y:(point.y-rect.top)/rect.height}}
-function annotationClientFromAnchor(anchor,geometry,target,fallbackRow){if(target==="page"){const rect=q(".paper")?.getBoundingClientRect();return rect?{x:rect.left+Number(anchor.pageX)*rect.width,y:rect.top+Number(anchor.pageY)*rect.height}:null}const located=geometry.measureMap.get(Number(anchor.m)),row=located?.row||geometry.rows[Number(fallbackRow)],measure=located?.measure||row?.measures?.[0],element=targetElement(row,target),rect=element?.getBoundingClientRect();if(!row||!measure||!rect)return null;const x=Number.isFinite(Number(anchor.x))?measure.rect.left+Number(anchor.x)*measure.rect.width:row.scoreRect.left+Number(anchor.rowX||0)*row.scoreRect.width,staffY=Number(anchor.staffY),y=target==="staff"?(Number.isFinite(staffY)?row.lineBottom+staffY*row.lineSpacing:row.lineTop+Number(anchor.y||0)*row.lineSpacing):rect.top+Number(anchor.y||0)*rect.height;return{x,y,row:row.row}}
+function annotationAnchorFromClient(point,row,target){if(target==="page"){const rect=annotationGeometry()?.pageRect;return rect?.width&&rect.height?{pageX:(point.x-rect.left)/rect.width,pageY:(point.y-rect.top)/rect.height}:null}const horizontal=measureAnchorForClient(row,point.x),element=targetElement(row,target),rect=element?.getBoundingClientRect();if(!horizontal||!rect?.width||!rect.height)return null;if(target==="staff"){const y=(point.y-row.lineTop)/row.lineSpacing;return{...horizontal,y,staffY:(point.y-row.lineBottom)/row.lineSpacing}}return{...horizontal,y:(point.y-rect.top)/rect.height}}
+function annotationClientFromAnchor(anchor,geometry,target,fallbackRow){if(target==="page"){const rect=geometry?.pageRect;return rect?{x:rect.left+Number(anchor.pageX)*rect.width,y:rect.top+Number(anchor.pageY)*rect.height}:null}const located=geometry.measureMap.get(Number(anchor.m)),row=located?.row||geometry.rows[Number(fallbackRow)],measure=located?.measure||row?.measures?.[0],element=targetElement(row,target),rect=element?.getBoundingClientRect();if(!row||!measure||!rect)return null;const x=Number.isFinite(Number(anchor.x))?measure.rect.left+Number(anchor.x)*measure.rect.width:row.scoreRect.left+Number(anchor.rowX||0)*row.scoreRect.width,staffY=Number(anchor.staffY),y=target==="staff"?(Number.isFinite(staffY)?row.lineBottom+staffY*row.lineSpacing:row.lineTop+Number(anchor.y||0)*row.lineSpacing):rect.top+Number(anchor.y||0)*rect.height;return{x,y,row:row.row}}
 function legacyVisualAnnotationItem(item,geometry){const target=item.layoutTarget||"staff";if(target==="page"||item.layoutAnchorVersion!==1)return structuredClone(item);const row=geometry?.rows?.[Number(item.layoutRow)],element=targetElement(row,target);if(!row||!element)return structuredClone(item);const svgTop=(element.getBoundingClientRect().top-geometry.svgRect.top)*geometry.view.height/geometry.svgRect.height,dy=svgTop-Number(item.layoutAnchorY||0),copy=structuredClone(item);shiftAnnotationY(copy,dy);return copy}
 function legacyRowOffsetAnnotationItem(item,geometry){
   if(!geometry||item.layoutAnchorVersion||item.layoutRow==null||item.layoutOffsetY==null||!Number.isInteger(Number(item.layoutRow))||!Number.isFinite(Number(item.layoutOffsetY)))return null;
@@ -742,7 +743,7 @@ function migrateCommentToTopAnchor(item,geometry){
   const offsetSvg=(Number(item.size)||20)*1.05+5,offsetClient=offsetSvg*geometry.svgRect.height/geometry.view.height,target=item.layoutTarget||"staff";
   if(item.layoutAnchorVersion===3&&Array.isArray(item.layoutAnchors)&&item.layoutAnchors.length){
     item.layoutAnchors.forEach(anchor=>{
-      if(target==="page"){const rect=q(".paper")?.getBoundingClientRect();if(rect?.height)anchor.pageY=Number(anchor.pageY||0)-offsetClient/rect.height;return}
+      if(target==="page"){const rect=geometry.pageRect;if(rect?.height)anchor.pageY=Number(anchor.pageY||0)-offsetClient/rect.height;return}
       const located=geometry.measureMap.get(Number(anchor.m)),row=located?.row||geometry.rows[Number(item.layoutRow)],rect=targetElement(row,target)?.getBoundingClientRect();if(!row||!rect)return;
       const delta=target==="staff"?offsetClient/row.lineSpacing:offsetClient/rect.height;
       anchor.y=Number(anchor.y||0)-delta;if(target==="staff")anchor.staffY=Number.isFinite(Number(anchor.staffY))?Number(anchor.staffY)-delta:Number(anchor.y||0)-2;
@@ -1010,7 +1011,7 @@ function renderLayers(){
   const svg=q("#annotations"),underlay=q("#annotationUnderlay"),paper=q(".paper");
   const movingSnapshots=snapshotMovingAnnotationClients(annotationLayoutIsInteracting()?annotationGeometry():null);
   /* 前回の表示結果を次回の基準にしない。毎回、書き込み追加量0のDOMへ戻す。 */
-  paper.style.minHeight="";resetAnnotationEditGaps();
+  paper.style.minHeight="";resetAnnotationEditGaps();annotationPageReferenceSize=null;
   let rect=svg.getBoundingClientRect(),logicalWidth=1000,logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
   if(state.annotationCoordVersion!==2){
     state.layers.forEach(layer=>layer.items.forEach(item=>{
@@ -1028,6 +1029,7 @@ function renderLayers(){
   if(!printing&&!annotationLayoutIsInteracting())normalizeCommentFlowAnchors(visibleLayers);
   if(!printing&&!annotationLayoutIsInteracting())constrainVisibleCommentsToOwnerScores(visibleLayers);
   const gapChanged=annotationLayoutReady?applyAnnotationEditGaps(visibleLayers):applySavedAnnotationEditGaps();
+  annotationPageReferenceSize=ShianAnnotationLayout.capturePageReferenceSize(paper);
   if(gapChanged){
     rect=svg.getBoundingClientRect();logicalHeight=Math.max(1,rect.height*logicalWidth/Math.max(1,rect.width));
     [svg,underlay].forEach(element=>element.setAttribute("viewBox",`0 0 ${logicalWidth} ${logicalHeight}`));
@@ -1285,8 +1287,8 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||
       save(true);
     }
   }
-  else if(b.id==="undo"&&past.length){future.unshift(JSON.stringify(serializable()));Object.assign(state,JSON.parse(past.pop()));annotationLayoutDirty=true;clearWritingRange();selectedItemId=null}
-  else if(b.id==="redo"&&future.length){past.push(JSON.stringify(serializable()));Object.assign(state,JSON.parse(future.shift()));annotationLayoutDirty=true;clearWritingRange();selectedItemId=null}
+  else if(b.id==="undo"&&past.length){future.unshift(JSON.stringify(serializable()));Object.assign(state,JSON.parse(past.pop()));ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers);annotationLayoutDirty=true;clearWritingRange();selectedItemId=null}
+  else if(b.id==="redo"&&future.length){past.push(JSON.stringify(serializable()));Object.assign(state,JSON.parse(future.shift()));ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers);annotationLayoutDirty=true;clearWritingRange();selectedItemId=null}
   else if(b.id==="addRow"){changeLayout(state.rows+1,measuresInRow(measureLocation(state.m).row));return}
   else if(b.id==="removeRow"){changeLayout(state.rows-1,measuresInRow(measureLocation(state.m).row));return}
   else if(b.id==="addMeasure"){changeLayout(state.rows,measuresInRow(measureLocation(state.m).row)+1);return}
@@ -1437,10 +1439,10 @@ window.addEventListener("afterprint",()=>{
   q("#printRootV2").replaceChildren();
 });
 window.addEventListener("resize",()=>{annotationLayoutReady=false;applyPreview();scheduleStableAnnotationLayout()},{passive:true});
-window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{annotationLayoutDirty=false;state={...defaults,...JSON.parse(event.newValue)};migrateState();startAnnotationMode();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
+window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{annotationLayoutDirty=false;state={...defaults,...JSON.parse(event.newValue)};migrateState();ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers);startAnnotationMode();render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
 document.querySelector('.page-link[href="./index.html"]')?.addEventListener("click",()=>{stopAnnotationMode();save()});
 window.addEventListener("pagehide",()=>{stopAnnotationMode();save()});
-window.addEventListener("pageshow",()=>{try{annotationLayoutReady=false;annotationLayoutDirty=false;const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState()}startAnnotationMode();render();scheduleStableAnnotationLayout()}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
+window.addEventListener("pageshow",()=>{try{annotationLayoutReady=false;annotationLayoutDirty=false;const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState();ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers)}startAnnotationMode();render();scheduleStableAnnotationLayout()}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();
 scheduleStableAnnotationLayout();
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();

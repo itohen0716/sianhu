@@ -25,6 +25,18 @@ const effective=api.effectivePixelGaps(geometry,{boundaries:{"0:afterScore":{gap
 assert.equal(effective.gaps.get("0:afterScore"),17,"screen pages must share the saved-gap plus comment-clearance calculation");
 assert.equal(api.effectivePixelGaps(geometry,{boundaries:{"0:afterScore":{gap:.25}}},[{type:"text",layoutPlacement:crowdedPlacement}]).gaps.get("0:afterScore"),17,"shared row layout must be stable across repeated page renders");
 
+let paperRect={left:40,top:80,width:900,height:600};
+const paper={getBoundingClientRect:()=>paperRect};
+const naturalPage=api.capturePageReferenceSize(paper);
+assert.deepStrictEqual(JSON.parse(JSON.stringify(naturalPage)),{width:900,height:600},"the natural screen page must be captured before annotation-driven height growth");
+const beforeFit=api.pageReferenceRect(paper,naturalPage),savedPageAnchor={pageX:.25,pageY:1.1};
+const beforeFitPoint={x:beforeFit.left+savedPageAnchor.pageX*beforeFit.width,y:beforeFit.top+savedPageAnchor.pageY*beforeFit.height};
+paperRect={left:40,top:80,width:900,height:760};
+const afterFit=api.pageReferenceRect(paper,naturalPage);
+const afterFitPoint={x:afterFit.left+savedPageAnchor.pageX*afterFit.width,y:afterFit.top+savedPageAnchor.pageY*afterFit.height};
+assert.deepStrictEqual(afterFitPoint,beforeFitPoint,"page-target comments must not move again when their own rendering extends the paper");
+assert.equal(afterFit.height,600,"the expanded paper height must not become the next page-anchor denominator");
+
 const annotationPage=fs.readFileSync(path.join(__dirname,"..","annotations.html"),"utf8");
 assert.match(annotationPage,/function snap\(\)[^{]*\{[^}]*annotationLayoutDirty=true/,
   "a real user edit must request an annotation-layout commit");
@@ -34,5 +46,10 @@ assert.doesNotMatch(annotationPage,/state\.annotationLayout=nextLayout;\s*\/\* ã
   "the old unconditional page-open layout write must stay removed");
 assert.match(annotationPage,/if\(!annotationLayoutDirty\)return applySavedAnnotationEditGaps\(\)/,
   "the writing page must use the same shared score layout before an edit starts");
+[annotationPage,fs.readFileSync(path.join(__dirname,"..","index.html"),"utf8")].forEach(html=>{
+  assert(html.includes("capturePageReferenceSize(paper)"),"screen pages must capture one stable natural page size per render");
+  assert(html.includes("const rect=geometry?.pageRect"),"saved page anchors must project through the stable page reference rectangle");
+  assert(html.includes('data-item="${item.id}"'),"screen DOM must retain the original saved annotation ID");
+});
 
 console.log("annotation layout tests passed");

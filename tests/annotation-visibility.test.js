@@ -36,6 +36,10 @@ const printJs=fs.readFileSync(path.join(__dirname,"..","print-v2.js"),"utf8");
 [indexHtml,annotationsHtml].forEach(html=>{
   assert(html.includes("annotation-visibility.js?v=234"));
   assert(html.includes("ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers)"));
+  assert.match(html,/addEventListener\("pageshow"[\s\S]{0,600}restoreSavedCommentLayers\(state\.layers\)/,
+    "pageshow rehydration must not overwrite the restored screen visibility");
+  assert.match(html,/addEventListener\("storage"[\s\S]{0,600}restoreSavedCommentLayers\(state\.layers\)/,
+    "cross-page storage rehydration must keep printable saved comments visible");
 });
 assert(printJs.includes('layer.id!=="technique-layer"&&layer.printEnabled!==false'),"print must keep using the existing saved comment objects");
 

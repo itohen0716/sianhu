@@ -52,10 +52,28 @@ const server=http.createServer((request,response)=>{
     assert.strictEqual(scoreLayer.items.length,1,"score load must not duplicate the saved comment");
     assert.strictEqual(scoreLayer.items[0].id,"saved-comment-1");
 
+    await page.evaluate(()=>{
+      const value=JSON.parse(localStorage.getItem("shian-bunkafu-editor-v2"));
+      value.layers.find(layer=>layer.id==="saved-comment-layer").visible=false;
+      localStorage.setItem("shian-bunkafu-editor-v2",JSON.stringify(value));
+      window.dispatchEvent(new PageTransitionEvent("pageshow"));
+    });
+    await page.waitForSelector('[data-item="saved-comment-1"]');
+    assert.strictEqual(await page.locator('[data-item="saved-comment-1"]').count(),1,"score pageshow must redraw the same saved comment once");
+
     await page.goto(`${base}/annotations.html`);
     await page.waitForSelector('[data-item="saved-comment-1"]');
     assert.strictEqual(await page.locator('[data-item="saved-comment-1"]').count(),1,"writing page must draw the same saved comment once");
     assert.strictEqual(await page.locator('[data-layer-visible="saved-comment-layer"]').isChecked(),true,"writing layer display control must agree with the restored state");
+
+    await page.evaluate(()=>{
+      const value=JSON.parse(localStorage.getItem("shian-bunkafu-editor-v2"));
+      value.layers.find(layer=>layer.id==="saved-comment-layer").visible=false;
+      localStorage.setItem("shian-bunkafu-editor-v2",JSON.stringify(value));
+      window.dispatchEvent(new PageTransitionEvent("pageshow"));
+    });
+    await page.waitForSelector('[data-item="saved-comment-1"]');
+    assert.strictEqual(await page.locator('[data-item="saved-comment-1"]').count(),1,"writing pageshow must redraw the same editable comment once");
 
     const afterWriting=await page.evaluate(()=>JSON.parse(localStorage.getItem("shian-bunkafu-editor-v2")));
     const writingLayer=afterWriting.layers.find(layer=>layer.id==="saved-comment-layer");

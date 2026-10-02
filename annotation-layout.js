@@ -84,6 +84,18 @@
     });
     return{addresses,gaps};
   }
+  function capturePageReferenceSize(element){
+    const rect=element?.getBoundingClientRect?.();
+    if(!rect?.width||!rect.height)return null;
+    return{width:Number(rect.width),height:Number(rect.height)};
+  }
+  function pageReferenceRect(element,referenceSize){
+    const rect=element?.getBoundingClientRect?.();
+    if(!rect)return null;
+    const left=Number(rect.left)||0,top=Number(rect.top)||0;
+    const width=Math.max(1,Number(referenceSize?.width)||Number(rect.width)||1),height=Math.max(1,Number(referenceSize?.height)||Number(rect.height)||1);
+    return{left,top,width,height,right:left+width,bottom:top+height};
+  }
   function equal(a,b){return JSON.stringify(normalize(a))===JSON.stringify(normalize(b))}
-  global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,rowRegions,domAddresses,addressForBounds,placementFromBounds,resolveAddress,placementTop,placementTopWithClearance,effectivePixelGaps,equal};
+  global.ShianAnnotationLayout={VERSION,UNIT,LANES,key,normalize,fromPixelGaps,rowGaps,pixelGaps,rowRegions,domAddresses,addressForBounds,placementFromBounds,resolveAddress,placementTop,placementTopWithClearance,effectivePixelGaps,capturePageReferenceSize,pageReferenceRect,equal};
 })(window);
