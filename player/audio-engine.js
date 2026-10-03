@@ -232,6 +232,8 @@
       segmentStart: offset,
       segmentEnd: Math.min(segment.end, audioBuffer.duration),
       segmentTailEnd: Math.min(Number(segment.tailEnd) || segment.end, audioBuffer.duration),
+      sourceNoteNumber: Number(segment.noteNumber) || null,
+      audioBufferDuration: audioBuffer.duration,
       baseSourceDuration,
       availableSourceDuration,
       sourceOffset: offset,
@@ -263,12 +265,18 @@
     const target = Number(frequency);
     const master = window.ShianTuningMaster;
     if (!Number.isFinite(target) || !master) throw new Error("調弦データから音を取得できません。");
+    const sourceKind = normalizeSourceKind(options.sourceKind);
+    const audioBuffer = await load(sourceKind);
     const sources = master.entries
       .filter((entry) => entry.mode === "hon")
       .flatMap((entry) => [
         { noteNumber: entry.count, frequency: entry.frequencies[0] },
         { noteNumber: entry.count + 12, frequency: entry.frequencies[0] * 2 }
-      ]);
+      ])
+      .filter((entry) => {
+        const segment = window.ShianSoundSegments?.[entry.noteNumber];
+        return segment && segment.start + 0.05 <= audioBuffer.duration;
+      });
     if (!sources.length) throw new Error("先生音源に対応する調弦データがありません。");
     const source = sources.reduce((best, candidate) =>
       Math.abs(Math.log2(target / candidate.frequency)) < Math.abs(Math.log2(target / best.frequency))
@@ -277,6 +285,7 @@
     );
     return playSegment(source.noteNumber, {
       ...options,
+      sourceKind,
       playbackRate: (Number(options.playbackRate) || 1) * target / source.frequency
     });
   }
