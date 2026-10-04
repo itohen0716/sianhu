@@ -115,17 +115,26 @@
     [...active].forEach((voice) => stopVoice(voice, fadeSeconds));
   }
 
-  async function playSegment(segmentOrNumber, options = {}) {
+  function resolveSegment(segmentOrNumber) {
     const segment = typeof segmentOrNumber === "number"
       ? window.ShianSoundSegments?.[segmentOrNumber]
       : segmentOrNumber;
     if (!segment || !Number.isFinite(segment.start) || !Number.isFinite(segment.end)) {
       throw new Error("音源区間が見つかりません。");
     }
+    return segment;
+  }
 
-    const ctx = await resume();
-    const sourceKind = normalizeSourceKind(options.sourceKind);
-    const audioBuffer = await load(sourceKind);
+  function cachedBuffer(sourceKind) {
+    const kind = normalizeSourceKind(sourceKind);
+    const audioBuffer = audioBuffers.get(kind);
+    if (!audioBuffer) throw new Error("三味線音源の準備が完了していません。");
+    return { kind, audioBuffer };
+  }
+
+  function playResolvedSegment(segmentOrNumber, sourceKind, audioBuffer, options = {}) {
+    const segment = resolveSegment(segmentOrNumber);
+    const ctx = getContext();
     if (options.exclusive !== false) stopAll(0.01);
 
     const offset = Math.max(0, segment.start);
@@ -256,17 +265,30 @@
     });
   }
 
+  async function playSegment(segmentOrNumber, options = {}) {
+    const segment = resolveSegment(segmentOrNumber);
+    const ctx = await resume();
+    const sourceKind = normalizeSourceKind(options.sourceKind);
+    const audioBuffer = await load(sourceKind);
+    if (ctx !== getContext()) throw new Error("音声コンテキストが切り替わりました。");
+    return playResolvedSegment(segment, sourceKind, audioBuffer, options);
+  }
+
+  function playSegmentReady(segmentOrNumber, options = {}) {
+    const segment = resolveSegment(segmentOrNumber);
+    const { kind, audioBuffer } = cachedBuffer(options.sourceKind);
+    return playResolvedSegment(segment, kind, audioBuffer, options);
+  }
+
   async function play(noteNumber, options) {
     const voice = await playSegment(noteNumber, options);
     return voice.duration;
   }
 
-  async function playFrequency(frequency, options = {}) {
+  function resolveFrequencySource(frequency, audioBuffer) {
     const target = Number(frequency);
     const master = window.ShianTuningMaster;
     if (!Number.isFinite(target) || !master) throw new Error("調弦データから音を取得できません。");
-    const sourceKind = normalizeSourceKind(options.sourceKind);
-    const audioBuffer = await load(sourceKind);
     const sources = master.entries
       .filter((entry) => entry.mode === "hon")
       .flatMap((entry) => [
@@ -283,14 +305,33 @@
         ? candidate
         : best
     );
-    return playSegment(source.noteNumber, {
+    return { source, target };
+  }
+
+  async function playFrequency(frequency, options = {}) {
+    const sourceKind = normalizeSourceKind(options.sourceKind);
+    const ctx = await resume();
+    const audioBuffer = await load(sourceKind);
+    if (ctx !== getContext()) throw new Error("音声コンテキストが切り替わりました。");
+    const { source, target } = resolveFrequencySource(frequency, audioBuffer);
+    return playResolvedSegment(source.noteNumber, sourceKind, audioBuffer, {
       ...options,
       sourceKind,
       playbackRate: (Number(options.playbackRate) || 1) * target / source.frequency
     });
   }
 
-  async function playFrequencyGlide(startFrequency, endFrequency, options = {}) {
+  function playFrequencyReady(frequency, options = {}) {
+    const { kind: sourceKind, audioBuffer } = cachedBuffer(options.sourceKind);
+    const { source, target } = resolveFrequencySource(frequency, audioBuffer);
+    return playResolvedSegment(source.noteNumber, sourceKind, audioBuffer, {
+      ...options,
+      sourceKind,
+      playbackRate: (Number(options.playbackRate) || 1) * target / source.frequency
+    });
+  }
+
+  function resolveGlideSource(startFrequency, endFrequency) {
     const start = Number(startFrequency), end = Number(endFrequency), master = window.ShianTuningMaster;
     if (!Number.isFinite(start) || !Number.isFinite(end) || !master) throw new Error("スリの音高を取得できませんでした。");
     const sources = master.entries
@@ -303,14 +344,35 @@
     const source = sources.reduce((best, candidate) =>
       Math.abs(Math.log2(start / candidate.frequency)) < Math.abs(Math.log2(start / best.frequency)) ? candidate : best
     );
-    return playSegment(source.noteNumber, {
+    return { source, start, end };
+  }
+
+  async function playFrequencyGlide(startFrequency, endFrequency, options = {}) {
+    const sourceKind = normalizeSourceKind(options.sourceKind);
+    const ctx = await resume();
+    const audioBuffer = await load(sourceKind);
+    if (ctx !== getContext()) throw new Error("音声コンテキストが切り替わりました。");
+    const { source, start, end } = resolveGlideSource(startFrequency, endFrequency);
+    return playResolvedSegment(source.noteNumber, sourceKind, audioBuffer, {
       ...options,
+      sourceKind,
       playbackRate: start / source.frequency,
       playbackRateEnd: end / source.frequency
     });
   }
 
-  const api = Object.freeze({ getContext, resume, load, loadMany, play, playSegment, playFrequency, playFrequencyGlide, clearTrace, getTrace, stop: stopAll, stopAll });
+  function playFrequencyGlideReady(startFrequency, endFrequency, options = {}) {
+    const { kind: sourceKind, audioBuffer } = cachedBuffer(options.sourceKind);
+    const { source, start, end } = resolveGlideSource(startFrequency, endFrequency);
+    return playResolvedSegment(source.noteNumber, sourceKind, audioBuffer, {
+      ...options,
+      sourceKind,
+      playbackRate: start / source.frequency,
+      playbackRateEnd: end / source.frequency
+    });
+  }
+
+  const api = Object.freeze({ getContext, resume, load, loadMany, play, playSegment, playSegmentReady, playFrequency, playFrequencyReady, playFrequencyGlide, playFrequencyGlideReady, clearTrace, getTrace, stop: stopAll, stopAll });
   window.ShianAudioEnvelopeDiagnostics = Object.freeze({
     tripletReleaseSeconds: 0.004,
     referenceFadeSeconds: 0.018
