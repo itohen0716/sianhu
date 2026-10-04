@@ -62,6 +62,18 @@ function loadEngine() {
   const engine = window.ShianAudioEngine;
   const segment = window.ShianSoundSegments[6];
 
+  await engine.load("normal");
+  engine.clearTrace();
+  const readyVoice = engine.playSegmentReady(segment, {
+    when: 1,
+    duration: 0.25,
+    playbackRate: 1,
+    exclusive: false,
+    trace: { id: "ready-scheduler" }
+  });
+  assert.equal(typeof readyVoice?.then, "undefined", "a preloaded source must be scheduled synchronously without a post-clock promise boundary");
+  assert.equal(engine.getTrace()[0].sourceStartAt, 1, "the ready scheduler must keep the requested common start clock");
+
   for (const bpm of [120, 100, 86, 80]) {
     for (const durationBeat of [2 / 3, 1 / 3]) {
       engine.clearTrace();
