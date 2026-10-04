@@ -31,6 +31,11 @@ assert.strictEqual(api.visibility(state,0).vocal,false);
 assert.strictEqual(api.hasVocal(state,0),true);
 assert.strictEqual(api.meaningfulText("\u200B\n "),false);
 assert.strictEqual(api.meaningfulText("　あ　"),true);
+assert.deepStrictEqual(JSON.parse(JSON.stringify(api.lyricLines("一番\r\n二番\n三番"))),["一番","二番","三番"]);
+assert.strictEqual(api.lyricLineCount("一番\n二番\n三番"),3);
+assert.strictEqual(api.lyricLineCount("一番\n二番\n"),2,"trailing empty input lines do not reserve printed space");
+assert.strictEqual(api.lyricLineCount("一番\n二番\n",{preserveTrailing:true}),3,"the live editor keeps the newly created trailing line");
+assert.strictEqual(api.lyricLineCount(" \n　"),0,"empty multi-line lyrics still collapse completely");
 
 const indexHtml=fs.readFileSync(require.resolve("../index.html"),"utf8");
 const annotationsHtml=fs.readFileSync(require.resolve("../annotations.html"),"utf8");

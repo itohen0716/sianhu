@@ -7,6 +7,20 @@
     return !EMPTY_TEXT.test(String(value??""));
   }
 
+  function normalizeLyricText(value){
+    return String(value??"").replace(/\r\n?/g,"\n");
+  }
+
+  function lyricLines(value,{preserveTrailing=false}={}){
+    const lines=normalizeLyricText(value).split("\n");
+    if(!preserveTrailing)while(lines.length>1&&!meaningfulText(lines.at(-1)))lines.pop();
+    return lines.length?lines:[""];
+  }
+
+  function lyricLineCount(value,{preserveTrailing=false}={}){
+    return meaningfulText(value)?Math.max(1,lyricLines(value,{preserveTrailing}).length):preserveTrailing?Math.max(1,lyricLines(value,{preserveTrailing:true}).length):0;
+  }
+
   function rowMeasureCounts(state){
     const rows=Math.max(1,Math.trunc(Number(state?.rows)||1));
     const fallback=Math.max(1,Math.trunc(Number(state?.measuresPerRow)||4));
@@ -43,5 +57,5 @@
     return rowMeasureCounts(state).map((_,row)=>({row,...visibility(state,row),hasLyrics:hasLyrics(state,row),hasVocal:hasVocal(state,row)}));
   }
 
-  global.ShianRowContent={meaningfulText,rowMeasureCounts,rowRange,hasLyrics,hasVocal,visibility,rows};
+  global.ShianRowContent={meaningfulText,normalizeLyricText,lyricLines,lyricLineCount,rowMeasureCounts,rowRange,hasLyrics,hasVocal,visibility,rows};
 })(window);
