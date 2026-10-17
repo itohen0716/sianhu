@@ -1012,15 +1012,90 @@ function removeLinkedSymbols(keys){
   const layer=state.layers.find(item=>item.id===TECHNIQUE_LAYER_ID);
   if(layer)layer.items=layer.items.filter(item=>(!item.anchor||!targets.has(anchorKey(item.anchor.m,item.anchor.s,item.anchor.p)))&&(!item.endAnchor||!targets.has(anchorKey(item.endAnchor.m,item.endAnchor.s,item.endAnchor.p))));
 }
+// 音価線は数字とは別の ::after で描画される。
+// 既存の線を動かさず、その描画範囲だけを参照する。
+function noteInkBottomClient(note, glyphRect, duration){
+  if(duration!==1&&duration!==2)return glyphRect.bottom;
+  if(note.classList.contains("rest"))return glyphRect.bottom;
+  const line=getComputedStyle(note,"::after");
+  const top=Number.parseFloat(line.top);
+  const height=Number.parseFloat(line.height);
+  const upper=Number.parseFloat(line.borderTopWidth);
+  const lower=Number.parseFloat(line.borderBottomWidth);
+  const box=note.getBoundingClientRect();
+  const scale=note.offsetHeight>0?box.height/note.offsetHeight:1;
+  if(!Number.isFinite(top)||!Number.isFinite(scale)||scale<=0)return glyphRect.bottom;
+  const lineBottom=box.top+(top+(Number.isFinite(height)?height:0)
+    +(Number.isFinite(upper)?upper:0)+(Number.isFinite(lower)?lower:0))*scale;
+  return Number.isFinite(lineBottom)?Math.max(glyphRect.bottom,lineBottom):glyphRect.bottom;
+}
 function noteAnchorPoint(anchor,side="above",symbolText=""){
   const svg=q("#annotations"),note=q(`[data-note="${anchorKey(anchor.m,anchor.s,anchor.p)}"]`);
   if(!svg||!note)return null;
   const svgRect=svg.getBoundingClientRect(),glyphRect=(note.querySelector("b")||note).getBoundingClientRect(),view=svg.viewBox.baseVal;
   if(!svgRect.width||!svgRect.height)return null;
   const metrics=anchoredSymbolMetrics(anchor,symbolText),isFinger=["Ⅰ","Ⅱ","Ⅲ"].includes(symbolText),firstRow=measureLocation(Number(anchor.m)||0).row===0,gap=window.innerWidth>=900?metrics.symbolCssSize/2+metrics.clearance:(isFinger?Math.max(firstRow?22:14,glyphRect.height*(firstRow?1.05:.65)):Math.max(8,glyphRect.height*.28));
+  let edge=side==="below"?glyphRect.bottom:glyphRect.top;
+  let clearance=gap;
+  // 既に正常なスリ・押しバチ等とスマホの配置は一切変更しない。
+  if(window.innerWidth>=900&&["ス","ハ","ウ","ケ","Ⅰ","Ⅱ","Ⅲ"].includes(symbolText)){
+    const glyph=note.querySelector("b");
+    if(glyph){
+      // 数字の実際のフォント行の矩形を取得。b 要素は固定高のため字が
+      // 大きくなっても矩形が変わらず、それだけでは追従できない。
+      const range=document.createRange();
+      range.selectNodeContents(glyph);
+      const textRect=range.getBoundingClientRect();
+      if(textRect.height>0)edge=side==="below"?textRect.bottom:textRect.top;
+    }
+    // 和音では表示用の下線が列の最下弦へ集約される。保存された
+    // 個々の d ではなく、この数字に実際に描かれた d クラスを優先する。
+    const duration=note.classList.contains("d1")?1:note.classList.contains("d2")?2:4;
+    if(side==="below")edge=noteInkBottomClient(note,{bottom:edge},duration);
+    // 連音は個別数字の上下ではなく、同じ小節・拍位置の全数字と最下弦の音価線を包む。
+    // JSON上のanchor.sは保持し、位置決めだけを列単位にする。単音の計算には影響しない。
+    const chordElements=columnNotes(Number(anchor.m),Number(anchor.p))
+      .map(entry=>q(`[data-note="${anchorKey(entry.m,entry.s,entry.p)}"]`))
+      .filter(element=>element instanceof HTMLElement);
+    if(chordElements.length>1){
+      const outerEdges=chordElements.map(element=>{
+        const textElement=element.querySelector("b");
+        let textBounds=(textElement||element).getBoundingClientRect();
+        if(textElement){
+          const textRange=document.createRange();
+          textRange.selectNodeContents(textElement);
+          const measured=textRange.getBoundingClientRect();
+          if(measured.height>0)textBounds=measured;
+        }
+        if(side==="above")return textBounds.top;
+        const actualDuration=element.classList.contains("d1")?1:element.classList.contains("d2")?2:4;
+        return noteInkBottomClient(element,{bottom:textBounds.bottom},actualDuration);
+      });
+      edge=side==="below"?Math.max(...outerEdges):Math.min(...outerEdges);
+    }
+    // SVGのフォントは中点指定でも上下の字形余白が非対称。
+    // 実描画BBoxから、下線端・数字端から文字のインク範囲までの距離を決める。
+    const probeGroup=document.createElementNS("http://www.w3.org/2000/svg","g");
+    probeGroup.setAttribute("class","annotation-item symbol-item anchored-symbol text-item"
+      +(isFinger?" finger-symbol":""));
+    const probe=document.createElementNS("http://www.w3.org/2000/svg","text");
+    probe.setAttribute("x","0");
+    probe.setAttribute("y","0");
+    probe.setAttribute("font-size",String(screenAnnotationLength(metrics.symbolSize)));
+    probe.setAttribute("text-anchor","middle");
+    probe.setAttribute("dominant-baseline","middle");
+    probe.textContent=symbolText;
+    probeGroup.append(probe);
+    svg.append(probeGroup);
+    let bbox;
+    try{bbox=probe.getBBox()}finally{probeGroup.remove()}
+    const pxPerUnit=svgRect.height/view.height;
+    const glyphHalf=side==="below"?Math.max(0,-bbox.y):Math.max(0,bbox.y+bbox.height);
+    clearance=glyphHalf*pxPerUnit+Math.max(1,glyphRect.height*.06);
+  }
   return{
     x:(glyphRect.left+glyphRect.width/2-svgRect.left)*view.width/svgRect.width,
-    y:((side==="below"?glyphRect.bottom+gap:glyphRect.top-gap)-svgRect.top)*view.height/svgRect.height
+    y:((side==="below"?edge+clearance:edge-clearance)-svgRect.top)*view.height/svgRect.height
   };
 }
 function migrateLegacyTechniqueSlurs(){
