@@ -1,9 +1,10 @@
 "use strict";
 
-const SCORE_FONT_CACHE="shian-score-font-v208";
+const SCORE_FONT_CACHE="shian-score-font-v209-kosugi";
 const SCORE_FONT_FILES=[
   "./fonts/BIZUDPMincho-Regular.ttf",
-  "./fonts/851MkPOP_101.ttf"
+  "./fonts/851MkPOP_101.ttf",
+  "./fonts/KosugiMaru-Regular.ttf"
 ];
 
 self.addEventListener("install",event=>{
