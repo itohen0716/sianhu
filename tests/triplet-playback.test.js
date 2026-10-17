@@ -121,7 +121,7 @@ function loadEngine() {
   assert(Math.abs(boundaryBridge.gainFadeOutStartAt - 0.486) < 1e-9, "the 18 ms release must begin 14 ms before the logical boundary");
 
   const player = fs.readFileSync(path.join(root, "player", "player.js"), "utf8");
-  assert(player.includes('preserveSampleTail=Boolean(sourceKind==="normal"&&(event.isTuplet||tupletEntryBridge))'), "sample-tail preservation must stay limited to normal-source triplets and the explicit tuplet-entry bridge");
+  assert(player.includes('preserveSampleTail=Boolean(sourceKind==="normal"&&(event.isTuplet||tupletEntryBridge||note.heldByHold))'), "sample-tail preservation must stay limited to normal-source triplets, the explicit tuplet-entry bridge, and editor holds");
   assert(player.includes('tripletFadeInSeconds=event.isTuplet&&sourceKind==="normal"?.018:undefined'), "triplet attacks must keep the compared 18 ms fade");
   assert(player.includes("transitionFadeOutSeconds=preserveSampleTail?.018:undefined"), "triplets must keep the compared 18 ms release fade");
   assert(player.includes("tailReleaseSeconds=preserveSampleTail?.004:undefined"), "triplets must keep only the bounded safe tail");
