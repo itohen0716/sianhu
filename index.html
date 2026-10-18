@@ -1822,7 +1822,7 @@ function ensurePrintLayout(){
 }
 window.addEventListener("beforeprint",ensurePrintLayout);
 window.addEventListener("afterprint",()=>{q("#printRootV2").replaceChildren()});
-function scheduleStableScoreMetrics(){const pass=++scoreMetricsPass,ready=document.fonts?.ready||Promise.resolve();ready.catch(()=>{}).then(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{if(pass!==scoreMetricsPass)return;const score=q("#scoreArea");if(!score||score.getBoundingClientRect().width<=0)return;scoreMetricsReady=true;applyPreview();syncAnchoredVocalPositions();syncVocalSlurs();syncTuplets()})))}
+function scheduleStableScoreMetrics(){const pass=++scoreMetricsPass,ready=document.fonts?.ready||Promise.resolve();ready.catch(()=>{}).then(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{if(pass!==scoreMetricsPass)return;const score=q("#scoreArea");if(!score||score.getBoundingClientRect().width<=0)return;scoreMetricsReady=true;applyPreview();syncAnchoredVocalPositions();syncVocalSlurs();syncTuplets();requestAnimationFrame(()=>{if(pass!==scoreMetricsPass)return;renderLayers(true)})})))}
 window.addEventListener("resize",()=>{scoreMetricsReady=false;applyPreview();scheduleStableScoreMetrics()},{passive:true});
 window.addEventListener("storage",event=>{if(event.key!==KEY||!event.newValue)return;try{state={...defaults,...JSON.parse(event.newValue)};migrateState();ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers);render()}catch(error){console.warn("更新された譜面を読み込めませんでした。",error)}});
 document.querySelector('.page-link[href="./annotations.html"]')?.addEventListener("click",save);
@@ -1830,6 +1830,7 @@ window.addEventListener("pagehide",save);
 window.addEventListener("pageshow",()=>{try{scoreMetricsReady=false;const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest,scoreEditLayer:"notes"};migrateState();ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers);drawing=false;render();scheduleStableScoreMetrics()}}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();
 scheduleStableScoreMetrics();
+document.fonts?.addEventListener("loadingdone",scheduleStableScoreMetrics);
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>

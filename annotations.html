@@ -669,15 +669,90 @@ function annotationItemRecord(id){for(const layer of state.layers||[]){const ite
 function uid(){return globalThis.crypto&&typeof globalThis.crypto.randomUUID==="function"?globalThis.crypto.randomUUID():`item-${Date.now()}-${Math.random().toString(36).slice(2)}`}
 function isTextEditingTarget(target){return target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target?.isContentEditable}
 function anchorKey(m,s,p){return`${m},${s},${p}`}
+// 音価線は数字とは別の ::after で描画される。
+// 既存の線を動かさず、その描画範囲だけを参照する。
+function noteInkBottomClient(note, glyphRect, duration){
+  if(duration!==1&&duration!==2)return glyphRect.bottom;
+  if(note.classList.contains("rest"))return glyphRect.bottom;
+  const line=getComputedStyle(note,"::after");
+  const top=Number.parseFloat(line.top);
+  const height=Number.parseFloat(line.height);
+  const upper=Number.parseFloat(line.borderTopWidth);
+  const lower=Number.parseFloat(line.borderBottomWidth);
+  const box=note.getBoundingClientRect();
+  const scale=note.offsetHeight>0?box.height/note.offsetHeight:1;
+  if(!Number.isFinite(top)||!Number.isFinite(scale)||scale<=0)return glyphRect.bottom;
+  const lineBottom=box.top+(top+(Number.isFinite(height)?height:0)
+    +(Number.isFinite(upper)?upper:0)+(Number.isFinite(lower)?lower:0))*scale;
+  return Number.isFinite(lineBottom)?Math.max(glyphRect.bottom,lineBottom):glyphRect.bottom;
+}
 function noteAnchorPoint(anchor,side="above",symbolText=""){
   const svg=q("#annotations"),note=q(`[data-note="${anchorKey(anchor.m,anchor.s,anchor.p)}"]`);
   if(!svg||!note)return null;
   const svgRect=svg.getBoundingClientRect(),glyphRect=(note.querySelector("b")||note).getBoundingClientRect(),view=svg.viewBox.baseVal;
   if(!svgRect.width||!svgRect.height)return null;
   const metrics=anchoredSymbolMetrics(anchor,symbolText),isFinger=["Ⅰ","Ⅱ","Ⅲ"].includes(symbolText),firstRow=measureLocation(Number(anchor.m)||0).row===0,gap=window.innerWidth>=900?metrics.symbolCssSize/2+metrics.clearance:(isFinger?Math.max(firstRow?22:14,glyphRect.height*(firstRow?1.05:.65)):Math.max(8,glyphRect.height*.28));
+  let edge=side==="below"?glyphRect.bottom:glyphRect.top;
+  let clearance=gap;
+  // 既に正常なスリ・押しバチ等とスマホの配置は一切変更しない。
+  if(window.innerWidth>=900&&["ス","ハ","ウ","ケ","Ⅰ","Ⅱ","Ⅲ"].includes(symbolText)){
+    const glyph=note.querySelector("b");
+    if(glyph){
+      // 数字の実際のフォント行の矩形を取得。b 要素は固定高のため字が
+      // 大きくなっても矩形が変わらず、それだけでは追従できない。
+      const range=document.createRange();
+      range.selectNodeContents(glyph);
+      const textRect=range.getBoundingClientRect();
+      if(textRect.height>0)edge=side==="below"?textRect.bottom:textRect.top;
+    }
+    // 和音では表示用の下線が列の最下弦へ集約される。保存された
+    // 個々の d ではなく、この数字に実際に描かれた d クラスを優先する。
+    const duration=note.classList.contains("d1")?1:note.classList.contains("d2")?2:4;
+    if(side==="below")edge=noteInkBottomClient(note,{bottom:edge},duration);
+    // 連音は個別数字の上下ではなく、同じ小節・拍位置の全数字と最下弦の音価線を包む。
+    // JSON上のanchor.sは保持し、位置決めだけを列単位にする。単音の計算には影響しない。
+    const chordElements=columnNotes(Number(anchor.m),Number(anchor.p))
+      .map(entry=>q(`[data-note="${anchorKey(entry.m,entry.s,entry.p)}"]`))
+      .filter(element=>element instanceof HTMLElement);
+    if(chordElements.length>1){
+      const outerEdges=chordElements.map(element=>{
+        const textElement=element.querySelector("b");
+        let textBounds=(textElement||element).getBoundingClientRect();
+        if(textElement){
+          const textRange=document.createRange();
+          textRange.selectNodeContents(textElement);
+          const measured=textRange.getBoundingClientRect();
+          if(measured.height>0)textBounds=measured;
+        }
+        if(side==="above")return textBounds.top;
+        const actualDuration=element.classList.contains("d1")?1:element.classList.contains("d2")?2:4;
+        return noteInkBottomClient(element,{bottom:textBounds.bottom},actualDuration);
+      });
+      edge=side==="below"?Math.max(...outerEdges):Math.min(...outerEdges);
+    }
+    // SVGのフォントは中点指定でも上下の字形余白が非対称。
+    // 実描画BBoxから、下線端・数字端から文字のインク範囲までの距離を決める。
+    const probeGroup=document.createElementNS("http://www.w3.org/2000/svg","g");
+    probeGroup.setAttribute("class","annotation-item symbol-item anchored-symbol text-item"
+      +(isFinger?" finger-symbol":""));
+    const probe=document.createElementNS("http://www.w3.org/2000/svg","text");
+    probe.setAttribute("x","0");
+    probe.setAttribute("y","0");
+    probe.setAttribute("font-size",String(screenAnnotationLength(metrics.symbolSize)));
+    probe.setAttribute("text-anchor","middle");
+    probe.setAttribute("dominant-baseline","middle");
+    probe.textContent=symbolText;
+    probeGroup.append(probe);
+    svg.append(probeGroup);
+    let bbox;
+    try{bbox=probe.getBBox()}finally{probeGroup.remove()}
+    const pxPerUnit=svgRect.height/view.height;
+    const glyphHalf=side==="below"?Math.max(0,-bbox.y):Math.max(0,bbox.y+bbox.height);
+    clearance=glyphHalf*pxPerUnit+Math.max(1,glyphRect.height*.06);
+  }
   return{
     x:(glyphRect.left+glyphRect.width/2-svgRect.left)*view.width/svgRect.width,
-    y:((side==="below"?glyphRect.bottom+gap:glyphRect.top-gap)-svgRect.top)*view.height/svgRect.height
+    y:((side==="below"?edge+clearance:edge-clearance)-svgRect.top)*view.height/svgRect.height
   };
 }
 function migrateLegacyTechniqueSlurs(){
@@ -1113,6 +1188,9 @@ function scheduleStableAnnotationLayout(){
     const paper=q(".paper"),score=q("#scoreArea");
     if(!paper||!score||paper.getBoundingClientRect().width<=0||score.getBoundingClientRect().width<=0)return;
     annotationLayoutReady=true;applyPreview();syncAnnotationVocalPositions();syncAnnotationVocalSlurs();syncTuplets();
+    // First pass can change the comment gaps and SVG viewBox. Re-project after paint.
+    // No saved anchor, note, or manual offset is modified by this follow-up pass.
+    requestAnimationFrame(()=>{if(pass!==annotationLayoutPass)return;renderLayers()});
   })));
 }
 function pointFromEvent(event){const rect=q("#annotations").getBoundingClientRect();return{x:(event.clientX-rect.left)*q("#annotations").viewBox.baseVal.width/rect.width,y:(event.clientY-rect.top)*q("#annotations").viewBox.baseVal.height/rect.height}}
@@ -1399,7 +1477,7 @@ q("#lineStyle").addEventListener("change",event=>{const value=event.target.value
 function resizeSelectedRect(axis,value){const item=selectedItem();if(!["rect","marker"].includes(item?.type))return;const next=clamp(Number(value)||10,10,axis==="x"?900:1200);snap();if(axis==="x"){const direction=item.x2>=item.x1?1:-1;item.x2=item.x1+direction*next}else{const direction=item.y2>=item.y1?1:-1;item.y2=item.y1+direction*next}captureAnnotationLayout(item,item.layoutTarget,item.layoutRow,item);render()}
 q("#rectWidth").addEventListener("change",event=>resizeSelectedRect("x",event.target.value));
 q("#rectHeight").addEventListener("change",event=>resizeSelectedRect("y",event.target.value));
-q("#textSize").addEventListener("change",event=>{const item=selectedItem(),value=+event.target.value;state.textSize=value;if(item?.type==="text"){snap();item.size=value}render()});
+q("#textSize").addEventListener("change",event=>{const item=selectedItem(),value=+event.target.value;state.textSize=value;if(item?.type==="text"){snap();item.size=value}render();scheduleStableAnnotationLayout()});
 q("#textBackground").addEventListener("change",event=>{const item=selectedItem();state.textBackground=event.target.value;if(item?.type==="text"){snap();item.background=event.target.value}render()});
 qAll('input[name="itemAnchorTarget"]').forEach(input=>input.addEventListener("change",event=>{
   if(!event.target.checked)return;
@@ -1467,6 +1545,8 @@ window.addEventListener("pagehide",()=>{stopAnnotationMode();save()});
 window.addEventListener("pageshow",()=>{try{annotationLayoutReady=false;annotationLayoutDirty=false;const latest=JSON.parse(localStorage.getItem(KEY)||"null");if(latest){state={...defaults,...latest};migrateState();ShianAnnotationVisibility.restoreSavedCommentLayers(state.layers)}startAnnotationMode();render();scheduleStableAnnotationLayout()}catch(error){console.warn("最新の譜面を読み込めませんでした。",error)}});
 render();
 scheduleStableAnnotationLayout();
+// Late font loads do not necessarily cause a resize event; always re-anchor once.
+document.fonts?.addEventListener("loadingdone",scheduleStableAnnotationLayout);
 if(!hasSaved&&!IS_ANNOTATION_PAGE)openNew();
 })();
 </script>
