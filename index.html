@@ -191,6 +191,10 @@
       .print-score-part{position:absolute;z-index:3;left:50%;top:50%;width:24px;height:36px;transform:translate(-50%,-50%)}.print-score-part svg{width:100%;height:100%;overflow:visible}
     }
     @media print{.measure.on .note b{background:transparent!important}}
+
+    /* Shamisen dotted note: visual-only marker, keeping duration bars and glyph geometry unchanged. */
+    .note.dotted:not(.rest)::before{content:"・";position:absolute;z-index:5;left:calc(50% + var(--shamisen-dot-gap,7px));top:calc(50% - 14px);width:12px;height:12px;font:700 11px/12px "Yu Mincho",serif;color:var(--note-color,#222);pointer-events:none}
+    .print-note.dotted:not(.rest)::before{content:"・";position:absolute;z-index:6;left:calc(50% + var(--shamisen-dot-gap,7px));top:-6px;font:700 12px/14px "Yu Mincho",serif;color:var(--note-color,#222);pointer-events:none}
     .vocal-note.dotted .vocal-note-value{margin-right:4px}.vocal-note-value>.vocal-dot{position:absolute;left:calc(100% - 1px);top:-2px;font-size:12px;font-weight:700}.score-scroll{padding-top:28px;margin-top:-28px}.score{padding-bottom:8px;margin-bottom:0}
     body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea{pointer-events:auto}body.triplet-selecting.score-page[data-score-layer="technique"] #scoreArea .note{pointer-events:auto;cursor:pointer}
     @media screen and (min-width:900px){body.player-modal-open{overflow-y:auto;width:auto}
@@ -282,7 +286,7 @@
       <fieldset><legend>1. 糸を選ぶ</legend><div id="strings" class="seg"></div></fieldset>
       <fieldset><legend>2. 音の長さ</legend><div id="durations" class="seg"></div></fieldset>
     </div>
-    <fieldset class="notes-only" style="margin-top:14px"><legend>3. 数字・開放弦・休符を入れる</legend><div id="numbers" class="nums"></div><div id="rests" class="rests"></div><div class="note-hold-tools"><button type="button" id="addNoteHold">選択した4分音符を1拍伸ばす</button><small>数字を選択してから押します。発音は増やさず、横棒の分だけ長さを追加します。</small></div><div id="sameParts" class="part-tools" aria-label="同じ記号"><button data-score-part="same1"><svg class="part-preview" viewBox="0 0 28 28"><circle cx="5" cy="8" r="2" fill="currentColor"/><circle cx="23" cy="20" r="2" fill="currentColor"/><line x1="8" y1="24" x2="20" y2="4" stroke="currentColor" stroke-width="2"/></svg>同じ1</button><button data-score-part="same2"><svg class="part-preview" viewBox="0 0 28 28"><circle cx="4" cy="8" r="2" fill="currentColor"/><circle cx="24" cy="20" r="2" fill="currentColor"/><line x1="7" y1="24" x2="18" y2="4" stroke="currentColor" stroke-width="2"/><line x1="12" y1="24" x2="23" y2="4" stroke="currentColor" stroke-width="2"/></svg>同じ2</button></div></fieldset>
+    <fieldset class="notes-only" style="margin-top:14px"><legend>3. 数字・開放弦・休符を入れる</legend><div id="numbers" class="nums"></div><div id="rests" class="rests"></div><div class="note-hold-tools"><button type="button" id="noteDot" aria-pressed="false" title="選択した三味線の数字に付点を付ける・外す">付点</button><button type="button" id="addNoteHold">選択した4分音符を1拍伸ばす</button><small>数字を選択してから押します。発音は増やさず、横棒の分だけ長さを追加します。</small></div><div id="sameParts" class="part-tools" aria-label="同じ記号"><button data-score-part="same1"><svg class="part-preview" viewBox="0 0 28 28"><circle cx="5" cy="8" r="2" fill="currentColor"/><circle cx="23" cy="20" r="2" fill="currentColor"/><line x1="8" y1="24" x2="20" y2="4" stroke="currentColor" stroke-width="2"/></svg>同じ1</button><button data-score-part="same2"><svg class="part-preview" viewBox="0 0 28 28"><circle cx="4" cy="8" r="2" fill="currentColor"/><circle cx="24" cy="20" r="2" fill="currentColor"/><line x1="7" y1="24" x2="18" y2="4" stroke="currentColor" stroke-width="2"/><line x1="12" y1="24" x2="23" y2="4" stroke="currentColor" stroke-width="2"/></svg>同じ2</button></div></fieldset>
     <div class="staff-only part-tools" id="barlineParts"><button data-bar-kind="single"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="14" y1="2" x2="14" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>通常線</button><button data-bar-kind="double"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="11" y1="2" x2="11" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="17" y1="2" x2="17" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>2本線</button><button data-bar-kind="repeat-start"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="13" y1="2" x2="13" y2="26" stroke="currentColor" stroke-width="1.5"/><circle cx="21" cy="10" r="2" fill="currentColor"/><circle cx="21" cy="18" r="2" fill="currentColor"/></svg>くり返しA</button><button data-bar-kind="repeat-end"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><circle cx="7" cy="10" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/><line x1="15" y1="2" x2="15" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="2" x2="20" y2="26" stroke="currentColor" stroke-width="1.5"/></svg>くり返しB</button><button data-bar-kind="final"><svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><line x1="10" y1="2" x2="10" y2="26" stroke="currentColor" stroke-width="1.5"/><line x1="18" y1="2" x2="18" y2="26" stroke="currentColor" stroke-width="4"/></svg>終止符</button></div>
     <button type="button" id="openKeyboardHelp" class="keyboard-help-label notes-only">キーボードで入力する方法</button>
     <div class="bottom notes-only"><span>入力内容はこの端末に自動保存されます。</span><button id="clear" class="clear">譜面を空にする</button></div>
@@ -454,16 +458,17 @@ function kanjiNumber(value){const digits=["","一","二","三","四","五","六"
 function meterLabel(value=state.meter){const meter=parseMeter(value)||parseMeter(defaults.meter);return`${kanjiNumber(meter.denominator)}分ノ${kanjiNumber(meter.numerator)}拍子`}
 function measureCapacity(){return(parseMeter(state.meter)||parseMeter(defaults.meter)).capacity}
 function noteDuration(note){return[1,2,4].includes(Number(note?.d))?Number(note.d):4}
+function shamisenNoteDuration(note){return noteDuration(note)*(note?.dotted&&!note?.rest?1.5:1)}
 function measureHasRepeat(m){return(state.scoreParts||[]).some(part=>Number(part.m)===Number(m)&&(part.kind==="same1"||part.kind==="same2"||part.type==="measureRepeat"))}
 function intervalsOverlap(startA,durationA,startB,durationB){return startA<startB+durationB&&startB<startA+durationA}
-function measureUsedDuration(m){const noteEnd=state.notes.filter(note=>Number(note.m)===Number(m)).reduce((end,note)=>Math.max(end,(Number(note.p)||0)+noteDuration(note)),0),holdEnd=(state.noteHolds||[]).filter(hold=>Number(hold.m)===Number(m)).reduce((end,hold)=>Math.max(end,Number(hold.p)+Number(hold.d)),0);return Math.max(noteEnd,holdEnd)}
+function measureUsedDuration(m){const noteEnd=state.notes.filter(note=>Number(note.m)===Number(m)).reduce((end,note)=>Math.max(end,(Number(note.p)||0)+shamisenNoteDuration(note)),0),holdEnd=(state.noteHolds||[]).filter(hold=>Number(hold.m)===Number(m)).reduce((end,hold)=>Math.max(end,Number(hold.p)+Number(hold.d)),0);return Math.max(noteEnd,holdEnd)}
 function canInsertAt(m,p,duration,{rest=false,stringNumber=state.s,chord=false}={}){
   const capacity=measureCapacityFor(m);if(measureHasRepeat(m)||p<0||p+duration>capacity)return false;
   const noteOverlap=state.notes.some(note=>{
-    if(Number(note.m)!==Number(m)||!intervalsOverlap(p,duration,Number(note.p)||0,noteDuration(note)))return false;
+    if(Number(note.m)!==Number(m)||!intervalsOverlap(p,duration,Number(note.p)||0,shamisenNoteDuration(note)))return false;
     if(rest||note.rest)return true;
     if(!chord)return true;
-    return Number(note.s)===Number(stringNumber)||Number(note.p)!==Number(p)||noteDuration(note)!==duration;
+    return Number(note.s)===Number(stringNumber)||Number(note.p)!==Number(p)||shamisenNoteDuration(note)!==duration;
   });
   const holdOverlap=(state.noteHolds||[]).some(hold=>Number(hold.m)===Number(m)&&intervalsOverlap(p,duration,Number(hold.p),Number(hold.d))&&(rest||Number(hold.s)===Number(stringNumber)));
   return !noteOverlap&&!holdOverlap;
@@ -555,7 +560,7 @@ function normalizeNoteHolds(){state.noteHolds=window.ShianNoteHold.normalize({ho
 function migrateState(){
   const rawMeter=state.meter,parsed=parseMeter(rawMeter)||parseMeter(defaults.meter),legacy=String(rawMeter||"").includes("拍子"),oldRows=state.rows;
   state.rhythmFeel=normalizeRhythmFeel(state.rhythmFeel);
-  state.notes=(Array.isArray(state.notes)?state.notes:[]).map(note=>{const d=noteDuration(note);if(note.rest)return{...note,s:2,d,rest:true};return isOpenValue(note.v)?{...note,d,v:"0"}:{...note,d}});
+  state.notes=(Array.isArray(state.notes)?state.notes:[]).map(note=>{const d=noteDuration(note);if(note.rest)return{...note,s:2,d,rest:true,dotted:false};return isOpenValue(note.v)?{...note,d,v:"0",dotted:Boolean(note.dotted)}:{...note,d,dotted:Boolean(note.dotted)}});
   if(legacy&&parsed.capacity<16&&state.notes.some(note=>note.p>=parsed.capacity)){
     const remap=(m,p)=>{const absolute=m*16+p;return{m:Math.floor(absolute/parsed.capacity),p:absolute%parsed.capacity}};
     state.notes=state.notes.map(note=>({...note,...remap(note.m,note.p)}));
@@ -638,7 +643,7 @@ function buildPrintModel(){
     measures:Array.from({length:measuresInRow(row)},(_,local)=>{
       const m=rowStartMeasure(row)+local,width=measureWidth(m),notes=state.notes.filter(note=>note.m===m).map(note=>{
         const key=anchorKey(note.m,note.s,note.p),x=note.rest?(Number(note.x)||0):columnX(note.m,note.p);
-        return{id:key,string:Number(note.s),position:Number(note.p),duration:[1,2,4].includes(note.d)?note.d:4,value:note.rest?"●":(isOpenValue(note.v)?"0":String(note.v||"")),rest:Boolean(note.rest),open:!note.rest&&isOpenValue(note.v),color:note.rest?"#222222":(note.color||(isOpenValue(note.v)?state.openColor:state.numberColor)),leftRatio:clamp((Number(note.p)+.5)/capacity+x/width,0.005,.995),techniques:note.rest?[]:(techniquesByAnchor.get(key)||[])};
+        return{id:key,string:Number(note.s),position:Number(note.p),duration:[1,2,4].includes(note.d)?note.d:4,dotted:Boolean(note.dotted)&&!note.rest,value:note.rest?"●":(isOpenValue(note.v)?"0":String(note.v||"")),rest:Boolean(note.rest),open:!note.rest&&isOpenValue(note.v),color:note.rest?"#222222":(note.color||(isOpenValue(note.v)?state.openColor:state.numberColor)),leftRatio:clamp((Number(note.p)+.5)/capacity+x/width,0.005,.995),techniques:note.rest?[]:(techniquesByAnchor.get(key)||[])};
       });
       return{index:m,local,width,capacity,startKind:state.barlineKinds?.[barlineKey(row,local)]||"single",endKind:local===measuresInRow(row)-1?(state.barlineKinds?.[barlineKey(row,measuresInRow(row))]||"single"):"single",notes,parts:(state.scoreParts||[]).filter(part=>part.m===m).map(part=>({kind:part.kind==="same2"?"same2":"same1",leftRatio:.5}))};
     })
@@ -649,7 +654,7 @@ function buildPrintModel(){
 }
 function printBarlineHtml(kind,edge){if(kind==="single")return"";return`<span class="print-barline ${edge}" aria-hidden="true">${barlineSvg(kind,edge==="end")}</span>`}
 function printTechniqueModelHtml(item,index){const side=item.side==="below"?"below":"above",x=item.offsetX,y=item.offsetY+(index*16),style=`--tech-color:${esc(item.color)};margin-left:${x}px;${side==="above"?`margin-bottom:${-y}px`:`margin-top:${y}px`}`;if(["Ⅰ","Ⅱ","Ⅲ"].includes(item.text))return`<span class="print-technique-item finger ${side}" style="${style}">${esc(item.text)}</span>`;if(item.text==="スリ")return`<span class="print-technique-item slur ${side}" style="${style};--slur-width:${item.slurWidth}px">スリ</span>`;return`<span class="print-technique-item symbol ${side}" style="${style}">${esc(item.text)}</span>`}
-function printNoteModelHtml(note){return`<span class="print-note d${note.duration}${note.rest?" rest":""}${note.open?" open":""}" style="--print-left:${(note.leftRatio*100).toFixed(5)}%;--note-color:${esc(note.color)}"><span class="print-note-glyph">${esc(note.value)}</span>${note.techniques.length?`<span class="print-techniques">${note.techniques.map(printTechniqueModelHtml).join("")}</span>`:""}</span>`}
+function printNoteModelHtml(note){return`<span class="print-note d${note.duration}${note.rest?" rest":""}${note.open?" open":""}${note.dotted?" dotted":""}" style="--print-left:${(note.leftRatio*100).toFixed(5)}%;--note-color:${esc(note.color)};--shamisen-dot-gap:${String(note.value).length>1?12:7}px"><span class="print-note-glyph">${esc(note.value)}</span>${note.techniques.length?`<span class="print-techniques">${note.techniques.map(printTechniqueModelHtml).join("")}</span>`:""}</span>`}
 function printMeasureModelHtml(measure){const customEnd=measure.endKind!=="single"?" custom-end":"";return`<div class="print-measure${customEnd}" style="--print-grow:${measure.width};--print-capacity:${measure.capacity}">${printBarlineHtml(measure.startKind,"start")}${printBarlineHtml(measure.endKind,"end")}${measure.parts.map(part=>`<span class="print-score-part" style="left:${(part.leftRatio*100).toFixed(5)}%">${samePartSvg(part.kind)}</span>`).join("")}${[3,2,1].map(string=>`<div class="print-string">${measure.notes.filter(note=>note.string===string).map(printNoteModelHtml).join("")}</div>`).join("")}</div>`}
 function renderPrintRoot(){
   const model=buildPrintModel(),root=q("#printRoot");
@@ -674,13 +679,13 @@ function openScorePlayer(){
   if(!state.notes.length){alert("演奏できる音がまだ入力されていません。");return}
   save();
   const heldSources=new Set((state.noteHolds||[]).map(hold=>window.ShianNoteHold.sourceKeyFor(hold)));
-  const payload={format:"shian-live-score",version:7,sentAt:Date.now(),score:{editorOnlyNoteHolds:true,title:String(state.title||""),tuning:String(state.tuning||"二上り"),meter:String(state.meter||"2/4"),rhythmFeel:normalizeRhythmFeel(state.rhythmFeel),measureCount:totalMeasures(),measureSpecials:state.measureSpecials,repeatBarlines:playerRepeatBarlines(),scoreParts:(state.scoreParts||[]).map(part=>{const kind=part.kind==="same2"?"same2":"same1",sourceMeasureSpan=kind==="same2"?2:1;return{type:"measureRepeat",kind,m:Number(part.m),repeatCount:1,sourceMeasureOffset:-sourceMeasureSpan,displayMeasureSpan:1,playbackMeasureSpan:sourceMeasureSpan}}),notes:state.notes.map(note=>{const held=heldSources.has(`${Number(note.m)},${Number(note.s)},${Number(note.p)}`),duration=[1,2,4].includes(Number(note.d))?Number(note.d):4;return{m:Number(note.m)||0,s:Number(note.s)||1,p:Number(note.p)||0,d:duration+(held?4:0),heldByHold:held,holdDuration:held?4:0,v:String(note.v||""),rest:Boolean(note.rest)}}),tuplets:(state.tuplets||[]).map(tuplet=>({id:String(tuplet.id||""),type:"triplet",start:{m:Number(tuplet.start?.m),s:Number(tuplet.start?.s),p:Number(tuplet.start?.p)},end:{m:Number(tuplet.end?.m),s:Number(tuplet.end?.s),p:Number(tuplet.end?.p)},targetBeats:Number(tuplet.targetBeats)||1})),shamisenSlurs:playerShamisenSlurs(),shamisenTechniques:playerShamisenTechniques(),vocalNotes:state.vocalNotes.map(note=>({id:String(note.id||""),m:Number(note.m)||0,s:Number(note.s)||3,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),kind:String(note.kind||"pitch"),tripletId:note.tripletId||null,tripletIndex:note.tripletIndex,tripletStartP:note.tripletStartP})),vocalSlurs:(state.vocalSlurs||[]).map(slur=>({startId:String(slur.startId||""),endId:String(slur.endId||"")}))}};
+  const payload={format:"shian-live-score",version:7,sentAt:Date.now(),score:{editorOnlyNoteHolds:true,title:String(state.title||""),tuning:String(state.tuning||"二上り"),meter:String(state.meter||"2/4"),rhythmFeel:normalizeRhythmFeel(state.rhythmFeel),measureCount:totalMeasures(),measureSpecials:state.measureSpecials,repeatBarlines:playerRepeatBarlines(),scoreParts:(state.scoreParts||[]).map(part=>{const kind=part.kind==="same2"?"same2":"same1",sourceMeasureSpan=kind==="same2"?2:1;return{type:"measureRepeat",kind,m:Number(part.m),repeatCount:1,sourceMeasureOffset:-sourceMeasureSpan,displayMeasureSpan:1,playbackMeasureSpan:sourceMeasureSpan}}),notes:state.notes.map(note=>{const held=heldSources.has(`${Number(note.m)},${Number(note.s)},${Number(note.p)}`),duration=[1,2,4].includes(Number(note.d))?Number(note.d):4;return{m:Number(note.m)||0,s:Number(note.s)||1,p:Number(note.p)||0,d:duration+(held?4:0),dotted:Boolean(note.dotted)&&!held&&!note.rest,heldByHold:held,holdDuration:held?4:0,v:String(note.v||""),rest:Boolean(note.rest)}}),tuplets:(state.tuplets||[]).map(tuplet=>({id:String(tuplet.id||""),type:"triplet",start:{m:Number(tuplet.start?.m),s:Number(tuplet.start?.s),p:Number(tuplet.start?.p)},end:{m:Number(tuplet.end?.m),s:Number(tuplet.end?.s),p:Number(tuplet.end?.p)},targetBeats:Number(tuplet.targetBeats)||1})),shamisenSlurs:playerShamisenSlurs(),shamisenTechniques:playerShamisenTechniques(),vocalNotes:state.vocalNotes.map(note=>({id:String(note.id||""),m:Number(note.m)||0,s:Number(note.s)||3,p:Number(note.p)||0,d:[1,2,4].includes(Number(note.d))?Number(note.d):4,v:String(note.v||""),kind:String(note.kind||"pitch"),tripletId:note.tripletId||null,tripletIndex:note.tripletIndex,tripletStartP:note.tripletStartP})),vocalSlurs:(state.vocalSlurs||[]).map(slur=>({startId:String(slur.startId||""),endId:String(slur.endId||"")}))}};
   payload.score.notes.forEach(note=>{const location=measureLocation(note.m);note.row=location.row;note.measureInRow=location.local});
   payload.score.vocalNotes.forEach((note,index)=>{note.dotted=Boolean(state.vocalNotes[index]?.dotted)});
   try{sessionStorage.setItem("shian-live-player-score",JSON.stringify(payload))}catch(error){console.warn("演奏データを一時保存できませんでした。",error)}
   const modal=q("#playerModal"),frame=q("#scorePlayerFrame");document.body.style.setProperty("--player-layout-width",`${document.body.getBoundingClientRect().width}px`);modal.hidden=false;document.body.classList.add("player-modal-open");
   const send=()=>{try{frame.contentWindow?.postMessage({type:"SHIAN_SCORE_UPDATE",payload},location.origin)}catch(error){console.warn("プレーヤーへ譜面を送れませんでした。",error)}};
-  frame.onload=()=>{send();setTimeout(send,150)};if(!frame.getAttribute("src"))frame.src="./player/index.html?v=247";else send();q("#closePlayer").focus();
+  frame.onload=()=>{send();setTimeout(send,150)};if(!frame.getAttribute("src"))frame.src="./player/index.html?v=248";else send();q("#closePlayer").focus();
 }
 function closeScorePlayer(){const modal=q("#playerModal"),frame=q("#scorePlayerFrame");try{frame.contentWindow?.postMessage({type:"SHIAN_PLAYER_STOP"},location.origin)}catch(error){console.warn("プレーヤーを停止できませんでした。",error)}q(".measure.playback-active")?.classList.remove("playback-active");modal.hidden=true;document.body.classList.remove("player-modal-open");document.body.style.removeProperty("--player-layout-width");q("#playScore")?.focus()}
 window.addEventListener("message",event=>{const frame=q("#scorePlayerFrame");if(event.origin!==location.origin||event.source!==frame?.contentWindow||event.data?.type!=="SHIAN_PLAYER_POSITION")return;q(".measure.playback-active")?.classList.remove("playback-active");const displayM=Number(event.data.displayM);if(!Number.isInteger(displayM))return;const measure=q(`.measure[data-measure="${displayM}"]`);if(!measure)return;measure.classList.add("playback-active")});
@@ -911,9 +916,9 @@ function printTechniqueHtml(n){
 function noteHtml(n,m,s){
   const value=n.rest?(rests.find(r=>r.d===n.d)||rests[0]).mark:(isOpenValue(n.v)?"0":n.v);
   const color=n.rest?"#222222":(n.color||(isOpenValue(n.v)?state.openColor:state.numberColor));
-  const x=n.rest?(n.x||0):columnX(m,n.p);
+  const x=n.rest?(n.x||0):columnX(m,n.p),dotGap=String(value).length>1?12:7;
   const rangeSelected=rangeNoteKeys.has(anchorKey(m,s,n.p))?" range-selected":"",currentAnchor=activeVocalAnchor(),anchorSelected=state.scoreEditLayer==="vocal"&&currentAnchor?.m===m&&currentAnchor?.p===n.p?" vocal-anchor-selected":"",tripletStart=tripletMode&&tripletStartAnchor?.m===m&&tripletStartAnchor?.s===s&&tripletStartAnchor?.p===n.p?" tuplet-start":"",slurStart=slurStartAnchor?.m===m&&slurStartAnchor?.s===s&&slurStartAnchor?.p===n.p?" slur-start":"";
-  return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}${!n.rest&&isOpenValue(n.v)?" open-note":""}${rangeSelected}${anchorSelected}${tripletStart}${slurStart}" style="grid-column:${n.p+1};--note-color:${color};transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b>${n.rest?"":printTechniqueHtml(n)}</button>`;
+  return `<button class="note ${noteRhythmClass(n,m)}${n.rest?" rest":""}${!n.rest&&isOpenValue(n.v)?" open-note":""}${n.dotted&&!n.rest?" dotted":""}${rangeSelected}${anchorSelected}${tripletStart}${slurStart}" style="grid-column:${n.p+1};--note-color:${color};--shamisen-dot-gap:${dotGap}px;transform:translateX(${x}px)" data-note="${m},${s},${n.p}" data-pos="${m},${s},${n.p}" aria-label="${n.rest?"休符":value}"><b>${value}</b>${n.rest?"":printTechniqueHtml(n)}</button>`;
 }
 function noteHoldHtml(hold){
   const capacity=measureCapacityFor(hold.m),key=`${hold.m},${hold.s},${hold.p}`,selected=selectedScoreTarget?.type==="hold"&&selectedScoreTarget.key===key?" selected":"";
@@ -922,7 +927,8 @@ function noteHoldHtml(hold){
 function addSelectedNoteHold(){
   const key=selectedScoreTarget?.type==="note"?selectedScoreTarget.key:"",source=state.notes.find(note=>`${note.m},${note.s},${note.p}`===key);
   if(!source){alert("先に伸ばす4分音符を選択してください。");return false}
-  const result=window.ShianNoteHold.create({source:{m:source.m,s:source.s,p:source.p},notes:state.notes,holds:state.noteHolds,totalMeasures:totalMeasures(),capacity:measureCapacity(),capacityFor:measureCapacityFor,isOccupied:hold=>(state.notes.some(note=>Number(note.m)===hold.m&&(note.rest||Number(note.s)===hold.s)&&intervalsOverlap(hold.p,hold.d,Number(note.p),noteDuration(note)))||state.noteHolds.some(other=>Number(other.m)===hold.m&&Number(other.s)===hold.s&&intervalsOverlap(hold.p,hold.d,Number(other.p),Number(other.d))))});
+  if(source.dotted){alert("付点が付いている音に音伸ばしは追加できません。先に付点を外してください。");return false}
+  const result=window.ShianNoteHold.create({source:{m:source.m,s:source.s,p:source.p},notes:state.notes,holds:state.noteHolds,totalMeasures:totalMeasures(),capacity:measureCapacity(),capacityFor:measureCapacityFor,isOccupied:hold=>(state.notes.some(note=>Number(note.m)===hold.m&&(note.rest||Number(note.s)===hold.s)&&intervalsOverlap(hold.p,hold.d,Number(note.p),shamisenNoteDuration(note)))||state.noteHolds.some(other=>Number(other.m)===hold.m&&Number(other.s)===hold.s&&intervalsOverlap(hold.p,hold.d,Number(other.p),Number(other.d))))});
   if(!result.ok){const message={source:"伸ばしの対象は、休符ではない4分音符です。",duplicate:"この音には、すでに音伸ばしが付いています。",end:"伸ばしを置く小節がありません。先に小節を追加してください。",occupied:"伸ばしの位置に同じ糸の音または休符があるため置けません。"};alert(message[result.reason]||"音伸ばしを追加できません。");return false}
   snap();state.noteHolds.push(result.hold);selectedScoreTarget={type:"hold",key:`${result.hold.m},${result.hold.s},${result.hold.p}`};cursorVisible=false;render();return true;
 }
@@ -1041,7 +1047,8 @@ function render(){
   const currentNote=state.notes.find(n=>n.m===state.m&&n.s===state.s&&n.p===state.p);
   q("#selectedNoteColor").value=currentNote&&!currentNote.rest?(currentNote.color||(isOpenValue(currentNote.v)?state.openColor:state.numberColor)):"#222222";
   const selectedHoldSource=selectedScoreTarget?.type==="note"?state.notes.find(note=>`${note.m},${note.s},${note.p}`===selectedScoreTarget.key):null;
-  q("#addNoteHold").disabled=!selectedHoldSource||selectedHoldSource.rest||Number(selectedHoldSource.d)!==window.ShianNoteHold.HOLD_UNITS||(state.noteHolds||[]).some(hold=>window.ShianNoteHold.sourceKeyFor(hold)===`${selectedHoldSource.m},${selectedHoldSource.s},${selectedHoldSource.p}`);
+  q("#noteDot").disabled=!selectedHoldSource||selectedHoldSource.rest;q("#noteDot").classList.toggle("on",Boolean(selectedHoldSource?.dotted));q("#noteDot").setAttribute("aria-pressed",String(Boolean(selectedHoldSource?.dotted)));
+   q("#addNoteHold").disabled=!selectedHoldSource||selectedHoldSource.rest||selectedHoldSource.dotted||Number(selectedHoldSource.d)!==window.ShianNoteHold.HOLD_UNITS||(state.noteHolds||[]).some(hold=>window.ShianNoteHold.sourceKeyFor(hold)===`${selectedHoldSource.m},${selectedHoldSource.s},${selectedHoldSource.p}`);
   const selectedVocal=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id):null;q("#vocalRed").disabled=selectedVocal?.kind!=="pitch";q("#vocalBlack").disabled=selectedVocal?.kind!=="pitch";
   q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
   q("#toggleHanma").textContent=isHanma(state.m)?"選択小節の半間を解除":"選択小節を半間にする";q("#hanmaStatus").textContent=`${location.row+1}段・${location.local+1}小節（${isHanma(state.m)?"半間":"通常小節"}）`;
@@ -1460,6 +1467,34 @@ function insert(value,isRest=false,duration=state.d){
   const currentCapacity=measureCapacityFor(state.m),np=state.p+d;if(np<currentCapacity)state.p=np;else if(state.m<totalMeasures()-1){state.m++;state.p=Math.min(measureUsedDuration(state.m),measureCapacityFor(state.m)-1)}
   return true;
 }
+/** Toggle the dotted duration for all strings sharing the selected onset.
+ *  A refused change must leave history, JSON and other notes unchanged. */
+function toggleSelectedShamisenDot(){
+  if(selectedScoreTarget?.type!=="note")return;
+  const [m,s,p]=String(selectedScoreTarget.key||"").split(",").map(Number);
+  const chosen=state.notes.find(note=>note.m===m&&note.s===s&&note.p===p);
+  if(!chosen||chosen.rest)return;
+  const chord=state.notes.filter(note=>note.m===m&&note.p===p&&!note.rest);
+  const newDotted=!Boolean(chosen.dotted);
+  if(chord.some(note=>Number(note.d)!==Number(chosen.d)||Boolean(note.dotted)!==Boolean(chosen.dotted))){
+    alert("同時に鳴らす数字の音価が揃っていません。連音の音価を確認してください。");return;
+  }
+  if(newDotted){
+    const end=p+Math.max(...chord.map(note=>noteDuration(note)*1.5));
+    const isInTriplet=(state.tuplets||[]).some(tuplet=>{
+      const from=Number(tuplet.start?.m)*measureCapacity()+Number(tuplet.start?.p);
+      const to=Number(tuplet.end?.m)*measureCapacity()+Number(tuplet.end?.p);
+      const current=m*measureCapacity()+p;
+      return Number.isFinite(from)&&Number.isFinite(to)&&current>=from&&current<=to;
+    });
+    if(isInTriplet){alert("三味線の三連符の音には付点を付けられません。");return}
+    if(chord.some(note=>(state.noteHolds||[]).some(hold=>Number(hold.m)===m&&Number(hold.s)===note.s&&Number(hold.p)===p))){alert("音伸ばしが設定された数字には付点を付けられません。");return}
+    const overlaps=state.notes.some(note=>note.m===m&&note.p!==p&&intervalsOverlap(p,end-p,Number(note.p),shamisenNoteDuration(note))) ||
+      (state.noteHolds||[]).some(hold=>Number(hold.m)===m&&Number(hold.p)!==p&&intervalsOverlap(p,end-p,Number(hold.p),Number(hold.d)));
+    if(end>measureCapacityFor(m)||overlaps){alert("付点を付けると小節を超えるか次の音と重なります。先に空きを確保してください。");return}
+  }
+  snap();chord.forEach(note=>{note.dotted=newDotted});lastInserted=null;render();
+}
 function insertSpecified(stringNumber,noteValue,displayValue){
   const durationMap={4:4,8:2,16:1},duration=durationMap[noteValue];if(!duration)return false;
   if(lastInserted&&lastInserted.d===duration&&lastInserted.s!==stringNumber&&!state.notes.some(n=>n.m===lastInserted.m&&n.s===stringNumber&&n.p===lastInserted.p)){state.m=lastInserted.m;state.p=lastInserted.p}else if(lastInserted?.d!==duration)lastInserted=null;
@@ -1522,7 +1557,8 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   if(b.dataset.historyAction){const scrollX=window.scrollX,scrollY=window.scrollY,source=q(b.dataset.historyAction==="undo"?"#undo":"#redo");if(source&&!source.disabled)source.click();requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY));return}
   if(b.id==="tripletTool"){tripletMode=!tripletMode;tripletStartAnchor=null;slurStartAnchor=null;selectedScoreTarget=null;selectedItemId=null;state.selectedSymbol=null;state.drawTool="select";drawing=false;state.scoreEditLayer="technique";cursorVisible=false}
   else if(b.id==="applyOshiBachi"){if(selectedScoreTarget?.type!=="note"){alert("押しバチを付ける数字または開放弦を1音選択してください。");return}const [m,s,p]=String(selectedScoreTarget.key||"").split(",").map(Number);if(addOshiBachi({m,s,p})){cursorVisible=false;render()}return}
-  else if(b.id==="addNoteHold"){addSelectedNoteHold();return}
+  else if(b.id==="noteDot"){toggleSelectedShamisenDot();return}
+   else if(b.id==="addNoteHold"){addSelectedNoteHold();return}
   else if(tripletMode&&b.dataset.note){const [m,s,p]=b.dataset.note.split(",").map(Number),anchor={m,s,p};if(!tripletStartAnchor){tripletStartAnchor=anchor;selectedScoreTarget=null}else if(createTriplet(tripletStartAnchor,anchor)){tripletStartAnchor=null;selectedScoreTarget=null}}
   else if(b.id==="vocalTriplet"){if(vocalTripletArmed)resetVocalTripletInput();else{vocalTripletArmed=true;vocalTripletDraft=[];vocalTripletOrigin=null;vocalTool="note";vocalSlurStartId=null;selectedScoreTarget=null;cursorVisible=true}}
   else if(b.id==="vocalSlur"){resetVocalTripletInput();vocalTool=vocalTool==="slur"?"note":"slur";vocalSlurStartId=null;selectedScoreTarget=null;cursorVisible=false}
