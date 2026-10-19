@@ -282,6 +282,7 @@
       <div class="layout-controls"><span>1段の小節数</span><button id="removeMeasure" aria-label="小節を減らす">−</button><strong id="measureCount"></strong><button id="addMeasure" aria-label="小節を増やす">＋</button></div>
     </div>
     <div class="staff-only part-tools"><button type="button" id="toggleHanma">選択小節を半間にする</button><small id="hanmaStatus">譜面上で対象小節を選択してください。</small></div>
+    <div class="staff-only part-tools" id="measureBeatsPanel"><label for="customMeasureBeats">選択小節の拍数</label><input id="customMeasureBeats" type="number" min="1" max="16" step="1" inputmode="numeric" style="width:64px" aria-label="選択小節の拍数"><button type="button" id="setMeasureBeats">この小節に設定</button><button type="button" id="clearMeasureBeats">通常拍数に戻す</button><small id="measureBeatsStatus">小節ごとに1～16拍を指定（譜面に拍子記号は表示しません）</small></div>
     <div class="controls notes-only">
       <fieldset><legend>1. 糸を選ぶ</legend><div id="strings" class="seg"></div></fieldset>
       <fieldset><legend>2. 音の長さ</legend><div id="durations" class="seg"></div></fieldset>
@@ -484,9 +485,10 @@ function nextMusicalPosition(m,duration,options={}){
 }
 function barlineKey(row,boundary){return`${row}:${boundary}`}
 function normalizeRowMeasureCounts(){const fallback=clamp(Number(state.measuresPerRow)||4,1,12),source=Array.isArray(state.rowMeasureCounts)?state.rowMeasureCounts:[];state.rowMeasureCounts=Array.from({length:state.rows},(_,row)=>clamp(Number(source[row])||fallback,1,12));state.measuresPerRow=state.rowMeasureCounts[0]||fallback}
-function normalizeMeasureSpecials(){const total=state.rowMeasureCounts.reduce((sum,count)=>sum+count,0),source=state.measureSpecials&&typeof state.measureSpecials==="object"&&!Array.isArray(state.measureSpecials)?state.measureSpecials:{};state.measureSpecials=Object.fromEntries(Object.entries(source).flatMap(([key,value])=>{const m=Number(key);return Number.isInteger(m)&&m>=0&&m<total&&value?.type==="hanma"&&Number(value.lengthRatio)===0.5?[[String(m),{type:"hanma",lengthRatio:0.5,label:"〔半間〕"}]]:[]}))}
+function normalizeMeasureSpecials(){const total=state.rowMeasureCounts.reduce((sum,count)=>sum+count,0),source=state.measureSpecials&&typeof state.measureSpecials==="object"&&!Array.isArray(state.measureSpecials)?state.measureSpecials:{};state.measureSpecials=Object.fromEntries(Object.entries(source).flatMap(([key,value])=>{const m=Number(key);if(!Number.isInteger(m)||m<0||m>=total)return[];if(value?.type==="hanma"&&Number(value.lengthRatio)===0.5)return[[String(m),{type:"hanma",lengthRatio:0.5,label:"〔半間〕"}]];const beats=Number(value?.beats);if(value?.type==="beatOverride"&&Number.isInteger(beats)&&beats>=1&&beats<=16)return[[String(m),{type:"beatOverride",beats}]];return[]}))}
 function isHanma(m){return state.measureSpecials?.[String(m)]?.type==="hanma"}
-function measureCapacityFor(m){return Math.max(1,Math.round(measureCapacity()*(isHanma(m)?0.5:1)))}
+function measureCapacityFor(m){const special=state.measureSpecials?.[String(m)];if(special?.type==="beatOverride"&&Number.isInteger(Number(special.beats))&&Number(special.beats)>=1&&Number(special.beats)<=16)return Number(special.beats)*4;return Math.max(1,Math.round(measureCapacity()*(isHanma(m)?0.5:1)))}
+function measureContentExceeds(m,capacity){return state.notes.some(note=>Number(note.m)===m&&(Number(note.p)||0)+shamisenNoteDuration(note)>capacity)||(state.noteHolds||[]).some(hold=>Number(hold.m)===m&&Number(hold.p)+Number(hold.d)>capacity)||(state.vocalNotes||[]).some(note=>Number(note.m)===m&&Number(note.p)+Number(note.d)*(note.dotted?1.5:1)>capacity)}
 function normalizeLyrics(){const source=Array.isArray(state.lyrics)?state.lyrics:[];state.lyrics=Array.from({length:state.rows},(_,row)=>ShianRowContent.normalizeLyricText(source[row]||""));const anchors=Array.isArray(state.lyricsGlyphAnchors)?state.lyricsGlyphAnchors:[];state.lyricsGlyphAnchors=Array.from({length:state.rows},(_,row)=>{const entry=anchors[row];if(!entry||entry.text!==state.lyrics[row]||!Array.isArray(entry.glyphs))return null;return{text:state.lyrics[row],glyphs:entry.glyphs.flatMap(glyph=>Number.isInteger(Number(glyph?.m))&&Number.isFinite(Number(glyph?.measureX))?[{text:String(glyph.text||""),m:Number(glyph.m),measureX:clamp(Number(glyph.measureX),0,1)}]:[])}});if(typeof state.vocalVisible!=="boolean")state.vocalVisible=Boolean(state.lyricsMode);if(typeof state.lyricsVisible!=="boolean")state.lyricsVisible=Boolean(state.lyricsMode);state.lyricsMode=state.vocalVisible||state.lyricsVisible}
 function normalizeVocalTripletMetadata(notes){
   const groups=new Map(),offsets=[0,1,3];
@@ -763,13 +765,14 @@ function measureWidth(m){
   const widest=notes.reduce((max,n)=>Math.max(max,String(n.v||"").length),1);
   const perString=Math.max(0,...[1,2,3].map(s=>notes.filter(n=>n.s===s).reduce((sum,n)=>sum+(n.d===1?1:n.d===2?.55:.3),0)));
   const occupied=new Set(notes.map(note=>note.p)).size;
+  const ratio=measureCapacityFor(m)/measureCapacity();
   const contentWidth=Math.max(384,measureCapacity()*24,occupied*34+widest*10+48);
   const normalWidth=Math.max(240,contentWidth+(state.measureOffsets?.[m]||0));
-  return isHanma(m)?normalWidth*0.5:normalWidth;
+  return normalWidth*ratio;
 }
 function screenMeasureGrow(m){
   const adjusted=clamp(1+(Number(state.measureOffsets?.[m])||0)/384,.35,2);
-  return isHanma(m)?adjusted*.5:adjusted;
+  return adjusted*(measureCapacityFor(m)/measureCapacity());
 }
 function noteRhythmClass(n,m){
   if(n.rest)return`d${n.d}`;
@@ -1052,6 +1055,9 @@ function render(){
   const selectedVocal=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(note=>note.id===selectedScoreTarget.id):null;q("#vocalRed").disabled=selectedVocal?.kind!=="pitch";q("#vocalBlack").disabled=selectedVocal?.kind!=="pitch";
   q("#removeRow").disabled=state.rows<=1;q("#removeMeasure").disabled=measuresInRow(location.row)<=1;save();
   q("#toggleHanma").textContent=isHanma(state.m)?"選択小節の半間を解除":"選択小節を半間にする";q("#hanmaStatus").textContent=`${location.row+1}段・${location.local+1}小節（${isHanma(state.m)?"半間":"通常小節"}）`;
+  const beatSpecial=state.measureSpecials?.[String(state.m)];const customBeats=beatSpecial?.type==="beatOverride"?beatSpecial.beats:null;
+  if(document.activeElement!==q("#customMeasureBeats"))q("#customMeasureBeats").value=customBeats??"";
+  q("#measureBeatsStatus").textContent=`${location.row+1}段・${location.local+1}小節：${customBeats?`${customBeats}拍（個別指定）`:isHanma(state.m)?"半間":`${(measureCapacity()/4)}拍（通常）`}／指定はこの小節だけ`;
   /* 表示切替後の新しい用紙高でSVG座標を確定してから、各部品を保存済みの段位置へ戻す。 */
   applyPreview();syncAnchoredVocalPositions();syncVocalTripletMarks();syncVocalSlurs();syncTuplets();
 }
@@ -1600,25 +1606,27 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.dataset.rest){insert("",true,+b.dataset.rest)}
   else if(b.dataset.scorePart){const kind=b.dataset.scorePart,sourceMeasureSpan=kind==="same2"?2:1;if(state.m<sourceMeasureSpan){alert(kind==="same2"?"『同じ2』は、繰り返す直前の2小節がある3小節目以降へ入力してください。":"『同じ1』は、繰り返す直前の小節がある2小節目以降へ入力してください。");return}if(state.notes.some(note=>note.m===state.m)){alert("音数字または休符がある小節には、『同じ1』『同じ2』を入力できません。小節内の通常要素を削除してから入力してください。");return}snap();state.scoreParts=Array.isArray(state.scoreParts)?state.scoreParts:[];state.scoreParts=state.scoreParts.filter(entry=>entry.m!==state.m);const part={id:uid(),type:"measureRepeat",kind,repeatCount:1,sourceMeasureOffset:-sourceMeasureSpan,displayMeasureSpan:1,playbackMeasureSpan:sourceMeasureSpan,alignment:"measureCenter",m:state.m,p:Math.floor(measureCapacity()/2),x:0};state.scoreParts.push(part);selectedScoreTarget={type:"scorePart",id:part.id};cursorVisible=false}
   else if(b.dataset.measureSelect!==undefined){state.m=Number(b.dataset.measureSelect);selectedScoreTarget=null;selectedItemId=null;cursorVisible=false}
-  else if(b.id==="toggleHanma"){const halfCapacity=Math.max(1,Math.round(measureCapacity()/2)),overflows=!isHanma(state.m)&&state.notes.some(note=>note.m===state.m&&Number(note.p)+Number(note.d)>halfCapacity);if(overflows){alert("この小節には半間の長さを超える音があります。後半の音を移動または削除してから半間にしてください。");return}snap();state.measureSpecials={...(state.measureSpecials||{})};if(isHanma(state.m))delete state.measureSpecials[String(state.m)];else state.measureSpecials[String(state.m)]={type:"hanma",lengthRatio:0.5,label:"〔半間〕"};state.p=Math.min(state.p,measureCapacityFor(state.m)-1);selectedScoreTarget=null;selectedItemId=null;cursorVisible=false}
+  else if(b.id==="toggleHanma"){const halfCapacity=Math.max(1,Math.round(measureCapacity()/2)),overflows=!isHanma(state.m)&&measureContentExceeds(state.m,halfCapacity);if(overflows){alert("この小節には半間の長さを超える音があります。後半の音を移動または削除してから半間にしてください。");return}snap();state.measureSpecials={...(state.measureSpecials||{})};if(isHanma(state.m))delete state.measureSpecials[String(state.m)];else state.measureSpecials[String(state.m)]={type:"hanma",lengthRatio:0.5,label:"〔半間〕"};state.p=Math.min(state.p,measureCapacityFor(state.m)-1);selectedScoreTarget=null;selectedItemId=null;cursorVisible=false}
+  else if(b.id==="setMeasureBeats"){const raw=q("#customMeasureBeats").value.trim(),beats=Number(raw);if(!raw||!Number.isInteger(beats)||beats<1||beats>16){alert("1～16の整数で、この小節の拍数を指定してください。");return}const capacity=beats*4;if(measureContentExceeds(state.m,capacity)){alert("指定の拍数では、この小節の音や休符が収まりません。音を移動してから設定してください。");return}snap();state.measureSpecials={...(state.measureSpecials||{}),[String(state.m)]:{type:"beatOverride",beats}};state.p=Math.min(state.p,capacity-1);cursorVisible=false}
+  else if(b.id==="clearMeasureBeats"){if(state.measureSpecials?.[String(state.m)]?.type!=="beatOverride")return;if(measureContentExceeds(state.m,measureCapacity())){alert("通常拍数に戻すと、この小節の音や休符が収まりません。先に音を移動してください。");return}snap();state.measureSpecials={...(state.measureSpecials||{})};delete state.measureSpecials[String(state.m)];state.p=Math.min(state.p,measureCapacity()-1);cursorVisible=false}
   else if(b.dataset.barKind){if(selectedScoreTarget?.type!=="barline"){alert("先に変更する小節線を譜面上で選択してください。");return}snap();state.barlineKinds={...(state.barlineKinds||{}),[selectedScoreTarget.key]:b.dataset.barKind}}
   else if(b.id==="prev"){
     clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;lastInserted=null;
-    if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacity()-1}
+    if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacityFor(state.m)-1}
   }
   else if(b.id==="next"){
     clearRangeSelection();selectedScoreTarget=null;selectedItemId=null;cursorVisible=true;lastInserted=null;
-    if(state.p<measureCapacity()-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}
+    if(state.p<measureCapacityFor(state.m)-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}
   }
   else if(b.id==="vocalPrev"){
     if(selectedScoreTarget?.type==="vocal"){snap();if(!nudgeSelectedVocal(-4))past.pop()}
     else if(vocalAnchorSelection){const previous=previousShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(previous){vocalAnchorSelection=previous;vocalAnchorOffset=0;state.m=previous.m;state.p=previous.p}}
-    else{cursorVisible=true;if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacity()-1}}
+    else{cursorVisible=true;if(state.p>0)state.p--;else if(state.m>0){state.m--;state.p=measureCapacityFor(state.m)-1}}
   }
   else if(b.id==="vocalNext"){
     if(selectedScoreTarget?.type==="vocal"){snap();if(!nudgeSelectedVocal(4))past.pop()}
     else if(vocalAnchorSelection){const next=nextShamisenColumn(vocalAnchorSelection.m,vocalAnchorSelection.p);if(next){vocalAnchorSelection=next;vocalAnchorOffset=0;state.m=next.m;state.p=next.p}}
-    else{cursorVisible=true;if(state.p<measureCapacity()-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
+    else{cursorVisible=true;if(state.p<measureCapacityFor(state.m)-1)state.p++;else if(state.m<totalMeasures()-1){state.m++;state.p=0}}
   }
   else if(b.id==="vocalRed"||b.id==="vocalBlack"){
     const note=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(item=>item.id===selectedScoreTarget.id):null;if(note?.kind!=="pitch"){alert("赤色にできる唄の音程数字を選択してください。");return}snap();note.color=b.id==="vocalRed"?"#c62828":"#222222";
@@ -1841,7 +1849,7 @@ q("#rhythmFeel").addEventListener("change",e=>{snap();state.rhythmFeel=normalize
 q("#meter").addEventListener("focus",e=>{if(!IS_ANNOTATION_PAGE)e.target.value=state.meter});
 q("#meter").addEventListener("change",e=>{
   const parsed=parseMeter(e.target.value);if(!parsed){alert("拍子を認識できません。2/4、4/4、6/8の形式で入力してください。\n分母は1・2・4・8・16に対応しています。");e.target.value=meterLabel();return}
-  if(state.notes.some(note=>note.p>=parsed.capacity)){alert("入力済みの音が新しい拍子の小節容量を超えます。先に音を移動または削除してください。");e.target.value=meterLabel();return}
+  if(state.notes.some(note=>{const special=state.measureSpecials?.[String(note.m)];const limit=special?.type==="beatOverride"?Number(special.beats)*4:special?.type==="hanma"?Math.round(parsed.capacity/2):parsed.capacity;return(Number(note.p)||0)+shamisenNoteDuration(note)>limit})){alert("入力済みの音が新しい拍子の小節容量を超えます。先に音を移動または削除してください。");e.target.value=meterLabel();return}
   snap();state.meter=parsed.signature;state.p=clamp(state.p,0,parsed.capacity-1);lastInserted=null;render();
 });
 q("#meter").addEventListener("blur",e=>{e.target.value=meterLabel()});
@@ -1909,7 +1917,7 @@ q("#printForm").addEventListener("submit",async event=>{
   applyPrintLayout();requestAnimationFrame(()=>window.print());
 });
 function applyPrintLayout(){
-  ShianPrintV2.render(state,{rootSelector:"#printRootV2",capacity:measureCapacity,measureWidth,columnX,barlineKey,pageRows:currentPageRows,meterLabel});
+  ShianPrintV2.render(state,{rootSelector:"#printRootV2",capacity:measureCapacity,capacityFor:measureCapacityFor,measureWidth,columnX,barlineKey,pageRows:currentPageRows,meterLabel});
 }
 function ensurePrintLayout(){
   /* 印刷ダイアログからは通常画面の座標で既に生成済み。
