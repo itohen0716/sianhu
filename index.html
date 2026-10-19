@@ -261,7 +261,7 @@
       <div id="colors" class="colors"></div>
       <div id="symbolTools" class="symbol-tools">
         <button data-symbol="ス" title="スクイ">スクイ<br>ス</button><button data-symbol="ハ" title="ハジキ">ハジキ<br>ハ</button><button data-symbol="スリ" title="スリ（下側に山形スラー）">スリ<br>⌒</button><button data-symbol="ウ" title="ウチ">ウチ<br>ウ</button><button data-symbol="押しバチ" title="対象音へ付ける押しバチ奏法">押しバチ<svg class="part-preview" viewBox="0 0 28 28" aria-hidden="true"><path d="M 8 24 V 6 H 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/></svg></button><button data-symbol="ケ" title="消し">消し<br>ケ</button>
-        <button class="roman" data-symbol="Ⅰ">Ⅰ</button><button class="roman" data-symbol="Ⅱ">Ⅱ</button><button class="roman" data-symbol="Ⅲ">Ⅲ</button><button id="tripletTool" title="開始音と終了音を選んで三連符を設定">三連符<br><small>⌒ 3</small></button>
+        <button class="roman" data-symbol="Ⅰ">Ⅰ</button><button class="roman" data-symbol="Ⅱ">Ⅱ</button><button class="roman" data-symbol="Ⅲ">Ⅲ</button><button id="tripletTool" title="開始音と終了音を選んで従来の三連符（3音＝1拍）を設定">三連符<br><small>⌒ 3</small></button><button id="shortTripletTool" title="16分音符3つを8分音符1つ分（0.5拍）で演奏する直角の三連符。始点と終点を選択します">三連符<br><small>┌3┐ 16分×3</small></button>
       </div>
     </div>
     <div class="edit-tools"><button id="nudgeLeft">← 左へ</button><button id="nudgeRight">右へ →</button><button id="nudgeUp">↑ 上へ</button><button id="nudgeDown">↓ 下へ</button><button id="clearTechniqueSelection">選択解除</button><button id="editComment" hidden>再編集</button><button id="deleteItem">選択した奏法記号を削除</button><button id="bringFront">最前面へ</button></div>
@@ -412,7 +412,7 @@ defaults.vocalSlurs=[];
 let state={...defaults},past=[],future=[],hasSaved=false;
 let scoreMetricsReady=false,scoreMetricsPass=0;
 let annotationPageReferenceSize=null;
-let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="",vocalAnchorSelection=null,vocalAnchorOffset=0,vocalTool="note",vocalSlurStartId=null,vocalTripletArmed=false,vocalTripletDraft=[],vocalTripletOrigin=null,tripletMode=false,tripletStartAnchor=null,slurStartAnchor=null;
+let drawing=false,draft=null,selectedItemId=null,selectedScoreTarget=null,dragging=null,cursorVisible=false,lastInserted=null,keyboardBuffer="",vocalAnchorSelection=null,vocalAnchorOffset=0,vocalTool="note",vocalSlurStartId=null,vocalTripletArmed=false,vocalTripletDraft=[],vocalTripletOrigin=null,tripletMode=false,tripletVariant="standard",tripletStartAnchor=null,slurStartAnchor=null;
 let rangeDrag=null,rangeBox=null,rangeMove=null,shiftHeld=false;const rangeNoteKeys=new Set(),rangeTechniqueIds=new Set();
 const q=x=>document.querySelector(x),qAll=x=>document.querySelectorAll(x),clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
 function updateScreenScoreScale(){
@@ -460,13 +460,34 @@ function meterLabel(value=state.meter){const meter=parseMeter(value)||parseMeter
 function measureCapacity(){return(parseMeter(state.meter)||parseMeter(defaults.meter)).capacity}
 function noteDuration(note){return[1,2,4].includes(Number(note?.d))?Number(note.d):4}
 function shamisenNoteDuration(note){return noteDuration(note)*(note?.dotted&&!note?.rest?1.5:1)}
+// Angle-bracket 16th triplets have three written grid columns (3 units),
+// but take only one eighth note (2 units). Only adjust the input-side
+// capacity/overlap calculation; the saved integer note positions stay intact.
+function shortTripletRanges(m){
+  return(state.tuplets||[]).filter(t=>t?.type==="triplet"&&t.shape==="square"&&Number(t.targetBeats)===0.5&&Number(t.start?.m)===Number(m)&&Number(t.end?.m)===Number(m)&&Number(t.end?.p)===Number(t.start?.p)+2)
+    .map(t=>({start:Number(t.start.p),end:Number(t.end.p)})).sort((a,b)=>a.start-b.start);
+}
+function shamisenEffectiveStart(m,p){
+  let offset=0;
+  for(const range of shortTripletRanges(m)){
+    if(p<range.start)break;
+    if(p<=range.end)return p-offset-(p-range.start)/3;
+    offset+=1;
+  }
+  return p-offset;
+}
+function shamisenEffectiveEnd(m,p,duration){
+  const inTriplet=shortTripletRanges(m).some(range=>p>=range.start&&p<=range.end);
+  return shamisenEffectiveStart(m,p)+duration*(inTriplet&&duration===1?2/3:1);
+}
 function measureHasRepeat(m){return(state.scoreParts||[]).some(part=>Number(part.m)===Number(m)&&(part.kind==="same1"||part.kind==="same2"||part.type==="measureRepeat"))}
 function intervalsOverlap(startA,durationA,startB,durationB){return startA<startB+durationB&&startB<startA+durationA}
-function measureUsedDuration(m){const noteEnd=state.notes.filter(note=>Number(note.m)===Number(m)).reduce((end,note)=>Math.max(end,(Number(note.p)||0)+shamisenNoteDuration(note)),0),holdEnd=(state.noteHolds||[]).filter(hold=>Number(hold.m)===Number(m)).reduce((end,hold)=>Math.max(end,Number(hold.p)+Number(hold.d)),0);return Math.max(noteEnd,holdEnd)}
+function measureUsedDuration(m){const noteEnd=state.notes.filter(note=>Number(note.m)===Number(m)).reduce((end,note)=>Math.max(end,shamisenEffectiveEnd(m,Number(note.p)||0,shamisenNoteDuration(note))),0),holdEnd=(state.noteHolds||[]).filter(hold=>Number(hold.m)===Number(m)).reduce((end,hold)=>Math.max(end,Number(hold.p)+Number(hold.d)),0);return Math.max(noteEnd,holdEnd)}
 function canInsertAt(m,p,duration,{rest=false,stringNumber=state.s,chord=false}={}){
-  const capacity=measureCapacityFor(m);if(measureHasRepeat(m)||p<0||p+duration>capacity)return false;
+  const capacity=measureCapacityFor(m),start=shamisenEffectiveStart(m,p),end=shamisenEffectiveEnd(m,p,duration);
+  if(measureHasRepeat(m)||p<0||p>=capacity||end>capacity+1e-7)return false;
   const noteOverlap=state.notes.some(note=>{
-    if(Number(note.m)!==Number(m)||!intervalsOverlap(p,duration,Number(note.p)||0,shamisenNoteDuration(note)))return false;
+    if(Number(note.m)!==Number(m)||!intervalsOverlap(start,end-start,shamisenEffectiveStart(m,Number(note.p)||0),shamisenEffectiveEnd(m,Number(note.p)||0,shamisenNoteDuration(note))-shamisenEffectiveStart(m,Number(note.p)||0)))return false;
     if(rest||note.rest)return true;
     if(!chord)return true;
     return Number(note.s)===Number(stringNumber)||Number(note.p)!==Number(p)||shamisenNoteDuration(note)!==duration;
@@ -478,8 +499,8 @@ function nextMusicalPosition(m,duration,options={}){
   for(let target=m;target<totalMeasures();target++){
     if(measureHasRepeat(target))continue;
     const capacity=measureCapacityFor(target),start=target===m?clamp(Number(state.p)||0,0,capacity-1):0;
-    for(let p=start;p+duration<=capacity;p++)if(canInsertAt(target,p,duration,options))return{m:target,p};
-    for(let p=0;p<start&&p+duration<=capacity;p++)if(canInsertAt(target,p,duration,options))return{m:target,p};
+    for(let p=start;p<capacity;p++)if(canInsertAt(target,p,duration,options))return{m:target,p};
+    for(let p=0;p<start&&p<capacity;p++)if(canInsertAt(target,p,duration,options))return{m:target,p};
   }
   return null;
 }
@@ -488,7 +509,7 @@ function normalizeRowMeasureCounts(){const fallback=clamp(Number(state.measuresP
 function normalizeMeasureSpecials(){const total=state.rowMeasureCounts.reduce((sum,count)=>sum+count,0),source=state.measureSpecials&&typeof state.measureSpecials==="object"&&!Array.isArray(state.measureSpecials)?state.measureSpecials:{};state.measureSpecials=Object.fromEntries(Object.entries(source).flatMap(([key,value])=>{const m=Number(key);if(!Number.isInteger(m)||m<0||m>=total)return[];if(value?.type==="hanma"&&Number(value.lengthRatio)===0.5)return[[String(m),{type:"hanma",lengthRatio:0.5,label:"〔半間〕"}]];const beats=Number(value?.beats);if(value?.type==="beatOverride"&&Number.isInteger(beats)&&beats>=1&&beats<=16)return[[String(m),{type:"beatOverride",beats}]];return[]}))}
 function isHanma(m){return state.measureSpecials?.[String(m)]?.type==="hanma"}
 function measureCapacityFor(m){const special=state.measureSpecials?.[String(m)];if(special?.type==="beatOverride"&&Number.isInteger(Number(special.beats))&&Number(special.beats)>=1&&Number(special.beats)<=16)return Number(special.beats)*4;return Math.max(1,Math.round(measureCapacity()*(isHanma(m)?0.5:1)))}
-function measureContentExceeds(m,capacity){return state.notes.some(note=>Number(note.m)===m&&(Number(note.p)||0)+shamisenNoteDuration(note)>capacity)||(state.noteHolds||[]).some(hold=>Number(hold.m)===m&&Number(hold.p)+Number(hold.d)>capacity)||(state.vocalNotes||[]).some(note=>Number(note.m)===m&&Number(note.p)+Number(note.d)*(note.dotted?1.5:1)>capacity)}
+function measureContentExceeds(m,capacity){return state.notes.some(note=>Number(note.m)===m&&shamisenEffectiveEnd(m,Number(note.p)||0,shamisenNoteDuration(note))>capacity+1e-7)||(state.noteHolds||[]).some(hold=>Number(hold.m)===m&&Number(hold.p)+Number(hold.d)>capacity)||(state.vocalNotes||[]).some(note=>Number(note.m)===m&&Number(note.p)+Number(note.d)*(note.dotted?1.5:1)>capacity)}
 function normalizeLyrics(){const source=Array.isArray(state.lyrics)?state.lyrics:[];state.lyrics=Array.from({length:state.rows},(_,row)=>ShianRowContent.normalizeLyricText(source[row]||""));const anchors=Array.isArray(state.lyricsGlyphAnchors)?state.lyricsGlyphAnchors:[];state.lyricsGlyphAnchors=Array.from({length:state.rows},(_,row)=>{const entry=anchors[row];if(!entry||entry.text!==state.lyrics[row]||!Array.isArray(entry.glyphs))return null;return{text:state.lyrics[row],glyphs:entry.glyphs.flatMap(glyph=>Number.isInteger(Number(glyph?.m))&&Number.isFinite(Number(glyph?.measureX))?[{text:String(glyph.text||""),m:Number(glyph.m),measureX:clamp(Number(glyph.measureX),0,1)}]:[])}});if(typeof state.vocalVisible!=="boolean")state.vocalVisible=Boolean(state.lyricsMode);if(typeof state.lyricsVisible!=="boolean")state.lyricsVisible=Boolean(state.lyricsMode);state.lyricsMode=state.vocalVisible||state.lyricsVisible}
 function normalizeVocalTripletMetadata(notes){
   const groups=new Map(),offsets=[0,1,3];
@@ -539,20 +560,40 @@ function tupletAnchor(value){
 }
 function tupletColumnExists(anchor){return Boolean(anchor&&state.notes.some(note=>!note.rest&&note.m===anchor.m&&note.s===anchor.s&&note.p===anchor.p))}
 function compareAnchors(a,b){return a.m-b.m||a.p-b.p}
+// Restore short-triplet identity if an older annotation page stripped only its shape.
+// Do not infer it from timing alone: require exactly three consecutive 16th-note columns.
+function recoverSquareTriplet(start,end,targetBeats){
+  if(targetBeats!==0.5||start.m!==end.m||end.p!==start.p+2)return false;
+  return [0,1,2].every(delta=>{
+    const column=state.notes.filter(note=>Number(note.m)===start.m&&Number(note.p)===start.p+delta);
+    return column.length>0&&column.every(note=>!note.rest&&Number(note.d)===1&&!note.dotted);
+  });
+}
 function normalizeTuplets(){
-  state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).flatMap(entry=>{const start=tupletAnchor(entry?.start),end=tupletAnchor(entry?.end),targetBeats=Number(entry?.targetBeats);if(entry?.type!=="triplet"||!tupletColumnExists(start)||!tupletColumnExists(end)||compareAnchors(start,end)>=0||measureLocation(start.m).row!==measureLocation(end.m).row||!Number.isFinite(targetBeats)||targetBeats<=0||targetBeats>16)return[];return[{id:String(entry.id||uid()),type:"triplet",start,end,targetBeats}]});
+  state.tuplets=(Array.isArray(state.tuplets)?state.tuplets:[]).flatMap(entry=>{const start=tupletAnchor(entry?.start),end=tupletAnchor(entry?.end),targetBeats=Number(entry?.targetBeats);if(entry?.type!=="triplet"||!tupletColumnExists(start)||!tupletColumnExists(end)||compareAnchors(start,end)>=0||measureLocation(start.m).row!==measureLocation(end.m).row||!Number.isFinite(targetBeats)||targetBeats<=0||targetBeats>16)return[];return[{id:String(entry.id||uid()),type:"triplet",start,end,targetBeats,...((entry.shape==="square"||(!entry.shape&&recoverSquareTriplet(start,end,targetBeats)))?{shape:"square"}:{})}]});
 }
 function normalizeScoreParts(){
   const total=totalMeasures(),capacity=measureCapacity();
   const occupied=new Set();state.scoreParts=(Array.isArray(state.scoreParts)?state.scoreParts:[]).flatMap(part=>{const explicitKind=part?.kind==="same2"?"same2":part?.kind==="same1"?"same1":null,kind=explicitKind||(Number(part?.repeatCount)===2?"same2":Number(part?.repeatCount)===1?"same1":null),m=Number(part?.m);if(!kind||!Number.isInteger(m)||m<0||m>=total||occupied.has(m))return[];occupied.add(m);const sourceMeasureSpan=kind==="same2"?2:1;return[{...part,id:String(part.id||uid()),type:"measureRepeat",kind,repeatCount:1,sourceMeasureOffset:-sourceMeasureSpan,displayMeasureSpan:1,playbackMeasureSpan:sourceMeasureSpan,alignment:"measureCenter",m,p:Math.floor(capacity/2),x:0}]});
 }
 function tupletColumns(start,end){return shamisenColumns().filter(anchor=>compareAnchors(anchor,start)>=0&&compareAnchors(anchor,end)<=0)}
-function createTriplet(start,end){
+function createTriplet(start,end,variant="standard"){
   if(!start||!end||compareAnchors(start,end)===0){alert("三連符の終了音には、開始音とは別の音を選んでください。");return false}
   if(compareAnchors(start,end)>0)[start,end]=[end,start];
   if(measureLocation(start.m).row!==measureLocation(end.m).row){alert("三連符の開始音と終了音は、同じ段から選んでください。");return false}
-  if(tupletColumns(start,end).length<2){alert("三連符の対象になる2音以上を選んでください。");return false}
-  snap();normalizeTuplets();state.tuplets=state.tuplets.filter(tuplet=>compareAnchors(tuplet.end,start)<0||compareAnchors(tuplet.start,end)>0);const tuplet={id:uid(),type:"triplet",start:{...start},end:{...end},targetBeats:1};state.tuplets.push(tuplet);selectedScoreTarget={type:"tuplet",id:tuplet.id};return true
+  const columns=tupletColumns(start,end);
+  if(variant==="short"){
+    // 16分音符3音を、8分音符1音分（0.5拍）に等分。従来の曲線型とは独立。
+    const valid=start.m===end.m&&end.p===start.p+2&&columns.length===3&&
+      columns.every((column,index)=>column.m===start.m&&column.p===start.p+index&&
+        columnEntries(column.m,column.p).length>0&&
+        columnEntries(column.m,column.p).every(note=>!note.rest&&Number(note.d)===1&&!note.dotted))&&
+      !(state.noteHolds||[]).some(hold=>Number(hold.m)===start.m&&Number(hold.p)>=start.p&&Number(hold.p)<=end.p);
+    if(!valid){alert("角括弧の三連符は、同じ小節に続けて入力した16分音符3音を選択してください（開始音→3音目）。休符・付点・音伸ばしは対象外です。");return false}
+  }else if(columns.length<2){alert("三連符の対象になる2音以上を選んでください。");return false}
+  snap();normalizeTuplets();state.tuplets=state.tuplets.filter(tuplet=>compareAnchors(tuplet.end,start)<0||compareAnchors(tuplet.start,end)>0);
+  const tuplet={id:uid(),type:"triplet",start:{...start},end:{...end},targetBeats:variant==="short"?0.5:1,...(variant==="short"?{shape:"square"}:{})};
+  state.tuplets.push(tuplet);selectedScoreTarget={type:"tuplet",id:tuplet.id};return true
 }
 function measuresInRow(row){return state.rowMeasureCounts?.[row]||state.measuresPerRow}
 function rowStartMeasure(row){return state.rowMeasureCounts.slice(0,row).reduce((sum,count)=>sum+count,0)}
@@ -830,7 +871,10 @@ function syncTuplets(){
     if(!svg){svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("class","tuplet-layer");score.appendChild(svg)}
     svg.setAttribute("viewBox",`0 0 ${sr.width} ${overlayHeight}`);svg.style.height=`${overlayHeight}px`;
     const selected=selectedScoreTarget?.type==="tuplet"&&selectedScoreTarget.id===tuplet.id?" selected":"";
-    svg.insertAdjacentHTML("beforeend",`<g class="tuplet-item${selected}" data-tuplet-id="${esc(tuplet.id)}" aria-label="三連符"><path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} Q ${controlX.toFixed(2)} ${controlY.toFixed(2)} ${x2.toFixed(2)} ${y2.toFixed(2)}"/><text x="${controlX.toFixed(2)}" y="${labelY.toFixed(2)}">3</text></g>`);
+    const path=tuplet.shape==="square"
+      ?`M ${x1.toFixed(2)} ${y1.toFixed(2)} L ${x1.toFixed(2)} ${controlY.toFixed(2)} L ${x2.toFixed(2)} ${controlY.toFixed(2)} L ${x2.toFixed(2)} ${y2.toFixed(2)}`
+      :`M ${x1.toFixed(2)} ${y1.toFixed(2)} Q ${controlX.toFixed(2)} ${controlY.toFixed(2)} ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+    svg.insertAdjacentHTML("beforeend",`<g class="tuplet-item${selected}" data-tuplet-id="${esc(tuplet.id)}" aria-label="${tuplet.shape==="square"?"角括弧の16分三連符":"三連符"}"><path d="${path}"/><text x="${controlX.toFixed(2)}" y="${tuplet.shape==="square"?Math.max(8,controlY-4).toFixed(2):labelY.toFixed(2)}">3</text></g>`);
   });
 }
 function shamisenColumnDuration(anchor){const durations=columnEntries(anchor.m,anchor.p).map(note=>Number(note.d)).filter(value=>[1,2,4].includes(value));return durations.length?Math.min(...durations):1}
@@ -1037,7 +1081,8 @@ function render(){
   q("#vocalNumbers").innerHTML=vocalVals.map(value=>`<button data-vocal-value="${value}">${value}</button>`).join("");
   q("#vocalTriplet").classList.toggle("on",vocalTripletArmed);q("#vocalTriplet").setAttribute("aria-pressed",String(vocalTripletArmed));
   q("#vocalSlur").classList.toggle("on",vocalTool==="slur");q("#vocalSlur").setAttribute("aria-pressed",String(vocalTool==="slur"));
-  q("#tripletTool").classList.toggle("on",tripletMode);q("#tripletTool").setAttribute("aria-pressed",String(tripletMode));document.body.classList.toggle("triplet-selecting",tripletMode);
+  q("#tripletTool").classList.toggle("on",tripletMode&&tripletVariant==="standard");q("#tripletTool").setAttribute("aria-pressed",String(tripletMode&&tripletVariant==="standard"));
+  q("#shortTripletTool").classList.toggle("on",tripletMode&&tripletVariant==="short");q("#shortTripletTool").setAttribute("aria-pressed",String(tripletMode&&tripletVariant==="short"));document.body.classList.toggle("triplet-selecting",tripletMode);
   q("#vocalStatus").textContent=vocalTripletArmed?`三連符：${vocalTripletDraft.length}/3音入力（1拍に3音。Escまたは三連符ボタンで中止）`:vocalTool==="slur"?(vocalSlurStartId?"スラーの終点を押してください":"スラーの始点を押してください"):`${location.row+1}段・${location.local+1}小節・16分位置${state.p+1}/${currentCapacity}（${vocalAnchorLabel(activeVocalAnchor())}）${selectedScoreTarget?.type==="vocal"?"（選択中：ドラッグ／矢印で微調整）":""}`;
   const printStarts=pageStartRows();
   const rowContent=ShianRowContent.rows(state);
@@ -1361,7 +1406,7 @@ function renderLayers(skipSave=false){
   q("#editComment").disabled=item?.type!=="text";q("#deleteItem").disabled=!item&&!tupletSelected;q("#deleteItem").textContent=tupletSelected?"選択した3連を削除":"選択した奏法記号を削除";q("#bringFront").disabled=!item;
   paper.classList.toggle("annotating",drawing);
   q("#toggleDrawing").textContent=drawing?"✓ 描画を終了":"✎ 描画を開始";
-  q("#layerHelp").textContent=tripletMode?(tripletStartAnchor?"三連符の終了音を選んでください。":"三連符の開始音を選んでください。"):drawing&&state.drawTool==="symbol"&&state.selectedSymbol==="スリ"?(slurStartAnchor?"スリの終了数字を選んでください。":"スリの開始数字を選んでください。"):drawing?(state.drawTool==="select"?"動かしたい奏法・指番号をタップし、そのまま指またはペンで移動します。":`「${state.selectedSymbol||""}」を関連付ける数字または開放弦をタップしてください。配置は${state.symbolSide==="below"?"下":"上"}です。`):scoreLayer==="notes"?"数字・開放弦だけを選択できます。小節線には反応しません。":scoreLayer==="staff"?"小節線だけを選択して左右へ移動できます。数字には反応しません。":"奏法レイヤーは音の移動・削除に追従します。";
+  q("#layerHelp").textContent= tripletMode?(tripletVariant==="short"?(tripletStartAnchor?"角括弧の三連符：16分音符3音目を選んでください。":"角括弧の三連符：16分音符3音の開始音を選んでください。"):(tripletStartAnchor?"三連符の終了音を選んでください。":"三連符の開始音を選んでください。")):drawing&&state.drawTool==="symbol"&&state.selectedSymbol==="スリ"?(slurStartAnchor?"スリの終了数字を選んでください。":"スリの開始数字を選んでください。"):drawing?(state.drawTool==="select"?"動かしたい奏法・指番号をタップし、そのまま指またはペンで移動します。":`「${state.selectedSymbol||""}」を関連付ける数字または開放弦をタップしてください。配置は${state.symbolSide==="below"?"下":"上"}です。`):scoreLayer==="notes"?"数字・開放弦だけを選択できます。小節線には反応しません。":scoreLayer==="staff"?"小節線だけを選択して左右へ移動できます。数字には反応しません。":"奏法レイヤーは音の移動・削除に追従します。";
   if(!skipSave)save();
 }
 function applyPreview(){
@@ -1561,11 +1606,11 @@ function openPrintSettings(){
 load();state.scoreEditLayer="notes";drawing=false;document.addEventListener("keydown",event=>{if(event.key==="Escape"&&vocalTripletArmed){resetVocalTripletInput();render()}});
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.historyAction){const scrollX=window.scrollX,scrollY=window.scrollY,source=q(b.dataset.historyAction==="undo"?"#undo":"#redo");if(source&&!source.disabled)source.click();requestAnimationFrame(()=>window.scrollTo(scrollX,scrollY));return}
-  if(b.id==="tripletTool"){tripletMode=!tripletMode;tripletStartAnchor=null;slurStartAnchor=null;selectedScoreTarget=null;selectedItemId=null;state.selectedSymbol=null;state.drawTool="select";drawing=false;state.scoreEditLayer="technique";cursorVisible=false}
+  if(b.id==="tripletTool"||b.id==="shortTripletTool"){const selectedVariant=b.id==="shortTripletTool"?"short":"standard";tripletMode=!tripletMode||tripletVariant!==selectedVariant;tripletVariant=selectedVariant;tripletStartAnchor=null;slurStartAnchor=null;selectedScoreTarget=null;selectedItemId=null;state.selectedSymbol=null;state.drawTool="select";drawing=false;state.scoreEditLayer="technique";cursorVisible=false}
   else if(b.id==="applyOshiBachi"){if(selectedScoreTarget?.type!=="note"){alert("押しバチを付ける数字または開放弦を1音選択してください。");return}const [m,s,p]=String(selectedScoreTarget.key||"").split(",").map(Number);if(addOshiBachi({m,s,p})){cursorVisible=false;render()}return}
   else if(b.id==="noteDot"){toggleSelectedShamisenDot();return}
    else if(b.id==="addNoteHold"){addSelectedNoteHold();return}
-  else if(tripletMode&&b.dataset.note){const [m,s,p]=b.dataset.note.split(",").map(Number),anchor={m,s,p};if(!tripletStartAnchor){tripletStartAnchor=anchor;selectedScoreTarget=null}else if(createTriplet(tripletStartAnchor,anchor)){tripletStartAnchor=null;selectedScoreTarget=null}}
+  else if(tripletMode&&b.dataset.note){const [m,s,p]=b.dataset.note.split(",").map(Number),anchor={m,s,p};if(!tripletStartAnchor){tripletStartAnchor=anchor;selectedScoreTarget=null}else if(createTriplet(tripletStartAnchor,anchor,tripletVariant)){tripletStartAnchor=null;selectedScoreTarget=null}}
   else if(b.id==="vocalTriplet"){if(vocalTripletArmed)resetVocalTripletInput();else{vocalTripletArmed=true;vocalTripletDraft=[];vocalTripletOrigin=null;vocalTool="note";vocalSlurStartId=null;selectedScoreTarget=null;cursorVisible=true}}
   else if(b.id==="vocalSlur"){resetVocalTripletInput();vocalTool=vocalTool==="slur"?"note":"slur";vocalSlurStartId=null;selectedScoreTarget=null;cursorVisible=false}
   else if(b.id==="vocalDot"){const note=selectedScoreTarget?.type==="vocal"?state.vocalNotes.find(item=>item.id===selectedScoreTarget.id):null;if(note&&note.tripletId){alert("三連符の3音には付点を付けられません。");return}if(note&&note.kind==="pitch"){snap();note.dotted=!note.dotted;state.vocalDotted=note.dotted}}
