@@ -140,6 +140,8 @@
     const offset = Math.max(0, segment.start);
     const rate = Math.max(0.25, Math.min(4, Number(options.playbackRate) || 1));
     const endRate = Math.max(0.25, Math.min(4, Number(options.playbackRateEnd) || rate));
+    const middleRate = Number.isFinite(Number(options.glideMiddleRate)) && Number(options.glideMiddleRate) > 0 ? Math.max(0.25, Math.min(4, Number(options.glideMiddleRate))) : null;
+    const middleFraction = middleRate === null ? null : Math.min(0.85, Math.max(0.15, Number(options.glideMiddleFraction) || 0.45));
     const baseSourceDuration = Math.max(0.05, Math.min(segment.end, audioBuffer.duration) - offset);
     const availableSourceDuration = Math.max(baseSourceDuration, Math.min(Number(segment.tailEnd) || segment.end, audioBuffer.duration) - offset);
     const requestedDuration = Math.max(0, Number(options.duration) || 0);
@@ -151,23 +153,24 @@
     const averageRate = requestedDuration && endRate !== rate
       ? (rate * requestedAttackHold + ((rate + endRate) / 2) * requestedSlideDuration) / requestedDuration
       : rate;
+    const effectiveAverageRate = middleRate !== null ? ((rate + middleRate) * middleFraction + (middleRate + endRate) * (1 - middleFraction)) / 2 : averageRate;
     const minimumOutputDuration = Math.max(0, Number(options.minimumDuration) || 0);
     const preserveSampleTail = Boolean(options.preserveSampleTail && endRate === rate && sourceKind === "normal");
     const requestedTailReleaseSeconds = preserveSampleTail
       ? Math.max(0, Number(options.tailReleaseSeconds) || 0.004)
       : 0;
     const requestedSourceDuration = requestedDuration
-      ? Math.min(availableSourceDuration, Math.max(0.05, requestedDuration * averageRate))
+      ? Math.min(availableSourceDuration, Math.max(0.05, requestedDuration * effectiveAverageRate))
       : Math.min(availableSourceDuration, Math.max(baseSourceDuration, minimumOutputDuration * rate));
     const logicalOutputDuration = requestedDuration
-      ? Math.min(requestedDuration, requestedSourceDuration / averageRate)
+      ? Math.min(requestedDuration, requestedSourceDuration / effectiveAverageRate)
       : requestedSourceDuration / rate;
     const availableTailReleaseSeconds = preserveSampleTail
       ? Math.max(0, availableSourceDuration / rate - logicalOutputDuration)
       : 0;
     const tailReleaseSeconds = Math.min(requestedTailReleaseSeconds, availableTailReleaseSeconds);
     const outputDuration = logicalOutputDuration + tailReleaseSeconds;
-    const sourceDuration = Math.min(availableSourceDuration, Math.max(0.05, outputDuration * averageRate));
+    const sourceDuration = Math.min(availableSourceDuration, Math.max(0.05, outputDuration * effectiveAverageRate));
     const startDelay = Math.max(0, Number(options.delay) || 0);
     const absoluteWhen = Number(options.when);
     const startAt = Number.isFinite(absoluteWhen) ? absoluteWhen : ctx.currentTime + startDelay;
@@ -195,7 +198,11 @@
 
     source.buffer = audioBuffer;
     source.playbackRate.setValueAtTime(rate, startAt);
-    if (endRate !== rate) {
+    if (middleRate !== null) {
+      const middleAt = startAt + outputDuration * middleFraction;
+      source.playbackRate.linearRampToValueAtTime(middleRate, middleAt);
+      source.playbackRate.linearRampToValueAtTime(endRate, gainEndAt);
+    } else if (endRate !== rate) {
       source.playbackRate.setValueAtTime(rate, pitchChangeStartAt);
       source.playbackRate.linearRampToValueAtTime(endRate, gainEndAt);
     }
@@ -361,6 +368,23 @@
     });
   }
 
+  // 3音スリ専用。2音の既存処理には変更を加えない。
+  function playFrequencyThreeNoteGlideReady(startFrequency, middleFrequency, endFrequency, options = {}) {
+    const middle = Number(middleFrequency);
+    if (!Number.isFinite(middle) || middle <= 0) throw new Error("3音スリの中間音高が正しくありません。");
+    const { kind: sourceKind, audioBuffer } = cachedBuffer(options.sourceKind);
+    const { source, start, end } = resolveGlideSource(startFrequency, endFrequency);
+    return playResolvedSegment(source.noteNumber, sourceKind, audioBuffer, {
+      ...options,
+      sourceKind,
+      glideAttackHold: 0,
+      playbackRate: start / source.frequency,
+      glideMiddleRate: middle / source.frequency,
+      glideMiddleFraction: options.glideMiddleFraction,
+      playbackRateEnd: end / source.frequency
+    });
+  }
+
   function playFrequencyGlideReady(startFrequency, endFrequency, options = {}) {
     const { kind: sourceKind, audioBuffer } = cachedBuffer(options.sourceKind);
     const { source, start, end } = resolveGlideSource(startFrequency, endFrequency);
@@ -372,7 +396,7 @@
     });
   }
 
-  const api = Object.freeze({ getContext, resume, load, loadMany, play, playSegment, playSegmentReady, playFrequency, playFrequencyReady, playFrequencyGlide, playFrequencyGlideReady, clearTrace, getTrace, stop: stopAll, stopAll });
+  const api = Object.freeze({ getContext, resume, load, loadMany, play, playSegment, playSegmentReady, playFrequency, playFrequencyReady, playFrequencyGlide, playFrequencyGlideReady, playFrequencyThreeNoteGlideReady, clearTrace, getTrace, stop: stopAll, stopAll });
   window.ShianAudioEnvelopeDiagnostics = Object.freeze({
     tripletReleaseSeconds: 0.004,
     referenceFadeSeconds: 0.018
