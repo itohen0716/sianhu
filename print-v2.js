@@ -26,6 +26,7 @@
   const densityTextWidth=(text,size)=>{densityContext.font=`400 ${size}px "Shian 851 MkPOP","Shian Score BIZ UDPMincho",serif`;return Math.max(12,densityContext.measureText(String(text)).width+2)};
   const rawDensityTextWidth=(text,size)=>{densityContext.font=`400 ${size}px "Shian 851 MkPOP","Shian Score BIZ UDPMincho",serif`;return Math.max(1,densityContext.measureText(String(text)).width+2)};
   const techniqueTextWidth=(text,size)=>{densityContext.font=`700 ${size}px "Yu Mincho","Times New Roman",serif`;return Math.max(1,densityContext.measureText(String(text)).width+1)};
+  function vividMarkerColor(value){const palette={"#f4df59": "#fff200", "#8fd3e2": "#00e9f2", "#a8d8a0": "#a3ff28", "#f2a9a0": "#ff65a8", "#c6b3e6": "#ac79ff", "#f5be6b": "#ffae1f"};const key=String(value||"#f4df59").toLowerCase();return palette[key]||value||"#fff200"}
   function horizontalFitScale(columns,measurePixels,widthForColumn,minScale=.68){
     const sorted=(columns||[]).filter(column=>Number.isFinite(column.left)).sort((a,b)=>a.left-b.left);let scale=1;
     for(let index=1;index<sorted.length;index++){
@@ -103,7 +104,7 @@
   }
   function markerHtml(item){
     const pts=item.pointsNormalized||[];if(item.type!=="marker"||pts.length<2)return"";
-    const x=Math.min(pts[0].x,pts[1].x),y=Math.min(pts[0].y,pts[1].y),width=Math.abs(pts[1].x-pts[0].x),height=Math.abs(pts[1].y-pts[0].y),color=esc(item.color||"#f4df59"),opacity=clamp(Number(item.opacity)||.4,.1,.55);
+    const x=Math.min(pts[0].x,pts[1].x),y=Math.min(pts[0].y,pts[1].y),width=Math.abs(pts[1].x-pts[0].x),height=Math.abs(pts[1].y-pts[0].y),color=esc(vividMarkerColor(item.color)),opacity=Math.max(.55,clamp(Number(item.opacity)||.4,.1,.55));
     return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${color}" fill-opacity="${opacity}"/>`;
   }
   function captureScoreGeometry(){

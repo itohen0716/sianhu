@@ -283,9 +283,10 @@ const IS_ANNOTATION_PAGE=document.body.classList.contains("annotation-page");
 const rests=[{d:4,label:"4分休符",mark:"●"},{d:2,label:"8分休符",mark:"●"},{d:1,label:"16分休符",mark:"●"}];
 const colors=["#FF0000","#2474c6","#208750","#8b48a5","#e58b17","#222222"];
 const markerColors=[
-  {value:"#f4df59",label:"蛍光黄"},{value:"#8fd3e2",label:"蛍光水色"},{value:"#a8d8a0",label:"蛍光黄緑"},
-  {value:"#f2a9a0",label:"蛍光桃"},{value:"#c6b3e6",label:"蛍光藤"},{value:"#f5be6b",label:"蛍光橙"}
+  {value:"#fff200",label:"蛍光黄"},{value:"#00e9f2",label:"蛍光水色"},{value:"#a3ff28",label:"蛍光黄緑"},
+  {value:"#ff65a8",label:"蛍光桃"},{value:"#ac79ff",label:"蛍光藤"},{value:"#ffae1f",label:"蛍光橙"}
 ];
+function vividMarkerColor(value){const palette={"#f4df59": "#fff200", "#8fd3e2": "#00e9f2", "#a8d8a0": "#a3ff28", "#f2a9a0": "#ff65a8", "#c6b3e6": "#ac79ff", "#f5be6b": "#ffae1f"};const key=String(value||"#f4df59").toLowerCase();return palette[key]||value||"#fff200"}
 const TECHNIQUE_LAYER_ID="technique-layer";
 const defaults={notes:[],tuplets:[],vocalNotes:[],vocalString:3,vocalDuration:4,vocalVisible:false,lyricsVisible:false,scoreParts:[],barlineKinds:{},measureSpecials:{},title:"曲名入力",tuning:"二上り",meter:"2/4",rhythmFeel:{type:"normal"},rows:1,measuresPerRow:4,rowMeasureCounts:[4],measureOffsets:[],lyricsMode:false,lyrics:[],lyricsGlyphAnchors:[],m:0,s:1,p:0,d:4,layers:[],activeLayerId:null,drawTool:"select",selectedSymbol:null,symbolSide:"above",drawColor:colors[0],markerColor:markerColors[0].value,markerStyleVersion:2,lineStyle:"solid",numberColor:"#222222",openColor:"#222222",textSize:20,textBackground:"white",annotationTarget:"staff",preview:true,annotationCoordVersion:2,annotationLayout:{version:2,unit:"staff-line",boundaries:{}},printMode:"auto",manualPageRows:""};
 defaults.vocalSlurs=[];
@@ -930,7 +931,7 @@ function ensureAnnotationRowAnchors(){const geometry=annotationGeometry();if(!ge
 function visualAnnotationItem(item,geometry=annotationGeometry()){if(item.type==="symbol"&&item.anchor||annotationItemIsMoving(item))return item;return projectedAnnotationItem(item,geometry)}
 function markerUnderlayHtml(item){
   const x=Math.min(item.x1,item.x2),y=Math.min(item.y1,item.y2),width=Math.abs(item.x2-item.x1),height=Math.abs(item.y2-item.y1);
-  return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(item.color||markerColors[0].value)}" fill-opacity="${clamp(Number(item.opacity)||.4,.1,.55)}"/>`;
+  return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="12" fill="${esc(vividMarkerColor(item.color))}" fill-opacity="${Math.max(.55,clamp(Number(item.opacity)||.4,.1,.55))}"/>`;
 }
 function resizeControlsHtml(item,x,y,width,height){
   if(item.id!==selectedItemId)return"";
@@ -1217,7 +1218,7 @@ function renderLayers(){
   q("#drawTools").querySelectorAll("[data-tool]").forEach(button=>button.classList.toggle("on",button.dataset.tool===state.drawTool));
   updateControlMarkup("#colors",colors.map(color=>`<button class="color ${color===state.drawColor?"on":""}" style="--c:${color}" data-color="${color}" aria-label="${color}"></button>`).join(""));
   const item=selectedItem();
-  updateControlMarkup("#markerColors",markerColors.map(color=>`<button class="marker-color ${color.value===(item?.type==="marker"?item.color:state.markerColor)?"on":""}" style="--c:${color.value}" data-marker-color="${color.value}" aria-label="${color.label}" title="${color.label}"></button>`).join(""));
+  updateControlMarkup("#markerColors",markerColors.map(color=>`<button class="marker-color ${color.value===vividMarkerColor(item?.type==="marker"?item.color:state.markerColor)?"on":""}" style="--c:${color.value}" data-marker-color="${color.value}" aria-label="${color.label}" title="${color.label}"></button>`).join(""));
   q("#itemColor").value=item?.color||state.drawColor;q("#itemColor").disabled=item?.type==="marker";q("#textSize").value=String(item?.size||state.textSize);q("#textBackground").value=item?.background||state.textBackground;
   const target=item?.type==="text"?(item.layoutVisibilityTarget||item.layoutTarget||state.annotationTarget||"staff"):(item?.layoutTarget||state.annotationTarget||"staff");qAll('input[name="itemAnchorTarget"]').forEach(input=>{input.checked=input.value===target;input.disabled=input.value==="lyrics"&&!state.lyricsVisible||input.value==="vocal"&&!state.vocalVisible});
   const lineItem=item&&["pen","arrow","rect"].includes(item.type),rectItem=item&&["rect","marker"].includes(item.type);
